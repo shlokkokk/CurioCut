@@ -63,7 +63,7 @@ jobs:
           INSTAGRAM_ACCOUNT_ID: ${{ secrets.INSTAGRAM_ACCOUNT_ID }}
           INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
           SOFTWARE_GL: "1"
-          FPS: "24"
+          FPS: "15"
         run: |
           python make_short.py --upload --privacy public --draft
 
