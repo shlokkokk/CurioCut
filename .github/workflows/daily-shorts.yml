@@ -9,7 +9,7 @@ on:
 jobs:
   build-and-post:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
 
     steps:
       - name: Checkout Code
@@ -63,9 +63,9 @@ jobs:
           INSTAGRAM_ACCOUNT_ID: ${{ secrets.INSTAGRAM_ACCOUNT_ID }}
           INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
           SOFTWARE_GL: "1"
-          FPS: "15"
+          FPS: "24"
         run: |
-          python make_short.py --upload --privacy public --draft
+          python make_short.py --upload --privacy public
 
       - name: Upload Finished MP4 as Build Artifact
         uses: actions/upload-artifact@v4
