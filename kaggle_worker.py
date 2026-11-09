@@ -76,10 +76,10 @@ if yt_token and not (WORKSPACE / "youtube_token.json").exists():
     (WORKSPACE / "youtube_token.json").write_text(yt_token, encoding="utf-8")
     print("Restored YouTube authentication token.", flush=True)
 
-# Step 4: Run autonomous 3D short generation & upload with Hardware GPU acceleration
+# Step 4: Run autonomous 3D short generation & upload
 print("\n[4/4] Starting 3D short generation and publishing...", flush=True)
 cmd = [sys.executable, "make_short.py", "--upload", "--privacy", "public"]
-res = subprocess.run(cmd, timeout=1800)
+res = subprocess.run(cmd)
 
 if res.returncode == 0:
     print("\n" + "="*70, flush=True)
