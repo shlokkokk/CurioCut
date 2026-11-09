@@ -2,8 +2,8 @@ name: Daily CurioCut Shorts Auto-Poster
 
 on:
   schedule:
-    # Runs every day at 13:17 UTC (6:47 PM IST - Prime Shorts viewing time)
-    - cron: '17 13 * * *'
+    # Runs 2x daily: 7:30 UTC (1:00 PM IST) and 13:30 UTC (7:00 PM IST)
+    - cron: '30 7,13 * * *'
   workflow_dispatch: # Allows manual 1-click trigger from GitHub website anytime!
 
 jobs:
