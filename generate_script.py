@@ -1,13 +1,14 @@
 """AI Viral Script & Retention Engineer for CurioCut.
-Autonomous multi-niche storyteller powered by Groq LPU & Reddit Harvester:
-- Spicy Relationship & Revenge Drama (cheating exposed, wedding blowups, secret fortunes)
-- Unbelievable Real-World Heists & Loophole Millionaires (historical scams, bank glitches)
-- Modern Internet Brainrot & Billionaire Absurdity (crazy lawsuits, Spotify bot glitches)
+Autonomous multi-niche storyteller powered by Dual-Brain AI (Google Gemini + Groq LPU):
+- Primary Creative Brain: Google Gemini 2.5/2.0 Flash (100% human-like witty viral storytelling)
+- Backup Speed Brain: Groq LPU with Meta Llama 3.3 70B
+- Offline Redundant Brain: Evergreen Master Vault (50+ 10/10 master scripts)
 """
 import os
 import sys
 import json
 import random
+import re
 import urllib.request
 import urllib.parse
 from pathlib import Path
@@ -81,8 +82,46 @@ def save_history(title, topic, style=None):
     history.append({"title": title, "topic": topic, "style": style})
     HISTORY_FILE.write_text(json.dumps(history[-50:], indent=2), encoding="utf-8")
 
+def call_gemini_api(prompt, api_key):
+    """Primary Brain: Direct HTTP call to Google Gemini 2.5/2.0 Flash REST API (Zero dependencies)."""
+    models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+    last_err = None
+
+    for m in models:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={api_key}"
+        payload = {
+            "systemInstruction": {
+                "parts": [{"text": PSYCHOLOGY_SYSTEM_PROMPT}]
+            },
+            "contents": [
+                {"parts": [{"text": prompt}]}
+            ],
+            "generationConfig": {
+                "temperature": 0.8,
+                "responseMimeType": "application/json"
+            }
+        }
+
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                text = data["candidates"][0]["content"]["parts"][0]["text"]
+                return json.loads(text)
+        except Exception as e:
+            last_err = e
+            continue
+
+    raise RuntimeError(f"Gemini API error: {last_err}")
+
 def call_groq_api(prompt, api_key):
-    """Direct HTTP call to Groq LPU API using urllib (zero dependencies)."""
+    """Backup Brain: Direct HTTP call to Groq LPU API using urllib (Zero dependencies)."""
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -128,8 +167,9 @@ def call_groq_api(prompt, api_key):
     raise RuntimeError(f"All Groq models failed. Last error: {last_error}")
 
 def generate_script(topic=None):
-    """Generates an elite viral script from Reddit harvester or custom topic."""
-    api_key = os.environ.get("GROQ_API_KEY")
+    """Dual-Brain Script Generator: Tries Gemini -> Groq -> Offline Master Vault."""
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    groq_key = os.environ.get("GROQ_API_KEY")
 
     if topic:
         seed_title = topic
@@ -147,21 +187,33 @@ def generate_script(topic=None):
         user_prompt = f"Write a viral short for the '{niche.upper()}' niche based on this premise:\nTitle: {seed_title}\nStory: {premise}\n\nDeliver maximum emotional impact, escalating tension, and an unforgettable punchline. Spell all numbers as words."
 
     print("\n" + "="*60)
-    print("   CURIO CUT MULTI-NICHE SCRIPT ENGINE   ")
+    print("   CURIO CUT DUAL-BRAIN SCRIPT ENGINE   ")
     print("="*60)
     print(f"Title: {seed_title}")
 
     data = None
-    if api_key:
-        try:
-            print("Crafting script with Groq LPU (Llama 3.3 70B)...")
-            data = call_groq_api(user_prompt, api_key)
-        except Exception as e:
-            print(f"Groq API note: {e}")
-            print("Using curated master story backup...")
 
-    # High quality backup if offline or sandbox network block
+    # 1. Primary Brain: Google Gemini
+    if gemini_key:
+        try:
+            print("🧠 [Primary Brain] Requesting script from Google Gemini Flash...")
+            data = call_gemini_api(user_prompt, gemini_key)
+            print("  ✓ Successfully crafted with Google Gemini!")
+        except Exception as e:
+            print(f"  Gemini note: {e}. Switching to Backup Brain...")
+
+    # 2. Backup Brain: Groq (Llama 3.3 70B)
+    if not data and groq_key:
+        try:
+            print("⚡ [Backup Brain] Crafting script with Groq LPU (Llama 3.3 70B)...")
+            data = call_groq_api(user_prompt, groq_key)
+            print("  ✓ Successfully crafted with Groq LPU!")
+        except Exception as e:
+            print(f"  Groq note: {e}. Switching to Offline Vault...")
+
+    # 3. Guaranteed Offline Fallback (Vault)
     if not data or not data.get("lines"):
+        print("🏛️ [Offline Vault] Loading guaranteed master story...")
         data = {
             "title": seed_title,
             "voice": "am_michael",
@@ -215,8 +267,8 @@ def generate_script(topic=None):
     title = data.get("title", seed_title)
     save_history(title, seed_title, style=style)
 
-    print(f"\nGenerated: '{title}'")
-    print(f"Cuts: {len(lines)} shots")
+    print(f"\nFinal Title: '{title}'")
+    print(f"Cuts: {len(lines)} camera shots")
     print(f"Hook: \"{lines[0].get('text')}\"")
     print(f"Punchline: \"{lines[-1].get('text')}\"\n")
     return data
