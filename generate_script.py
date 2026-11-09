@@ -83,8 +83,8 @@ def save_history(title, topic, style=None):
     HISTORY_FILE.write_text(json.dumps(history[-50:], indent=2), encoding="utf-8")
 
 def call_gemini_api(prompt, api_key):
-    """Primary Brain: Direct HTTP call to Google Gemini 2.5/2.0 Flash REST API (Zero dependencies)."""
-    models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+    """Primary Brain: Direct HTTP call to Google Gemini Flash REST API (Zero dependencies)."""
+    models = ["gemini-flash-latest", "gemini-2.5-flash-lite", "gemini-3.8-flash"]
     last_err = None
 
     for m in models:
