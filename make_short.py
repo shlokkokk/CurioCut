@@ -109,14 +109,21 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
         raise FileNotFoundError(f"Style template not found: {template_dir}")
 
     # Determine script
-    if topic:
+    from generate_script import generate_script
+    if topic and topic != "auto":
         print(f"[1/5] Writing viral script for topic: {topic}...")
-        from generate_script import generate_script
         script_data = generate_script(topic)
     else:
-        print(f"[1/5] Loading master synchronized script for style: '{style}'...")
-        script_path = template_dir / "script.json"
-        script_data = json.loads(script_path.read_text(encoding="utf-8"))
+        print(f"[1/5] Dynamically generating fresh viral script for style: '{style}'...")
+        try:
+            script_data = generate_script()
+        except Exception as e:
+            print(f"Notice: Dynamic script generation exception: {e}. Using synchronized style script.")
+            script_data = None
+            
+        if not script_data:
+            script_path = template_dir / "script.json"
+            script_data = json.loads(script_path.read_text(encoding="utf-8"))
 
     title = script_data.get("title", "Untitled Short")
     print(f"Title: {title}")
