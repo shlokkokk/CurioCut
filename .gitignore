@@ -1,0 +1,34 @@
+# Environment variables & API keys
+.env
+*.env
+
+# YouTube & OAuth Credentials
+youtube_token.json
+client_secret.json
+client_secret_*.json
+
+# Instagram & Meta Credentials
+instagram_token.json
+ig_token.json
+meta_token.json
+
+# Generated video projects and heavy binary renders
+projects/
+renders/
+review/
+*.mp4
+*.wav
+
+# Local virtual environment and binaries
+.faceless-shorts/
+venv/
+bin/
+tmp/
+
+# Python & Node caches
+__pycache__/
+*.py[cod]
+*$py.class
+node_modules/
+.DS_Store
+Thumbs.db

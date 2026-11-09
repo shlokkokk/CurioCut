@@ -1,0 +1,75 @@
+name: Daily CurioCut Shorts Auto-Poster
+
+on:
+  schedule:
+    # Runs every day at 13:17 UTC (6:47 PM IST - Prime Shorts viewing time)
+    - cron: '17 13 * * *'
+  workflow_dispatch: # Allows manual 1-click trigger from GitHub website anytime!
+
+jobs:
+  build-and-post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install System Dependencies (FFmpeg & Chrome)
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ffmpeg libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libasound2
+
+      - name: Cache AI Models (Kokoro TTS & Whisper)
+        id: cache-models
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.faceless-shorts/kokoro
+            ~/.cache/huggingface/hub
+          key: ai-models-kokoro-whisper-v1
+
+      - name: Install Python Libraries
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy scipy kokoro-onnx faster-whisper groq requests google-api-python-client google-auth-oauthlib google-auth-httplib2
+
+      - name: Download Voice & Subtitle Models (if not cached)
+        if: steps.cache-models.outputs.cache-hit != 'true'
+        run: |
+          python faceless-shorts-skill/faceless-shorts/scripts/voice.py --download
+          python -c "from faster_whisper import WhisperModel; WhisperModel('small.en', device='cpu', compute_type='int8')"
+
+      - name: Restore YouTube Credentials
+        run: |
+          echo "${{ secrets.YOUTUBE_TOKEN_JSON }}" > youtube_token.json
+
+      - name: Generate 3D Short & Publish (YouTube & Instagram)
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          INSTAGRAM_ACCOUNT_ID: ${{ secrets.INSTAGRAM_ACCOUNT_ID }}
+          INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+          SOFTWARE_GL: "1"
+          FPS: "24"
+        run: |
+          python make_short.py --upload --privacy public
+
+      - name: Upload Finished MP4 as Build Artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: daily-short-renders
+          path: projects/*/renders/*.mp4
+          retention-days: 7
+

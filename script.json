@@ -1,0 +1,52 @@
+{
+  "title": "The 18th Century Eccentric Who Did Everything Wrong and Got Rich",
+  "voice": "am_michael",
+  "speed": 1.05,
+  "lead": 0.3,
+  "outro": 1.0,
+  "gap": 0.18,
+  "music": "bounce",
+  "lines": [
+    {
+      "text": "In twenty eleven, a normal bartender found a glitch that gave him infinite free cash.",
+      "caps": "IN TWENTY ELEVEN | A BARTENDER | INFINITE CASH"
+    },
+    {
+      "text": "Dan Saunders walked up to an ATM at one in the morning just to check his balance.",
+      "caps": "DAN SAUNDERS | AT ONE A M | TO CHECK BALANCE"
+    },
+    {
+      "text": "The screen showed an error, but the machine still spat out two hundred dollars.",
+      "caps": "SCREEN ERRORED | STILL SPAT OUT | TWO HUNDRED"
+    },
+    {
+      "text": "See, between one and three in the morning, the bank's network disconnected for daily maintenance.",
+      "caps": "BETWEEN ONE AND THREE | NETWORK DISCONNECTED | DAILY MAINTENANCE"
+    },
+    {
+      "text": "During that window, the ATM could not verify balances, so it simply approved every transaction.",
+      "caps": "COULD NOT VERIFY | SO IT APPROVED | EVERY TRANSACTION"
+    },
+    {
+      "text": "Over the next four months, Dan withdrew one point six million dollars in cold hard cash.",
+      "caps": "OVER FOUR MONTHS | ONE POINT SIX MILLION | IN COLD CASH"
+    },
+    {
+      "text": "He chartered private jets, bought five star suites, and threw wild parties for strangers.",
+      "caps": "CHARTERED JETS | FIVE STAR SUITES | WILD PARTIES"
+    },
+    {
+      "text": "Eventually, the guilt became so crushing he called the bank to confess.",
+      "caps": "GUILT CRUSHING | CALLED THE BANK | TO CONFESS"
+    },
+    {
+      "text": "Except the bank was so embarrassed by the glitch, they hung up on him and refused to call the police.",
+      "caps": "SO EMBARRASSED | THEY HUNG UP | REFUSED POLICE"
+    },
+    {
+      "text": "Leaving Dan with bags of cash, and the wildest two hour loophole in banking history.",
+      "caps": "BAGS OF CASH | WILDEST LOOPHOLE | IN BANKING HISTORY",
+      "gap": 0.3
+    }
+  ]
+}
