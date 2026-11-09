@@ -16,6 +16,21 @@ import argparse
 import subprocess
 from pathlib import Path
 
+try:
+    from discord_notifier import (
+        notify_engine, notify_alert, notify_error,
+        notify_youtube_post, notify_youtube_error,
+        notify_instagram_post, notify_instagram_error
+    )
+except ImportError:
+    def notify_engine(*a, **kw): pass
+    def notify_alert(*a, **kw): pass
+    def notify_error(*a, **kw): pass
+    def notify_youtube_post(*a, **kw): pass
+    def notify_youtube_error(*a, **kw): pass
+    def notify_instagram_post(*a, **kw): pass
+    def notify_instagram_error(*a, **kw): pass
+
 WORKSPACE = Path(__file__).resolve().parent
 SKILL_DIR = WORKSPACE / "faceless-shorts-skill" / "faceless-shorts"
 FACELSS_HOME = Path.home() / ".faceless-shorts"
@@ -93,6 +108,15 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
     print(f"Title: {title}")
     print(f"Style: {style}")
 
+    notify_engine(
+        title="Short Generation Started",
+        description=f"CurioCut engine started generating: **{title}**",
+        fields=[
+            {"name": "Style", "value": style, "inline": True},
+            {"name": "Upload Target", "value": "YouTube + Instagram" if upload else "Local Only", "inline": True}
+        ]
+    )
+
     # 2. Setup Project Folder
     slug = "".join(c if c.isalnum() else "_" for c in title.lower())[:30].strip("_")
     project_dir = WORKSPACE / "projects" / slug
@@ -156,8 +180,18 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
                 from youtube_uploader import upload_short
                 v_id, v_url = upload_short(str(output_mp4), title=title, description=desc, privacy_status=privacy)
                 print(f"  Live on YouTube: {v_url}")
+                file_size_mb = output_mp4.stat().st_size / (1024 * 1024)
+                notify_youtube_post(
+                    title=title,
+                    video_url=v_url,
+                    video_id=v_id,
+                    size_mb=file_size_mb,
+                    privacy=privacy,
+                    style=style
+                )
             except Exception as e:
                 print(f"  YouTube upload error: {e}")
+                notify_youtube_error(str(e))
         else:
             print("  Skipping YouTube (youtube_token.json not found).")
 
@@ -170,8 +204,10 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
                 from instagram_uploader import upload_reel
                 ig_media_id, ig_permalink = upload_reel(str(output_mp4), caption=desc)
                 print(f"  Live on Instagram: {ig_permalink}")
+                notify_instagram_post(caption=desc, permalink=ig_permalink, media_id=ig_media_id)
             except Exception as e:
                 print(f"  Instagram Reels upload error: {e}")
+                notify_instagram_error(str(e))
         else:
             print("  Skipping Instagram (INSTAGRAM_ACCESS_TOKEN not configured or placeholder).")
     else:

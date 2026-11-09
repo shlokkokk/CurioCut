@@ -201,6 +201,11 @@ def generate_script(topic=None):
             print("  ✓ Successfully crafted with Google Gemini!")
         except Exception as e:
             print(f"  Gemini note: {e}. Switching to Backup Brain...")
+            try:
+                from discord_notifier import notify_alert
+                notify_alert("AI Brain Failover", f"Gemini returned error ({e}). Seamlessly failed over to Groq Llama 3.3 70B.")
+            except Exception:
+                pass
 
     # 2. Backup Brain: Groq (Llama 3.3 70B)
     if not data and groq_key:
