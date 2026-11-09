@@ -146,7 +146,11 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
         desc = f"{title}. Watch daily animated stories on CurioCut! #shorts #viral #curiosity"
 
         # 5a. YouTube Shorts
-        if (WORKSPACE / "youtube_token.json").exists():
+        yt_file = WORKSPACE / "youtube_token.json"
+        if not yt_file.exists() and os.environ.get("YOUTUBE_TOKEN_JSON"):
+            yt_file.write_text(os.environ["YOUTUBE_TOKEN_JSON"].strip(), encoding="utf-8")
+
+        if yt_file.exists():
             try:
                 print("\n  >> Uploading to YouTube Shorts...")
                 from youtube_uploader import upload_short

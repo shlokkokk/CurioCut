@@ -61,3 +61,5 @@ Everything for Instagram Reels is already fully coded in `instagram_uploader.py`
   ```bash
   python youtube_uploader.py "path/to/video.mp4" "Your Video Title" public
   ```
+
+add tg dc push notification
