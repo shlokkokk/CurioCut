@@ -119,7 +119,7 @@ out_url = f"https://www.kaggle.com/api/v1/kernels/output?userName={KAGGLE_USER}&
 
 print("\nMonitoring Cloud execution...")
 start_t = time.time()
-max_wait = 3600  # 60 minutes safety ceiling
+max_wait = 7200  # 120 minutes unbreakable ceiling
 queued_start = time.time()
 
 while time.time() - start_t < max_wait:
@@ -128,16 +128,16 @@ while time.time() - start_t < max_wait:
     
     try:
         req_st = urllib.request.Request(status_url, headers={"Authorization": f"Bearer {KAGGLE_TOKEN}"})
-        with urllib.request.urlopen(req_st, timeout=15) as resp:
+        with urllib.request.urlopen(req_st, timeout=20) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             st = data.get("status", "unknown")
             fail_msg = data.get("failureMessage", "")
             
             print(f"  [{elapsed}s] Cloud Worker Status: {st.upper()}")
             
-            # Keep waiting for GPU (Kaggle batch GPU queue normally takes 2-8 minutes)
-            if gpu_requested and st == "queued" and (time.time() - queued_start) > 900:
-                print("\n⚠️ GPU queue reached 15-minute wait ceiling. Failing over to Cloud Compute...")
+            # Keep waiting for GPU (Kaggle batch GPU queue normally takes 2-8 minutes, ceiling 30 mins)
+            if gpu_requested and st == "queued" and (time.time() - queued_start) > 1800:
+                print("\n⚠️ GPU queue reached 30-minute wait ceiling. Failing over to Cloud Compute...")
                 gpu_requested = False
                 push_kernel(enable_gpu=False)
                 queued_start = time.time()

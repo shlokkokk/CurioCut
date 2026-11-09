@@ -38,10 +38,10 @@ WORKSPACE = Path("/kaggle/working/CurioCut")
 # Step 1: Clone or pull repo
 if not WORKSPACE.exists():
     print("\n[1/4] Cloning CurioCut repository...", flush=True)
-    subprocess.run(["git", "clone", "https://github.com/shlokkokk/CurioCut.git", str(WORKSPACE)], check=True, timeout=120)
+    subprocess.run(["git", "clone", "https://github.com/shlokkokk/CurioCut.git", str(WORKSPACE)], check=True, timeout=300)
 else:
     print("\n[1/4] Updating CurioCut repository...", flush=True)
-    subprocess.run(["git", "-C", str(WORKSPACE), "pull"], check=False, timeout=60)
+    subprocess.run(["git", "-C", str(WORKSPACE), "pull"], check=False, timeout=300)
 
 os.chdir(WORKSPACE)
 
@@ -53,9 +53,9 @@ apt_flags = ["-o", "Dpkg::Options::=--force-confdef", "-o", "Dpkg::Options::=--f
 if not chrome_path:
     print("Downloading and installing official Google Chrome stable deb...", flush=True)
     try:
-        subprocess.run(["wget", "-q", "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"], check=True, timeout=60)
-        subprocess.run(["apt-get", "update", "-y"] + apt_flags, check=False, timeout=60)
-        subprocess.run(["apt-get", "install", "-y"] + apt_flags + ["./google-chrome-stable_current_amd64.deb", "libegl1", "libgles2"], check=True, timeout=120)
+        subprocess.run(["wget", "-q", "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"], check=True, timeout=120)
+        subprocess.run(["apt-get", "update", "-y"] + apt_flags, check=False, timeout=120)
+        subprocess.run(["apt-get", "install", "-y"] + apt_flags + ["./google-chrome-stable_current_amd64.deb", "libegl1", "libgles2"], check=True, timeout=300)
     except Exception as e:
         print(f"Chrome install notice: {e}", flush=True)
     chrome_path = shutil.which("google-chrome") or "/usr/bin/google-chrome"
@@ -68,7 +68,7 @@ subprocess.run([
     sys.executable, "-m", "pip", "install", "--quiet",
     "-r", "requirements.txt",
     "kokoro-onnx", "faster-whisper", "groq", "requests"
-], check=True, timeout=300)
+], check=True, timeout=600)
 
 # Restore YouTube Token if provided in environment
 yt_token = os.environ.get("YOUTUBE_TOKEN_JSON")
