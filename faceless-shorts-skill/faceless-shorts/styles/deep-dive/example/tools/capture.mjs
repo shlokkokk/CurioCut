@@ -102,7 +102,7 @@ else {
       const r = spawnSync('ffmpeg', ['-v', 'error', '-y', '-framerate', '1', '-i', path.join(tmp, 'f%04d.jpg'), '-vf', `scale=216:384,tile=${cols}x${rows}:padding=4:color=black`, '-frames:v', '1', '-q:v', '3', out]);
       fs.rmSync(tmp, { recursive: true, force: true });
       if (r.status) throw new Error('ffmpeg: ' + r.stderr); console.log(`${out} (${n} frames, every ${step} s)`);
-    } else if (mode === 'video') {
+        } else if (mode === 'video') {
       const out = path.resolve(ROOT, rest[0] || 'renders/video.mp4'); fs.mkdirSync(path.dirname(out), { recursive: true });
       const mix = path.join(ROOT, 'data/mix.wav'), hasMix = fs.existsSync(mix), a0 = rest[1] ? +rest[1] : 0, a1 = rest[2] ? Math.min(+rest[2], dur) : dur, n = Math.round((a1 - a0) * FPS);
       const ff = spawn('ffmpeg', ['-v', 'error', '-y', '-f', 'image2pipe', '-framerate', String(FPS), '-i', '-',
@@ -111,9 +111,14 @@ else {
         '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', out], { stdio: ['pipe', 'inherit', 'inherit'] });
       const t0 = Date.now();
       for (let i = 0; i < n; i++) {
-        const b = jpg(await P.ev(FRAME(a0 + i / FPS, flags.has('--draft') ? 0.8 : 0.93)));
+        const framePromise = P.ev(FRAME(a0 + i / FPS, flags.has('--draft') ? 0.8 : 0.93));
+        const timeoutPromise = new Promise((_, rej) => setTimeout(() => rej(new Error(`Frame ${i} timed out after 10s`)), 10000));
+        const b = jpg(await Promise.race([framePromise, timeoutPromise]));
         if (!ff.stdin.write(b)) await new Promise((r) => ff.stdin.once('drain', r));
-        if (i % 150 === 0) process.stdout.write(`\r${i}/${n} frames`);
+        if (i % 60 === 0 || i === n - 1) {
+          const pct = Math.round((i / n) * 100);
+          console.log(`[Render] Frame ${i}/${n} (${pct}%) - elapsed: ${((Date.now() - t0)/1000).toFixed(1)}s`);
+        }
       }
       ff.stdin.end(); await new Promise((r) => ff.on('close', r));
       console.log(`\r${out} (${n} frames, ${hasMix ? 'with data/mix.wav' : 'SILENT: no data/mix.wav'}, ${((Date.now() - t0) / 1000).toFixed(0)} s)`);
