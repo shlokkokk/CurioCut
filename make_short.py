@@ -60,12 +60,6 @@ def run_cmd(cmd, cwd=None, env=None):
     if bin_str not in merged_env.get("PATH", ""):
         merged_env["PATH"] = f"{bin_str};{merged_env.get('PATH', '')}" if os.name == 'nt' else f"{bin_str}:{merged_env.get('PATH', '')}"
 
-    if "FPS" not in merged_env:
-        merged_env["FPS"] = "24"
-    if "SOFTWARE_GL" not in merged_env and os.name != 'nt':
-        merged_env["SOFTWARE_GL"] = "1"
-    if "QS" not in merged_env and os.name != 'nt':
-        merged_env["QS"] = "&aa=1&shadow=1024"
 
     process = subprocess.Popen(
         cmd,
