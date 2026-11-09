@@ -21,6 +21,10 @@ SKILL_DIR = WORKSPACE / "faceless-shorts-skill" / "faceless-shorts"
 FACELSS_HOME = Path.home() / ".faceless-shorts"
 BIN_DIR = FACELSS_HOME / "bin"
 VENV_PYTHON = FACELSS_HOME / "venv" / ("Scripts/python.exe" if os.name == 'nt' else "bin/python")
+PYTHON_EXE = str(VENV_PYTHON) if VENV_PYTHON.exists() else sys.executable
+
+node_candidate = BIN_DIR / ("node.exe" if os.name == 'nt' else "node")
+NODE_EXE = str(node_candidate) if node_candidate.exists() else "node"
 
 ROTATION_STYLES = [
     "tall-tale",     # 3D con/loophole story (e.g. The Girl Who Was Mailed to Grandma)
@@ -111,18 +115,17 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
 
     # 3. Audio & Voiceover (Kokoro + Whisper + Mix)
     print("[3/5] Generating voiceover (Kokoro TTS) & subtitle timings (Whisper)...")
-    run_cmd([str(VENV_PYTHON), str(SKILL_DIR / "scripts" / "voice.py"), "."], cwd=project_dir)
-    run_cmd([str(VENV_PYTHON), str(SKILL_DIR / "scripts" / "words.py"), "."], cwd=project_dir)
+    run_cmd([PYTHON_EXE, str(SKILL_DIR / "scripts" / "voice.py"), "."], cwd=project_dir)
+    run_cmd([PYTHON_EXE, str(SKILL_DIR / "scripts" / "words.py"), "."], cwd=project_dir)
 
     print("Synthesizing procedural sound effects and music bed...")
-    node_exe = str(BIN_DIR / "node.exe") if os.name == 'nt' else "node"
-    run_cmd([node_exe, "tools/capture.mjs", "cues"], cwd=project_dir)
-    run_cmd([str(VENV_PYTHON), "tools/mix.py", "."], cwd=project_dir)
+    run_cmd([NODE_EXE, "tools/capture.mjs", "cues"], cwd=project_dir)
+    run_cmd([PYTHON_EXE, "tools/mix.py", "."], cwd=project_dir)
 
     # 4. Render (Headless Chrome + FFmpeg)
     output_mp4 = project_dir / "renders" / f"{slug}.mp4"
     print(f"[4/5] Rendering animation (1080x1920) in headless Chrome...")
-    capture_args = [node_exe, "tools/capture.mjs", "video", str(output_mp4)]
+    capture_args = [NODE_EXE, "tools/capture.mjs", "video", str(output_mp4)]
     if draft:
         capture_args.append("--draft")
         
