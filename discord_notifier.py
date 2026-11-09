@@ -92,7 +92,7 @@ def notify_error(context, error_msg, stack_trace=None):
 def notify_youtube_post(title, video_url, video_id, duration_sec=None, size_mb=None, privacy="public", style="tall-tale"):
     """Sends rich success card to #youtube-posts when a Short is published."""
     fields = [
-        {"name": "Video URL", "value": f"[{video_url}]({video_url})", "inline": False},
+        {"name": "Watch Short", "value": f"[▶️ Watch on YouTube Shorts]({video_url})\n{video_url}", "inline": False},
         {"name": "Visibility", "value": privacy.capitalize(), "inline": True},
         {"name": "Style", "value": style, "inline": True},
     ]
@@ -126,7 +126,7 @@ def notify_youtube_error(error_msg, context="Upload"):
 
 def notify_instagram_post(caption, permalink, media_id=None):
     """Sends rich success card to #instagram-posts when a Reel is published."""
-    fields = [{"name": "Reel URL", "value": f"[{permalink}]({permalink})", "inline": False}]
+    fields = [{"name": "Watch Reel", "value": f"[▶️ Watch on Instagram Reels]({permalink})\n{permalink}", "inline": False}]
     if media_id:
         fields.append({"name": "Media ID", "value": str(media_id), "inline": True})
         

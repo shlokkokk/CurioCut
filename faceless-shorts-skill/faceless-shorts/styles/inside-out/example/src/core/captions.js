@@ -17,7 +17,10 @@ function autoChunks(text) {
 export function buildCaptions(script) {
   caps = [];
   script.lines.forEach((ln, i) => {
-    const chunks = (ln.caps ? ln.caps.split('|') : autoChunks(ln.text)).map((s) => s.trim()).filter(Boolean);
+    const textWords = ln.text.split(/\s+/).filter(Boolean);
+    const capsWords = ln.caps ? ln.caps.replace(/\|/g, ' ').split(/\s+/).filter(Boolean) : [];
+    const useCaps = ln.caps && capsWords.length >= Math.max(3, textWords.length * 0.75);
+    const chunks = (useCaps ? ln.caps.split('|') : autoChunks(ln.text)).map((s) => s.trim()).filter(Boolean);
     const ws = lineWords(i); if (!ws.length) return;
     const counts = chunks.map((c) => c.split(/\s+/).length), N = counts.reduce((a, b) => a + b, 0);
     const nm = (w) => String(w).toLowerCase().replace(/[^a-z0-9']+/g, '');

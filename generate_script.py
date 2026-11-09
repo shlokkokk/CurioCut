@@ -25,48 +25,44 @@ if ENV_FILE.exists():
 
 HISTORY_FILE = Path(__file__).resolve().parent / "history.json"
 
-PSYCHOLOGY_SYSTEM_PROMPT = """You are an elite short-form storyteller for viral YouTube Shorts & Instagram Reels (CurioCut).
-You write addictive, high-retention stories across 3 viral niches:
-1. SPICY RELATIONSHIP DRAMA: Infidelity exposed, petty wedding revenge, secret millionaire exes, wild family trust fund betrayals. (Make it gritty, dramatic, and emotionally charged).
-2. TRUE CRIME & HEISTS: Real people who beat the system, insane bank glitches, historical con artists, and legendary heists.
-3. INTERNET BRAINROT & ABSURDITY: Unhinged billionaire antics, ridiculous class-action lawsuits, algorithmic money hacks.
+PSYCHOLOGY_SYSTEM_PROMPT = """You are a top-tier viral YouTube Shorts & Instagram Reels creator.
+You write addictive, 100% human-sounding short-form stories across 3 viral niches:
+1. SPICY RELATIONSHIP DRAMA & REVENGE: Petty betrayals, secret bank accounts, wedding exposures, toxic family drama.
+2. WILD HEISTS & LOOPHOLES: Unbelievable true glitches, real people who outsmarted massive systems, crazy cons.
+3. INTERNET BRAINROT & ABSURDITY: Pettiest billionaire antics, weird lawsuits, insane algorithmic accidents.
 
-CORE ALGORITHM RULES:
-1. THE 2-SECOND PATTERN INTERRUPT (HOOK):
-   - Never begin with "Did you know", "Imagine", or "In this video".
-   - Start immediately with the shock factor, high stakes, or the unbelievable premise.
-   - Example: "Two days before their eighty-thousand dollar wedding, a groom discovered his fiancée had a second secret phone."
+HUMAN VOICE & TONE (CRITICAL):
+- Speak like a witty, charismatic 24-year-old friend telling a jaw-dropping story over late-night coffee.
+- Use natural spoken connectors: "Get this,", "Except here's the catch:", "Turns out,", "Bro literally...", "No seriously,", "Wait, it gets crazier:".
+- Sentences must be short, punchy, and conversational.
+- Spell out ALL numbers as spoken words ("eighty thousand dollars", "two in the morning", "five million").
 
-2. MICRO-TWISTS & ESCALATION:
-   - Every 2.5 seconds, advance the story with high tension.
-   - Use natural human connectors: "See,", "So,", "Except,", "Which meant,", "Turns out,".
-   - Write like a friend telling you the craziest gossip you've ever heard over coffee.
+STRICT NEGATIVE CONSTRAINTS (ZERO AI CLICHES):
+- NEVER write like a Wikipedia summary, textbook, or documentary narrator.
+- NEVER use these dead AI buzzwords or phrases (instant disqualification):
+  "little did he know", "in a shocking turn of events", "testament to", "against all odds", "unbeknownst", "the stage was set", "it wasn't long before", "leaving him with", "a lesson in", "delve", "bustling", "beacon", "tale of", "journey", "the unbelievable true case of".
+- Start IMMEDIATELY with the shocking premise in cut 1. Never start with "Did you know", "Imagine", or "In this video".
 
-3. CAMERA CUT SEGMENTATION:
-   - Each entry in 'lines' is ONE CAMERA CUT (1.5 to 3.0 seconds).
-   - Split sentences at natural breathing pauses.
-   - Target runtime: 40 to 60 seconds (80 to 130 words).
-   - Spell out all numbers as spoken words ("eighty thousand dollars", "twenty eleven", "five hundred").
+CAMERA CUT SEGMENTATION:
+- Each entry in 'lines' is ONE FAST CAMERA CUT (1.5 to 2.5 seconds, 8 to 15 spoken words).
+- Total lines: 8 to 12 cuts (target 40 to 55 seconds total runtime).
+- Do NOT include any 'caps' field. Only provide 'text'. The video engine automatically generates word-by-word synced captions for 100% of spoken words.
 
-4. CAPTION CHUNKS ('caps'):
-   - Break the line into 1 to 3 uppercase word chunks separated by pipes (|).
-   - Example: "HE DIMMED THE LIGHTS | AND PLAYED | THE FOOTAGE"
-
-5. JSON OUTPUT FORMAT:
-Output strictly valid JSON with no markdown formatting:
+JSON OUTPUT FORMAT:
+Strictly valid JSON:
 {
-  "title": "Short Catchy Viral Title (under 8 words)",
+  "title": "Short Catchy Viral Title (under 7 words)",
   "voice": "am_michael",
   "speed": 1.05,
   "lead": 0.3,
   "outro": 1.0,
   "gap": 0.18,
-  "music": "bounce",
+  "music": "tension",
   "lines": [
-    { "text": "Shocking hook cut...", "caps": "SHOCKING | HOOK CUT" },
-    { "text": "Escalation cut...", "caps": "ESCALATION | CUT" },
+    { "text": "Shocking hook cut..." },
+    { "text": "Escalation cut..." },
     ...
-    { "text": "The satisfying punchline or ironic loop...", "caps": "SATISFYING | PUNCHLINE", "gap": 0.3 }
+    { "text": "Satisfying punchline or twist...", "gap": 0.3 }
   ]
 }
 """
@@ -85,14 +81,16 @@ def save_history(title, topic, style=None):
     HISTORY_FILE.write_text(json.dumps(history[-50:], indent=2), encoding="utf-8")
 
 def call_gemini_api(prompt, api_key):
-    """Primary Brain: Direct HTTP call to Google Gemini 2.5 Flash REST API with smart 5xx retry."""
-    models = ["gemini-2.5-flash"]
+    """Primary Brain: Direct HTTP call to Google Gemini Flash REST API with progressive retry."""
+    models = ["gemini-3.8-flash", "gemini-flash-latest", "gemini-3.5-flash", "gemini-2.0-flash"]
     last_err = None
 
     try:
         from discord_notifier import notify_alert
     except Exception:
         def notify_alert(*a, **kw): pass
+
+    delays = [2, 4, 6]
 
     for m in models:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={api_key}"
@@ -109,8 +107,9 @@ def call_gemini_api(prompt, api_key):
             }
         }
 
-        # Try twice per model with 3s backoff on 5xx errors
-        for attempt in range(2):
+        # Up to 3 attempts per model with progressive delays
+        max_attempts = 3
+        for attempt in range(max_attempts):
             req = urllib.request.Request(
                 url,
                 data=json.dumps(payload).encode("utf-8"),
@@ -132,13 +131,14 @@ def call_gemini_api(prompt, api_key):
             except Exception as e:
                 last_err = e
                 err_str = str(e)
-                if ("503" in err_str or "500" in err_str or "502" in err_str or "504" in err_str) and attempt == 0:
-                    print(f"  Gemini transient {err_str} on {m}. Retrying in 3 seconds...", flush=True)
+                if ("503" in err_str or "500" in err_str or "502" in err_str or "504" in err_str or "429" in err_str) and attempt < (max_attempts - 1):
+                    delay = delays[min(attempt, len(delays) - 1)]
+                    print(f"  Gemini transient {err_str} on {m} (attempt {attempt + 1}/{max_attempts}). Retrying in {delay}s...", flush=True)
                     notify_alert(
-                        title="Gemini Transient Spike (5xx)",
-                        description=f"Gemini returned {err_str} on `{m}`. Pausing 3 seconds to retry before failing over..."
+                        title=f"Gemini Transient Spike ({err_str})",
+                        description=f"Gemini returned {err_str} on `{m}` (attempt {attempt + 1}/{max_attempts}). Retrying in {delay}s..."
                     )
-                    time.sleep(3)
+                    time.sleep(delay)
                     continue
                 break
 
@@ -208,7 +208,18 @@ def generate_script(topic=None):
         style = story_info["style"]
         niche = story_info["niche"]
 
-        user_prompt = f"Write a viral short for the '{niche.upper()}' niche based on this premise:\nTitle: {seed_title}\nStory: {premise}\n\nDeliver maximum emotional impact, escalating tension, and an unforgettable punchline. Spell all numbers as words."
+        user_prompt = (
+            f"Write an addictive, 100% human-sounding viral short based on this premise:\n"
+            f"Premise Topic: {seed_title}\n"
+            f"Facts / Event: {premise}\n\n"
+            f"CRITICAL STORYTELLING RULES:\n"
+            f"- DO NOT write a dry documentary or encyclopedia summary.\n"
+            f"- Completely dramatize this from the perspective of an energetic creator telling an unbelievable story to a friend.\n"
+            f"- Cut 1 MUST be a shocking pattern interrupt hook.\n"
+            f"- Every cut must advance the story with high tension.\n"
+            f"- Spell all numbers as words ('eighty thousand dollars', 'three in the morning').\n"
+            f"- Output strictly the JSON schema with 'text' lines (NO 'caps' field)."
+        )
 
     print("\n" + "="*60)
     print("   CURIO CUT DUAL-BRAIN SCRIPT ENGINE   ")
@@ -267,43 +278,15 @@ def generate_script(topic=None):
             "gap": 0.18,
             "music": "tension",
             "lines": [
-                {
-                    "text": "Two days before their eighty thousand dollar wedding, a groom found his fiancee's secret phone.",
-                    "caps": "TWO DAYS BEFORE | EIGHTY THOUSAND WEDDING | SECRET PHONE"
-                },
-                {
-                    "text": "Inside, he found months of messages between her and his own best man.",
-                    "caps": "MONTHS OF MESSAGES | WITH HIS | BEST MAN"
-                },
-                {
-                    "text": "Instead of confronting her, he quietly saved every single screenshot.",
-                    "caps": "DID NOT CONFRONT | SAVED EVERY | SCREENSHOT"
-                },
-                {
-                    "text": "He smiled through the entire ceremony, let the lavish reception proceed, and waited for his toast.",
-                    "caps": "SMILED THROUGH CEREMONY | WAITED FOR | HIS TOAST"
-                },
-                {
-                    "text": "When the microphone was handed to him, he asked the staff to dim the lights.",
-                    "caps": "TOOK THE MIC | DIM THE LIGHTS"
-                },
-                {
-                    "text": "He turned on the giant projector, broadcasting every text and hotel photo to all two hundred guests.",
-                    "caps": "GIANT PROJECTOR | BROADCASTING TEXTS | TO ALL GUESTS"
-                },
-                {
-                    "text": "The room went dead silent as the bride broke down in tears.",
-                    "caps": "ROOM DEAD SILENT | BRIDE BROKE DOWN"
-                },
-                {
-                    "text": "He handed the microphone to his ex-father-in-law, picked up the envelope of honeymoon cash,",
-                    "caps": "HANDED MIC OVER | TOOK HONEYMOON CASH"
-                },
-                {
-                    "text": "and booked a solo flight to the Bahamas.",
-                    "caps": "SOLO FLIGHT | TO THE BAHAMAS",
-                    "gap": 0.3
-                }
+                { "text": "Two days before their eighty thousand dollar wedding, a groom found his fiancee's secret phone." },
+                { "text": "Inside, he found months of messages between her and his own best man." },
+                { "text": "Instead of confronting her, he quietly saved every single screenshot." },
+                { "text": "He smiled through the entire ceremony, let the lavish reception proceed, and waited for his toast." },
+                { "text": "When the microphone was handed to him, he asked the staff to dim the lights." },
+                { "text": "He turned on the giant projector, broadcasting every text and hotel photo to all two hundred guests." },
+                { "text": "The room went dead silent as the bride broke down in tears." },
+                { "text": "He handed the microphone to his ex-father-in-law, picked up the envelope of honeymoon cash," },
+                { "text": "and booked a solo flight to the Bahamas.", "gap": 0.3 }
             ]
         }
 

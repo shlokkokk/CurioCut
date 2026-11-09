@@ -199,7 +199,7 @@ def fetch_from_wikipedia():
         if extract and not is_duplicate(title):
             print(f"  [Tier 1B] Sourced verified historical event from Wikipedia ({title})")
             return {
-                "title": f"The Unbelievable True Case of {title}",
+                "title": title,
                 "premise": extract[:700],
                 "source": "Wikipedia Knowledge REST API"
             }

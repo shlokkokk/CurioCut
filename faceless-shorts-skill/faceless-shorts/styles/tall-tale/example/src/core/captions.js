@@ -23,7 +23,9 @@ export function buildCaptions(script) {
     const ws = lineWords(i); if (!ws.length) return;
     const textWords = ln.text.split(/\s+/).filter(Boolean);
     const spoken = ws.length === textWords.length ? textWords : ws.map((w) => w.w);
-    if (ln.caps) {
+    const capsWords = ln.caps ? ln.caps.replace(/\|/g, ' ').split(/\s+/).filter(Boolean) : [];
+    const useCaps = ln.caps && capsWords.length >= Math.max(3, textWords.length * 0.75);
+    if (useCaps) {
       const nm = (w) => String(w).toLowerCase().replace(/[^a-z0-9']+/g, '');
       let from = 0;
       ln.caps.split('|').map((c) => c.trim()).filter(Boolean).forEach((c, j) => {
