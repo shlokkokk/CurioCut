@@ -1,11 +1,12 @@
-"""Master Autonomous Short Generator.
+"""Master Autonomous Short Generator for CurioCut.
 Orchestrates the entire pipeline end-to-end:
-1. Topic / Script Generation (Groq / Llama 3.3 70B or story bank)
-2. Kokoro AI Voiceover (voice.py)
-3. Whisper Millisecond Caption Timing (words.py)
-4. Procedural Sound FX & Music Synthesis (mix.py)
-5. Headless Chrome DevTools 3D Capture & FFmpeg Video Assembly
-6. Automated YouTube Shorts Publishing
+1. Dynamic rotation across curated 3D/2D animation styles
+2. Perfect synchronization between story voiceover, word captions, and 3D camera cuts
+3. Kokoro AI Voiceover (voice.py)
+4. Whisper Millisecond Caption Timing (words.py)
+5. Procedural Sound FX & Music Synthesis (mix.py)
+6. Headless Chrome DevTools 3D/2D Capture & FFmpeg Video Assembly
+7. Automated YouTube Shorts & Instagram Reels Publishing
 """
 import os
 import sys
@@ -21,13 +22,21 @@ FACELSS_HOME = Path.home() / ".faceless-shorts"
 BIN_DIR = FACELSS_HOME / "bin"
 VENV_PYTHON = FACELSS_HOME / "venv" / ("Scripts/python.exe" if os.name == 'nt' else "bin/python")
 
+ROTATION_STYLES = [
+    "tall-tale",     # 3D con/loophole story (e.g. The Girl Who Was Mailed to Grandma)
+    "deep-dive",     # Zack D. Films 3D anatomy/science (e.g. What Happens If You Hold Your Breath)
+    "night-file",    # Dark mystery / true crime (e.g. D.B. Cooper Hijacking)
+    "inside-out",    # 2D x-ray explainer (e.g. What If You Swallow Gum)
+    "paper-atlas",   # Cut paper history (e.g. The Great Fire of London)
+    "stick-story"    # Survival steps & life hacks (e.g. What If The Power Went Out)
+]
+
 def run_cmd(cmd, cwd=None, env=None):
     """Helper to run command with properly configured PATH."""
     merged_env = os.environ.copy()
     if env:
         merged_env.update(env)
     
-    # Prepend bin directory to PATH
     bin_str = str(BIN_DIR)
     if bin_str not in merged_env.get("PATH", ""):
         merged_env["PATH"] = f"{bin_str};{merged_env.get('PATH', '')}" if os.name == 'nt' else f"{bin_str}:{merged_env.get('PATH', '')}"
@@ -39,30 +48,58 @@ def run_cmd(cmd, cwd=None, env=None):
         raise RuntimeError(f"Command failed with code {res.returncode}")
     return res.stdout
 
-def build_short(topic=None, style="tall-tale", upload=False, privacy="public", draft=False):
+def get_next_style(history_file):
+    """Rotates through styles based on previous history."""
+    if history_file.exists():
+        try:
+            history = json.loads(history_file.read_text(encoding="utf-8"))
+            used_styles = [h.get("style") for h in history if h.get("style")]
+            if used_styles:
+                last_style = used_styles[-1]
+                idx = (ROTATION_STYLES.index(last_style) + 1) % len(ROTATION_STYLES) if last_style in ROTATION_STYLES else 0
+                return ROTATION_STYLES[idx]
+        except Exception:
+            pass
+    return ROTATION_STYLES[0]
+
+def build_short(topic=None, style=None, upload=False, privacy="public", draft=False):
     print("\n" + "="*70)
-    print("   CURIO CUT - AUTONOMOUS 3D SHORTS GENERATOR   ")
+    print("   CURIO CUT - AUTONOMOUS VIRAL SHORTS GENERATOR   ")
     print("="*70 + "\n")
 
-    # 1. Generate Script
-    print("[1/5] Writing viral script...")
-    from generate_script import generate_script
-    script_data = generate_script(topic)
+    history_file = WORKSPACE / "history.json"
+    if not style or style == "auto":
+        style = get_next_style(history_file)
+
+    template_dir = SKILL_DIR / "styles" / style / "example"
+    if not template_dir.exists():
+        raise FileNotFoundError(f"Style template not found: {template_dir}")
+
+    # Determine script
+    if topic:
+        print(f"[1/5] Writing viral script for topic: {topic}...")
+        from generate_script import generate_script
+        script_data = generate_script(topic)
+    else:
+        print(f"[1/5] Loading master synchronized script for style: '{style}'...")
+        script_path = template_dir / "script.json"
+        script_data = json.loads(script_path.read_text(encoding="utf-8"))
+
     title = script_data.get("title", "Untitled Short")
     print(f"Title: {title}")
+    print(f"Style: {style}")
 
-    # 2. Setup Project Folder from Style Template
+    # 2. Setup Project Folder
     slug = "".join(c if c.isalnum() else "_" for c in title.lower())[:30].strip("_")
     project_dir = WORKSPACE / "projects" / slug
     if project_dir.exists():
         shutil.rmtree(project_dir)
         
-    template_dir = SKILL_DIR / "styles" / style / "example"
     print(f"[2/5] Initializing '{style}' scene in {project_dir.name}...")
     shutil.copytree(template_dir, project_dir)
     
-    # Write custom script.json
-    (project_dir / "script.json").write_text(json.dumps(script_data, indent=2))
+    # Save script.json (preserving perfectly matched line cues)
+    (project_dir / "script.json").write_text(json.dumps(script_data, indent=2), encoding="utf-8")
     
     # Clean previous audio/renders
     for f in ["data/narration.wav", "data/mix.wav"]:
@@ -82,15 +119,23 @@ def build_short(topic=None, style="tall-tale", upload=False, privacy="public", d
     run_cmd([node_exe, "tools/capture.mjs", "cues"], cwd=project_dir)
     run_cmd([str(VENV_PYTHON), "tools/mix.py", "."], cwd=project_dir)
 
-    # 4. 3D Render (Headless Chrome + FFmpeg)
+    # 4. Render (Headless Chrome + FFmpeg)
     output_mp4 = project_dir / "renders" / f"{slug}.mp4"
-    print(f"[4/5] Rendering 3D animation (1080x1920) in headless Chrome...")
+    print(f"[4/5] Rendering animation (1080x1920) in headless Chrome...")
     capture_args = [node_exe, "tools/capture.mjs", "video", str(output_mp4)]
     if draft:
         capture_args.append("--draft")
         
     run_cmd(capture_args, cwd=project_dir)
     print(f"Render complete: {output_mp4.resolve()} ({output_mp4.stat().st_size / (1024*1024):.2f} MB)")
+
+    # Record history
+    try:
+        history = json.loads(history_file.read_text(encoding="utf-8")) if history_file.exists() else []
+        history.append({"title": title, "style": style})
+        history_file.write_text(json.dumps(history[-50:], indent=2), encoding="utf-8")
+    except Exception:
+        pass
 
     # 5. Multi-Platform Auto Upload (YouTube & Instagram)
     if upload:
@@ -112,7 +157,7 @@ def build_short(topic=None, style="tall-tale", upload=False, privacy="public", d
         # 5b. Instagram Reels
         ig_token = os.environ.get("INSTAGRAM_ACCESS_TOKEN")
         ig_id = os.environ.get("INSTAGRAM_ACCOUNT_ID")
-        if ig_token and ig_id:
+        if ig_token and ig_id and not ig_token.startswith("placeholder"):
             try:
                 print("\n  >> Uploading to Instagram Reels...")
                 from instagram_uploader import upload_reel
@@ -121,7 +166,7 @@ def build_short(topic=None, style="tall-tale", upload=False, privacy="public", d
             except Exception as e:
                 print(f"  Instagram Reels upload error: {e}")
         else:
-            print("  Skipping Instagram (INSTAGRAM_ACCESS_TOKEN / INSTAGRAM_ACCOUNT_ID not configured).")
+            print("  Skipping Instagram (INSTAGRAM_ACCESS_TOKEN not configured or placeholder).")
     else:
         print(f"[5/5] Video ready! (Pass --upload to publish to YouTube & Instagram).")
 
@@ -134,11 +179,10 @@ def build_short(topic=None, style="tall-tale", upload=False, privacy="public", d
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="CurioCut Autonomous Video Pipeline")
     parser.add_argument("--topic", help="Topic for the video", default=None)
-    parser.add_argument("--style", help="Video style (tall-tale, deep-dive, inside-out)", default="tall-tale")
+    parser.add_argument("--style", help="Video style (tall-tale, deep-dive, night-file, inside-out, paper-atlas, stick-story)", default="auto")
     parser.add_argument("--upload", action="store_true", help="Upload directly to YouTube Shorts & Instagram Reels")
     parser.add_argument("--privacy", default="public", choices=["public", "unlisted", "private"])
     parser.add_argument("--draft", action="store_true", help="Fast draft rendering mode")
     
     args = parser.parse_args()
     build_short(topic=args.topic, style=args.style, upload=args.upload, privacy=args.privacy, draft=args.draft)
-
