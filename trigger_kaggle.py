@@ -146,6 +146,14 @@ while time.time() - start_t < max_wait:
                 sys.exit(0)
             elif st == "error":
                 print(f"\n❌ Cloud Execution Error: {fail_msg}")
+                try:
+                    req_out = urllib.request.Request(out_url, headers={"Authorization": f"Bearer {KAGGLE_TOKEN}"})
+                    with urllib.request.urlopen(req_out, timeout=15) as resp_out:
+                        out_data = json.loads(resp_out.read().decode("utf-8"))
+                        print("\n--- CLOUD ERROR LOGS ---")
+                        print(out_data.get("log", ""))
+                except Exception:
+                    pass
                 sys.exit(1)
             elif st == "cancelAcknowledged":
                 print("\nJob cancelled.")

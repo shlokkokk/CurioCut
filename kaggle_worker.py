@@ -3,7 +3,7 @@ This script runs in Kaggle's cloud environment with:
 - NVIDIA Tesla T4 GPU (16 GB VRAM) / High-Speed Multi-Core vCPUs
 - 30 GB System RAM
 - Kokoro Neural TTS + Faster-Whisper millisecond subtitles
-- Automatic Chromium / Chrome environment setup
+- Automatic Google Chrome Headless GPU Acceleration
 - Direct Publishing to YouTube Shorts & Instagram Reels
 """
 import os
@@ -30,7 +30,7 @@ except Exception as e:
 
 WORKSPACE = Path("/kaggle/working/CurioCut")
 
-# Step 1: Clone repo
+# Step 1: Clone or pull repo
 if not WORKSPACE.exists():
     print("\n[1/4] Cloning CurioCut repository...")
     subprocess.run(["git", "clone", "https://github.com/shlokkokk/CurioCut.git", str(WORKSPACE)], check=True)
@@ -40,14 +40,18 @@ else:
 
 os.chdir(WORKSPACE)
 
-# Step 2: Ensure Chrome/Chromium is installed
-print("\n[2/4] Verifying Chrome / Chromium browser...")
-chrome_path = shutil.which("google-chrome") or shutil.which("chromium-browser") or shutil.which("chromium")
+# Step 2: Ensure Google Chrome is installed
+print("\n[2/4] Verifying Google Chrome...")
+chrome_path = shutil.which("google-chrome")
 if not chrome_path:
-    print("Installing Chromium browser via apt-get...")
-    subprocess.run(["apt-get", "update", "-y"], check=False)
-    subprocess.run(["apt-get", "install", "-y", "chromium-browser", "chromium"], check=False)
-    chrome_path = shutil.which("google-chrome") or shutil.which("chromium-browser") or shutil.which("chromium")
+    print("Downloading and installing official Google Chrome stable deb...")
+    try:
+        subprocess.run(["wget", "-q", "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"], check=True)
+        subprocess.run(["apt-get", "update", "-y"], check=False)
+        subprocess.run(["apt-get", "install", "-y", "./google-chrome-stable_current_amd64.deb"], check=True)
+    except Exception as e:
+        print(f"Chrome install warning: {e}")
+    chrome_path = shutil.which("google-chrome") or "/usr/bin/google-chrome"
 
 print(f"Browser ready: {chrome_path}")
 
