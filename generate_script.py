@@ -1,3 +1,4 @@
+
 """AI Viral Script & Retention Engineer for CurioCut.
 Autonomous multi-niche storyteller powered by Dual-Brain AI (Google Gemini + Groq LPU):
 - Primary Creative Brain: Google Gemini 2.5/2.0 Flash (100% human-like witty viral storytelling)

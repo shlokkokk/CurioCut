@@ -51,7 +51,7 @@ ROTATION_STYLES = [
 ]
 
 def run_cmd(cmd, cwd=None, env=None):
-    """Helper to run command with properly configured PATH."""
+    """Helper to run command with properly configured PATH and stream output live."""
     merged_env = os.environ.copy()
     if env:
         merged_env.update(env)
@@ -60,12 +60,32 @@ def run_cmd(cmd, cwd=None, env=None):
     if bin_str not in merged_env.get("PATH", ""):
         merged_env["PATH"] = f"{bin_str};{merged_env.get('PATH', '')}" if os.name == 'nt' else f"{bin_str}:{merged_env.get('PATH', '')}"
 
-    res = subprocess.run(cmd, cwd=cwd, env=merged_env, capture_output=True, text=True)
-    if res.returncode != 0:
-        print(f"Error executing {' '.join(cmd)}:")
-        print(res.stderr)
-        raise RuntimeError(f"Command failed with code {res.returncode}")
-    return res.stdout
+    if "FPS" not in merged_env:
+        merged_env["FPS"] = "24"
+    if "SOFTWARE_GL" not in merged_env and os.name != 'nt':
+        merged_env["SOFTWARE_GL"] = "1"
+    if "QS" not in merged_env and os.name != 'nt':
+        merged_env["QS"] = "&aa=1&shadow=1024"
+
+    process = subprocess.Popen(
+        cmd,
+        cwd=cwd,
+        env=merged_env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1
+    )
+    output_lines = []
+    if process.stdout:
+        for line in iter(process.stdout.readline, ''):
+            print(line, end='', flush=True)
+            output_lines.append(line)
+        process.stdout.close()
+    return_code = process.wait()
+    if return_code != 0:
+        raise RuntimeError(f"Command failed with code {return_code}: {' '.join(cmd)}")
+    return ''.join(output_lines)
 
 def get_next_style(history_file):
     """Rotates through styles based on previous history."""

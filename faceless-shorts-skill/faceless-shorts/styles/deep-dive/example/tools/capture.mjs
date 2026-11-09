@@ -111,7 +111,7 @@ else {
         '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', out], { stdio: ['pipe', 'inherit', 'inherit'] });
       const t0 = Date.now();
       for (let i = 0; i < n; i++) {
-        const framePromise = P.ev(FRAME(a0 + i / FPS, flags.has('--draft') ? 0.8 : 0.93));
+        const framePromise = P.ev(FRAME(a0 + i / FPS, flags.has('--draft') ? 0.8 : 0.85));
         const timeoutPromise = new Promise((_, rej) => setTimeout(() => rej(new Error(`Frame ${i} timed out after 10s`)), 10000));
         const b = jpg(await Promise.race([framePromise, timeoutPromise]));
         if (!ff.stdin.write(b)) await new Promise((r) => ff.stdin.once('drain', r));

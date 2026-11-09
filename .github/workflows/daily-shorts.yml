@@ -9,7 +9,7 @@ on:
 jobs:
   build-render-publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
 
     steps:
       - name: Checkout Code
@@ -66,6 +66,9 @@ jobs:
           DISCORD_WEBHOOK_IG_POSTS: ${{ secrets.DISCORD_WEBHOOK_IG_POSTS }}
           DISCORD_WEBHOOK_IG_ERRORS: ${{ secrets.DISCORD_WEBHOOK_IG_ERRORS }}
           PYTHONUNBUFFERED: "1"
+          FPS: "24"
+          SOFTWARE_GL: "1"
+          QS: "&aa=1&shadow=1024"
         run: |
           python make_short.py --upload --privacy public
 
