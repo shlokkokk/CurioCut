@@ -2,8 +2,11 @@ name: Daily CurioCut Shorts Auto-Poster
 
 on:
   schedule:
-    # Runs 2x daily: 7:30 UTC (1:00 PM IST) and 13:30 UTC (7:00 PM IST)
-    - cron: '30 7,13 * * *'
+    # Peak Engagement Timings (IST - Indian Standard Time):
+    # - Lunch Window: Triggers 12:30 PM IST (07:00 UTC) -> Video goes LIVE at 1:00 PM IST
+    # - Prime Evening Surge: Triggers 6:30 PM IST (13:00 UTC) -> Video goes LIVE at 7:00 PM IST
+    # (Accounts for ~25-30 mins Kaggle GPU generation/rendering time so videos publish at exact peak hour)
+    - cron: '0 7,13 * * *'
   workflow_dispatch: # Allows manual 1-click trigger from GitHub website anytime!
 
 jobs:
