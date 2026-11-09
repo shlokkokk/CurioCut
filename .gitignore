@@ -12,11 +12,28 @@ instagram_token.json
 ig_token.json
 meta_token.json
 
+# Internal planning & notes (untracked from git)
+TODO.md
+*.todo
+scratch/
+
+# Runtime state & generated script files
+script.json
+history.json
+
+# Logs & debug dumps
+*.log
+download.txt
+curiocut-gpu-engine.log
+
 # Generated video projects and heavy binary renders
 projects/
 renders/
 review/
 *.mp4
+*.mkv
+*.mov
+*.avi
 *.wav
 
 # Local virtual environment and binaries
@@ -24,6 +41,9 @@ review/
 venv/
 bin/
 tmp/
+temp/
+*.tmp
+*.bak
 
 # Python & Node caches
 __pycache__/
@@ -32,3 +52,4 @@ __pycache__/
 node_modules/
 .DS_Store
 Thumbs.db
+.cache/
