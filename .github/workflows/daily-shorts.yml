@@ -9,7 +9,7 @@ on:
 jobs:
   build-and-post:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - name: Checkout Code
@@ -65,7 +65,7 @@ jobs:
           SOFTWARE_GL: "1"
           FPS: "24"
         run: |
-          python make_short.py --upload --privacy public
+          python make_short.py --upload --privacy public --draft
 
       - name: Upload Finished MP4 as Build Artifact
         uses: actions/upload-artifact@v4
