@@ -3,7 +3,7 @@ This script runs in Kaggle's cloud environment with:
 - NVIDIA Tesla T4 GPU (16 GB VRAM) / High-Speed Multi-Core vCPUs
 - 30 GB System RAM
 - Kokoro Neural TTS + Faster-Whisper millisecond subtitles
-- Automatic Google Chrome Headless GPU Acceleration
+- Automatic Google Chrome Headless GPU Acceleration (via Xvfb + Hardware WebGL)
 - Direct Publishing to YouTube Shorts & Instagram Reels
 """
 import os
@@ -17,9 +17,11 @@ print("   CURIO CUT - AUTONOMOUS CLOUD EXECUTION WORKER   ")
 print("="*70 + "\n")
 
 # Check GPU availability
+has_gpu = False
 try:
     smi = subprocess.run(["nvidia-smi"], capture_output=True, text=True)
     if smi.returncode == 0:
+        has_gpu = True
         print("🚀 NVIDIA Hardware GPU Detected:")
         for line in smi.stdout.splitlines()[2:9]:
             print(f"   {line}")
@@ -40,18 +42,21 @@ else:
 
 os.chdir(WORKSPACE)
 
-# Step 2: Ensure Google Chrome is installed
-print("\n[2/4] Verifying Google Chrome...")
+# Step 2: Ensure Google Chrome and Xvfb Virtual Display are installed
+print("\n[2/4] Verifying Google Chrome and Virtual GPU Display...")
 chrome_path = shutil.which("google-chrome")
 if not chrome_path:
     print("Downloading and installing official Google Chrome stable deb...")
     try:
         subprocess.run(["wget", "-q", "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"], check=True)
         subprocess.run(["apt-get", "update", "-y"], check=False)
-        subprocess.run(["apt-get", "install", "-y", "./google-chrome-stable_current_amd64.deb"], check=True)
+        subprocess.run(["apt-get", "install", "-y", "./google-chrome-stable_current_amd64.deb", "xvfb"], check=True)
     except Exception as e:
-        print(f"Chrome install warning: {e}")
+        print(f"Package install notice: {e}")
     chrome_path = shutil.which("google-chrome") or "/usr/bin/google-chrome"
+else:
+    if not shutil.which("xvfb-run"):
+        subprocess.run(["apt-get", "install", "-y", "xvfb"], check=False)
 
 print(f"Browser ready: {chrome_path}")
 
@@ -69,9 +74,13 @@ if yt_token and not (WORKSPACE / "youtube_token.json").exists():
     (WORKSPACE / "youtube_token.json").write_text(yt_token, encoding="utf-8")
     print("Restored YouTube authentication token.")
 
-# Step 4: Run autonomous 3D short generation & upload
-print("\n[4/4] Starting 3D short generation and publishing...")
-cmd = [sys.executable, "make_short.py", "--upload", "--privacy", "public"]
+# Step 4: Run autonomous 3D short generation & upload with Hardware GPU acceleration
+print("\n[4/4] Starting 3D short generation and publishing with GPU acceleration...")
+if shutil.which("xvfb-run"):
+    cmd = ["xvfb-run", "-s", "-screen 0 1080x1920x24 -ac +extension GLX", sys.executable, "make_short.py", "--upload", "--privacy", "public"]
+else:
+    cmd = [sys.executable, "make_short.py", "--upload", "--privacy", "public"]
+
 res = subprocess.run(cmd)
 
 if res.returncode == 0:
