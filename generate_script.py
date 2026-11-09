@@ -8,6 +8,7 @@ Autonomous multi-niche storyteller powered by Dual-Brain AI (Google Gemini + Gro
 import os
 import sys
 import json
+import time
 import random
 import re
 import urllib.request
@@ -84,9 +85,14 @@ def save_history(title, topic, style=None):
     HISTORY_FILE.write_text(json.dumps(history[-50:], indent=2), encoding="utf-8")
 
 def call_gemini_api(prompt, api_key):
-    """Primary Brain: Direct HTTP call to Google Gemini Flash REST API (Zero dependencies)."""
-    models = ["gemini-flash-latest", "gemini-2.5-flash-lite", "gemini-3.8-flash"]
+    """Primary Brain: Direct HTTP call to Google Gemini Flash REST API with smart 5xx retry."""
+    models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
     last_err = None
+
+    try:
+        from discord_notifier import notify_alert
+    except Exception:
+        def notify_alert(*a, **kw): pass
 
     for m in models:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={api_key}"
@@ -103,23 +109,40 @@ def call_gemini_api(prompt, api_key):
             }
         }
 
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-            method="POST"
-        )
+        # Try twice per model with 3s backoff on 5xx errors
+        for attempt in range(2):
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
 
-        try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                text = data["candidates"][0]["content"]["parts"][0]["text"]
-                return json.loads(text)
-        except Exception as e:
-            last_err = e
-            continue
+            try:
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    text = data["candidates"][0]["content"]["parts"][0]["text"]
+                    res = json.loads(text)
+                    if attempt > 0:
+                        notify_alert(
+                            title="Gemini Recovered",
+                            description=f"Gemini successfully recovered on attempt {attempt + 1} ({m})!"
+                        )
+                    return res
+            except Exception as e:
+                last_err = e
+                err_str = str(e)
+                if ("503" in err_str or "500" in err_str or "502" in err_str or "504" in err_str) and attempt == 0:
+                    print(f"  Gemini transient {err_str} on {m}. Retrying in 3 seconds...", flush=True)
+                    notify_alert(
+                        title="Gemini Transient Spike (5xx)",
+                        description=f"Gemini returned {err_str} on `{m}`. Pausing 3 seconds to retry before failing over..."
+                    )
+                    time.sleep(3)
+                    continue
+                break
 
-    raise RuntimeError(f"Gemini API error: {last_err}")
+    raise RuntimeError(f"Gemini API error after retries: {last_err}")
 
 def call_groq_api(prompt, api_key):
     """Backup Brain: Direct HTTP call to Groq LPU API using urllib (Zero dependencies)."""
@@ -214,12 +237,27 @@ def generate_script(topic=None):
             print("⚡ [Backup Brain] Crafting script with Groq LPU (Llama 3.3 70B)...")
             data = call_groq_api(user_prompt, groq_key)
             print("  ✓ Successfully crafted with Groq LPU!")
+            try:
+                from discord_notifier import notify_alert
+                notify_alert("Groq Backup Brain Succeeded", f"Groq Llama 3.3 70B successfully crafted the viral script: **{seed_title}**.")
+            except Exception:
+                pass
         except Exception as e:
             print(f"  Groq note: {e}. Switching to Offline Vault...")
+            try:
+                from discord_notifier import notify_alert
+                notify_alert("Groq Unavailable", f"Groq returned error ({e}). Activating Plan C: Offline Master Vault.")
+            except Exception:
+                pass
 
     # 3. Guaranteed Offline Fallback (Vault)
     if not data or not data.get("lines"):
         print("🏛️ [Offline Vault] Loading guaranteed master story...")
+        try:
+            from discord_notifier import notify_alert
+            notify_alert("Offline Vault Engaged", f"All AI APIs offline. Loaded verified master story: **{seed_title}**.")
+        except Exception:
+            pass
         data = {
             "title": seed_title,
             "voice": "am_michael",
