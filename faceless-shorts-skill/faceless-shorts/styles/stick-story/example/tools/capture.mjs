@@ -40,8 +40,10 @@ function serve(port = 0) {
 async function openPage(port) {
   if (!CHROME) throw new Error('Chrome not found: install Google Chrome or set CHROME=/path/to/chrome');
   const prof = fs.mkdtempSync(path.join(os.tmpdir(), 'fs-chrome-'));
-  const chrome = spawn(CHROME, ['--headless=new', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu-sandbox', '--enable-webgl', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--enable-accelerated-2d-canvas', '--use-gl=angle', '--use-angle=gl', '--remote-debugging-port=0', `--user-data-dir=${prof}`, '--no-first-run', '--no-default-browser-check',
-    '--hide-scrollbars', '--window-size=1080,1920', ...(process.env.SOFTWARE_GL ? ['--use-angle=swiftshader'] : []), '--disable-background-timer-throttling', '--disable-renderer-backgrounding', 'about:blank'], { stdio: 'inherit' });
+  const useGpu = process.env.GPU_ACCEL === '1';
+  const glFlags = process.env.SOFTWARE_GL ? ['--use-angle=swiftshader'] : (useGpu ? ['--use-gl=angle', '--use-angle=gl-egl'] : ['--use-gl=angle', '--use-angle=gl']);
+  const chrome = spawn(CHROME, ['--headless=new', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu-sandbox', '--enable-webgl', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--enable-accelerated-2d-canvas', ...glFlags, '--remote-debugging-port=0', `--user-data-dir=${prof}`, '--no-first-run', '--no-default-browser-check',
+    '--hide-scrollbars', '--window-size=1080,1920', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', 'about:blank'], { stdio: 'inherit' });
   let dbg;
   for (let i = 0; i < 200 && !dbg; i++) { try { dbg = fs.readFileSync(path.join(prof, 'DevToolsActivePort'), 'utf8').split('\n')[0].trim(); } catch { await sleep(100); } }
   if (!dbg) throw new Error('Chrome did not start');

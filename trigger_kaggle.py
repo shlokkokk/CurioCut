@@ -34,7 +34,14 @@ secrets_to_pass = {
     "GEMINI_API_KEY": os.environ.get("GEMINI_API_KEY", ""),
     "INSTAGRAM_ACCOUNT_ID": os.environ.get("INSTAGRAM_ACCOUNT_ID", ""),
     "INSTAGRAM_ACCESS_TOKEN": os.environ.get("INSTAGRAM_ACCESS_TOKEN", ""),
-    "YOUTUBE_TOKEN_JSON": os.environ.get("YOUTUBE_TOKEN_JSON", "")
+    "YOUTUBE_TOKEN_JSON": os.environ.get("YOUTUBE_TOKEN_JSON", ""),
+    "DISCORD_WEBHOOK_ENGINE_LOGS": os.environ.get("DISCORD_WEBHOOK_ENGINE_LOGS", ""),
+    "DISCORD_WEBHOOK_ALERTS": os.environ.get("DISCORD_WEBHOOK_ALERTS", ""),
+    "DISCORD_WEBHOOK_ERRORS": os.environ.get("DISCORD_WEBHOOK_ERRORS", ""),
+    "DISCORD_WEBHOOK_YT_POSTS": os.environ.get("DISCORD_WEBHOOK_YT_POSTS", ""),
+    "DISCORD_WEBHOOK_YT_ERRORS": os.environ.get("DISCORD_WEBHOOK_YT_ERRORS", ""),
+    "DISCORD_WEBHOOK_IG_POSTS": os.environ.get("DISCORD_WEBHOOK_IG_POSTS", ""),
+    "DISCORD_WEBHOOK_IG_ERRORS": os.environ.get("DISCORD_WEBHOOK_IG_ERRORS", ""),
 }
 
 yt_file = Path(__file__).resolve().parent / "youtube_token.json"
@@ -48,6 +55,13 @@ os.environ["GEMINI_API_KEY"] = {repr(secrets_to_pass["GEMINI_API_KEY"])}
 os.environ["INSTAGRAM_ACCOUNT_ID"] = {repr(secrets_to_pass["INSTAGRAM_ACCOUNT_ID"])}
 os.environ["INSTAGRAM_ACCESS_TOKEN"] = {repr(secrets_to_pass["INSTAGRAM_ACCESS_TOKEN"])}
 os.environ["YOUTUBE_TOKEN_JSON"] = {repr(secrets_to_pass["YOUTUBE_TOKEN_JSON"])}
+os.environ["DISCORD_WEBHOOK_ENGINE_LOGS"] = {repr(secrets_to_pass["DISCORD_WEBHOOK_ENGINE_LOGS"])}
+os.environ["DISCORD_WEBHOOK_ALERTS"] = {repr(secrets_to_pass["DISCORD_WEBHOOK_ALERTS"])}
+os.environ["DISCORD_WEBHOOK_ERRORS"] = {repr(secrets_to_pass["DISCORD_WEBHOOK_ERRORS"])}
+os.environ["DISCORD_WEBHOOK_YT_POSTS"] = {repr(secrets_to_pass["DISCORD_WEBHOOK_YT_POSTS"])}
+os.environ["DISCORD_WEBHOOK_YT_ERRORS"] = {repr(secrets_to_pass["DISCORD_WEBHOOK_YT_ERRORS"])}
+os.environ["DISCORD_WEBHOOK_IG_POSTS"] = {repr(secrets_to_pass["DISCORD_WEBHOOK_IG_POSTS"])}
+os.environ["DISCORD_WEBHOOK_IG_ERRORS"] = {repr(secrets_to_pass["DISCORD_WEBHOOK_IG_ERRORS"])}
 # ----------------------------------------------------
 """
 
@@ -121,9 +135,9 @@ while time.time() - start_t < max_wait:
             
             print(f"  [{elapsed}s] Cloud Worker Status: {st.upper()}")
             
-            # If GPU is queued for > 45s (e.g. unverified phone or GPU queue busy), switch to instant CPU
-            if gpu_requested and st == "queued" and (time.time() - queued_start) > 45:
-                print("\n⚠️ GPU queue is busy or pending SMS activation. Seamlessly failing over to instant Cloud Compute...")
+            # Keep waiting for GPU (Kaggle batch GPU queue normally takes 2-8 minutes)
+            if gpu_requested and st == "queued" and (time.time() - queued_start) > 900:
+                print("\n⚠️ GPU queue reached 15-minute wait ceiling. Failing over to Cloud Compute...")
                 gpu_requested = False
                 push_kernel(enable_gpu=False)
                 queued_start = time.time()

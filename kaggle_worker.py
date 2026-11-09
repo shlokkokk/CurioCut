@@ -26,6 +26,8 @@ try:
         print("🚀 NVIDIA Hardware GPU Detected:", flush=True)
         for line in smi.stdout.splitlines()[2:9]:
             print(f"   {line}", flush=True)
+        os.environ["GPU_ACCEL"] = "1"
+        os.environ["NVIDIA_DRIVER_CAPABILITIES"] = "compute,utility,graphics"
     else:
         print("ℹ️ Running in High-Speed Multi-Core Cloud CPU mode.", flush=True)
 except Exception as e:
@@ -53,7 +55,7 @@ if not chrome_path:
     try:
         subprocess.run(["wget", "-q", "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"], check=True, timeout=60)
         subprocess.run(["apt-get", "update", "-y"] + apt_flags, check=False, timeout=60)
-        subprocess.run(["apt-get", "install", "-y"] + apt_flags + ["./google-chrome-stable_current_amd64.deb"], check=True, timeout=120)
+        subprocess.run(["apt-get", "install", "-y"] + apt_flags + ["./google-chrome-stable_current_amd64.deb", "libegl1", "libgles2"], check=True, timeout=120)
     except Exception as e:
         print(f"Chrome install notice: {e}", flush=True)
     chrome_path = shutil.which("google-chrome") or "/usr/bin/google-chrome"
