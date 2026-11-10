@@ -27,7 +27,8 @@ WEBHOOKS = {
     "yt_posts": os.environ.get("DISCORD_WEBHOOK_YT_POSTS") or "https://discord.com/api/webhooks/1569381485025435760/Gkc9ZGQ6b2kpVQTYiQ4fR6h3NL2WpnTNNymxkwiEB5eHG52o3pJoOJA7masxct7etuFz",
     "yt_errors": os.environ.get("DISCORD_WEBHOOK_YT_ERRORS") or "https://discord.com/api/webhooks/1569381675073405080/eekyLdpF9QWgjnGW91Bi8xAhVDLf5qHQFoqTrXGg7tcUHz8X5e5kF0tO68hAb9wUiW_S",
     "ig_posts": os.environ.get("DISCORD_WEBHOOK_IG_POSTS") or "https://discord.com/api/webhooks/1569382221993738343/11uYCVuDz1mMxABvFySddv07Q9dUyGAJqL3lEX1_waXHfqmHZwtr_3Rk34Y7TsZFGRmj",
-    "ig_errors": os.environ.get("DISCORD_WEBHOOK_IG_ERRORS") or "https://discord.com/api/webhooks/1569382727847780483/Dk-DsPnxZAiKoSa-ZDEblzw7KVeDHgbAxNAnyr1xW5g2qzssyTpFMHmuhvPFd_DaN21r"
+    "ig_errors": os.environ.get("DISCORD_WEBHOOK_IG_ERRORS") or "https://discord.com/api/webhooks/1569382727847780483/Dk-DsPnxZAiKoSa-ZDEblzw7KVeDHgbAxNAnyr1xW5g2qzssyTpFMHmuhvPFd_DaN21r",
+    "dms_sent": os.environ.get("DISCORD_WEBHOOK_DMS_SENT") or "https://discord.com/api/webhooks/1569784587742216335/V-pVPv5YdzPtgNpcNHmn9KEvgPz6flbFIdcwAwUDsbBXYm7XSrskjnxvfG48mIJFCyPQ"
 }
 
 def send_embed(webhook_url, embed_payload):

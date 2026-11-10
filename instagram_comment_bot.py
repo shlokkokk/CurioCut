@@ -185,12 +185,8 @@ def process_reels_comments(default_keyword="JARVIS", default_url="https://github
                     send_private_dm_reply(c_id, dm_msg)
                     print(f"    ✓ Private DM sent successfully!")
                     try:
-                        # Send rich notification to #dms-sent with a direct button to the Reel
-                        bot_token = os.environ.get("DISCORD_BOT_TOKEN")
-                        if not bot_token or bot_token.startswith("placeholder"):
-                            p = Path(__file__).resolve().parent / ".discord_token"
-                            bot_token = p.read_text(encoding="utf-8").strip() if p.exists() else ".".join(["MTU2OTc0NzczNTcyMzI0OTczNQ", "GJ6qW0", "yW95EFsWYvdw6E9AHynAtA02VAso9IUKOwY37s"])
-                        dms_ch_id = "1569750975189876858"
+                        # Send rich notification to #dms-sent using webhook
+                        from discord_notifier import WEBHOOKS, send_embed
                         dm_embed = {
                             "title": "Direct Message Sent",
                             "description": f"@{c_user} commented `{c_text}` and received the resource link.",
@@ -202,20 +198,7 @@ def process_reels_comments(default_keyword="JARVIS", default_url="https://github
                             ],
                             "footer": {"text": "Instagram Growth Engine"}
                         }
-                        components = []
-                        if permalink:
-                            components = [{
-                                "type": 1,
-                                "components": [
-                                    {"type": 2, "style": 5, "label": "View Reel on Instagram", "url": permalink}
-                                ]
-                            }]
-                        req_dc = urllib.request.Request(
-                            f"https://discord.com/api/v10/channels/{dms_ch_id}/messages",
-                            data=json.dumps({"embeds": [dm_embed], "components": components}).encode("utf-8"),
-                            headers={"Authorization": f"Bot {bot_token}", "Content-Type": "application/json", "User-Agent": "CurioCut-Bot"}
-                        )
-                        urllib.request.urlopen(req_dc, timeout=10)
+                        send_embed(WEBHOOKS["dms_sent"], dm_embed)
                     except Exception as e_dc:
                         print(f"    Notice: Discord notification response: {e_dc}")
                 except Exception as e:
