@@ -428,6 +428,21 @@ async function handleInstagramWebhook(request, env) {
           }
           await markCommentProcessed(commentId);
 
+          // Verify live Meta Graph API state to guarantee no duplicate replies exist
+          try {
+            const checkUrl = `https://graph.facebook.com/v21.0/${commentId}/replies?access_token=${token}`;
+            const checkRes = await fetch(checkUrl);
+            if (checkRes.ok) {
+              const checkData = await checkRes.json();
+              if (checkData && checkData.data && checkData.data.length > 0) {
+                console.log(`[Instagram Webhook] Comment ${commentId} already has ${checkData.data.length} existing replies on Meta. Skipping duplicate.`);
+                continue;
+              }
+            }
+          } catch (eCheck) {
+            console.error("Meta reply check notice:", eCheck);
+          }
+
           // Resolve reel metadata and Claude Skill status
           let reelTitle = "Underground AI Exploit";
           let reelKeyword = text.toUpperCase();

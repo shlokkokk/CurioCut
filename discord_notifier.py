@@ -32,6 +32,18 @@ WEBHOOKS = {
     "live_progress": os.environ.get("DISCORD_WEBHOOK_LIVE_PROGRESS") or "https://discord.com/api/webhooks/1569785063535546450/7MZUMEDK1u7okE7a_a5YsstKQ-bN2GFai2Ww2nHDAG4HlBwD8Gg8FSOiQ-eixJyk0aBb"
 }
 
+CHANNELS = {
+    "engine_logs": "1569380705539072121",
+    "alerts": "1569381025539162294",
+    "errors": "1569381210696712342",
+    "yt_posts": "1569381438812590131",
+    "yt_errors": "1569381640575254701",
+    "ig_posts": "1569382175185305601",
+    "ig_errors": "1569382586101403768",
+    "dms_sent": "1569750975189876858",
+    "live_progress": "1569750972975288441"
+}
+
 def make_button(label, url, style=5):
     """Creates a Discord Link Button component (Style 5 = Link Button)."""
     return {
@@ -50,9 +62,44 @@ def make_action_row(buttons):
         "components": buttons[:5]
     }]
 
-def send_embed(webhook_url, embed_payload, components=None):
-    """Sends a Discord webhook embed with retry logic and interactive components."""
-    if not webhook_url or not webhook_url.startswith("https://discord.com/api/webhooks/"):
+def send_embed(webhook_or_channel, embed_payload, components=None):
+    """Sends a Discord embed with interactive components.
+    Routes through Discord Bot API when token is available to ensure action buttons render,
+    falling back seamlessly to standard webhooks if needed.
+    """
+    bot_token = get_discord_bot_token()
+    channel_id = None
+    if webhook_or_channel in CHANNELS:
+        channel_id = CHANNELS[webhook_or_channel]
+    elif isinstance(webhook_or_channel, str) and webhook_or_channel.startswith("https://discord.com/api/webhooks/"):
+        for k, wh in WEBHOOKS.items():
+            if webhook_or_channel == wh and k in CHANNELS:
+                channel_id = CHANNELS[k]
+                break
+
+    # If we have bot token & channel ID, use Bot API (renders buttons natively)
+    if bot_token and channel_id:
+        try:
+            payload = {"embeds": [embed_payload]}
+            if components:
+                payload["components"] = components
+            data = json.dumps(payload).encode("utf-8")
+            url = f"https://discord.com/api/v10/channels/{channel_id}/messages"
+            headers = {
+                "Authorization": f"Bot {bot_token}",
+                "Content-Type": "application/json",
+                "User-Agent": "CurioCut-Bot"
+            }
+            req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                if resp.status in (200, 201):
+                    return True
+        except Exception as e:
+            print(f"Notice: Bot API post noticed ({e}), falling back to webhook...")
+
+    # Fallback to standard webhook URL
+    webhook_url = WEBHOOKS.get(webhook_or_channel, webhook_or_channel)
+    if not webhook_url or not str(webhook_url).startswith("https://discord.com/api/webhooks/"):
         return False
         
     payload = {"embeds": [embed_payload]}
