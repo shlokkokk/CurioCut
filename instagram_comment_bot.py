@@ -12,6 +12,7 @@ import json
 import time
 import urllib.request
 import urllib.parse
+import re
 from pathlib import Path
 
 ENV_FILE = Path(__file__).resolve().parent / ".env"
@@ -230,5 +231,5 @@ def process_reels_comments(default_keyword="JARVIS", default_url="https://github
 if __name__ == "__main__":
     kw = sys.argv[1] if len(sys.argv) > 1 else "JARVIS"
     url = sys.argv[2] if len(sys.argv) > 2 else "https://github.com/open-jarvis/OpenJarvis"
-    process_reels_comments(keyword=kw, resource_url=url)
+    process_reels_comments(default_keyword=kw, default_url=url)
 
