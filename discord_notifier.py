@@ -55,6 +55,49 @@ def send_embed(webhook_url, embed_payload, components=None):
         print(f"Notice: Failed to dispatch Discord notification: {e}")
         return False
 
+def post_webhook_message(webhook_url, embed_payload, components=None):
+    """Sends a Discord webhook message with wait=true and returns the message ID."""
+    if not webhook_url or not webhook_url.startswith("https://discord.com/api/webhooks/"):
+        return None
+    payload = {"embeds": [embed_payload]}
+    if components:
+        payload["components"] = components
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        webhook_url + "?wait=true",
+        data=data,
+        headers={"Content-Type": "application/json", "User-Agent": "CurioCut-Notifier/1.0"},
+        method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            return data.get("id")
+    except Exception as e:
+        print(f"Notice: Failed to post webhook message: {e}")
+        return None
+
+def patch_webhook_message(webhook_url, message_id, embed_payload, components=None):
+    """In-place updates an existing Discord webhook message."""
+    if not webhook_url or not message_id:
+        return False
+    payload = {"embeds": [embed_payload]}
+    if components:
+        payload["components"] = components
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        f"{webhook_url}/messages/{message_id}",
+        data=data,
+        headers={"Content-Type": "application/json", "User-Agent": "CurioCut-Notifier/1.0"},
+        method="PATCH"
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return resp.status in (200, 204)
+    except Exception as e:
+        print(f"Notice: Failed to patch webhook message: {e}")
+        return False
+
 def notify_engine(title, description, fields=None, color=0x2B2D31):
     """Sends clean updates to #engine-logs."""
     embed = {

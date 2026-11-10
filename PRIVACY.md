@@ -16,3 +16,4 @@ Users may request data deletion or opt-out at any time by sending a message to @
 
 ## 4. Contact
 For any privacy questions or inquiries: contact@curiocut.internal
+

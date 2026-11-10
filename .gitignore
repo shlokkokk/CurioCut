@@ -21,6 +21,7 @@ scratch/
 # Runtime state & generated script files
 script.json
 history.json
+comment_bot_history.json
 
 # Logs & debug dumps
 *.log

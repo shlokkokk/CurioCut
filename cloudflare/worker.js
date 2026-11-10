@@ -394,55 +394,107 @@ async function handleInstagramWebhook(request, env) {
           // Ignore own bot comments
           if (comment.from?.id === accountId) continue;
 
-          // 1. Post Public Reply on Reel
-          const replyUrl = `https://graph.facebook.com/v21.0/${commentId}/replies?message=${encodeURIComponent("Check your DMs! Sent you the full repo link and setup prompt 🚀")}&access_token=${token}`;
-          await fetch(replyUrl, { method: "POST" });
-
-          // 2. Send Private DM with link
-          const dmUrl = `https://graph.facebook.com/v21.0/${accountId}/messages`;
-          const dmPayload = {
-            recipient: { comment_id: commentId },
-            message: {
-              text: `Here is the direct open-source repository link and setup guide for the tool you requested:\n\n🔗 Link: https://github.com/open-jarvis/OpenJarvis\n\nSetup prompt: Clone the repo or ask Claude Code to install it for you.\n\nFollow @curiocutt for daily underground AI exploits!`
-            }
-          };
-          await fetch(dmUrl, {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${token}`,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify(dmPayload)
-          });
-
-          // 3. Post Discord Notification with interactive button
-          const embedPayload = {
-            embeds: [{
-              title: "Direct Message Auto-Sent",
-              description: `@${user} commented \`${text}\` and received the resource link.`,
-              color: 0xEC4899,
-              fields: [
-                { name: "User", value: `@${user}`, inline: true },
-                { name: "Keyword", value: text.toUpperCase(), inline: true }
-              ],
-              footer: { text: "24/7 Cloudflare Edge Auto-Responder" }
-            }],
+          const reelUrl = `https://www.instagram.com/reel/${comment.media?.id || ""}`;
+          const components = [{
+            type: 1,
             components: [{
-              type: 1,
-              components: [{
-                type: 2,
-                style: 5,
-                label: "View Reel on Instagram",
-                url: `https://www.instagram.com/reel/${comment.media?.id || ""}`
-              }]
+              type: 2,
+              style: 5,
+              label: "View Reel on Instagram",
+              url: reelUrl
             }]
-          };
+          }];
 
-          await fetch(dmsWebhook, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(embedPayload)
-          });
+          // Stage 1: Immediately post initial notification to Discord
+          let msgId = null;
+          try {
+            const initPayload = {
+              embeds: [{
+                title: "New Comment Detected",
+                description: `@${user} commented on your Reel:`,
+                color: 0x3B82F6,
+                fields: [
+                  { name: "User", value: `@${user}`, inline: true },
+                  { name: "Comment", value: text, inline: true },
+                  { name: "Status", value: "⏳ Sending DM & Public Reply...", inline: false }
+                ],
+                footer: { text: "24/7 Cloudflare Edge Auto-Responder" }
+              }],
+              components
+            };
+            const postRes = await fetch(`${dmsWebhook}?wait=true`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(initPayload)
+            });
+            if (postRes.ok) {
+              const msgData = await postRes.json();
+              msgId = msgData.id;
+            }
+          } catch (eInit) {
+            console.error("Initial Discord post error:", eInit);
+          }
+
+          // Stage 2: Send public reply on Reel
+          let publicOk = false;
+          try {
+            const replyUrl = `https://graph.facebook.com/v21.0/${commentId}/replies?message=${encodeURIComponent("Check your DMs! Sent you the full repo link and setup prompt 🚀")}&access_token=${token}`;
+            const rRes = await fetch(replyUrl, { method: "POST" });
+            publicOk = rRes.ok;
+          } catch (eRep) {
+            console.error("Public reply error:", eRep);
+          }
+
+          // Stage 3: Send private DM with link
+          let dmOk = false;
+          try {
+            const dmUrl = `https://graph.facebook.com/v21.0/${accountId}/messages`;
+            const dmPayload = {
+              recipient: { comment_id: commentId },
+              message: {
+                text: `Here is the direct open-source repository link and setup guide for the tool you requested:\n\n🔗 Link: https://github.com/open-jarvis/OpenJarvis\n\nSetup prompt: Clone the repo or ask Claude Code to install it for you.\n\nFollow @curiocutt for daily underground AI exploits!`
+              }
+            };
+            const dmRes = await fetch(dmUrl, {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify(dmPayload)
+            });
+            dmOk = dmRes.ok;
+          } catch (eDm) {
+            console.error("Private DM error:", eDm);
+          }
+
+          // Stage 4: In-place update the exact same Discord message to Delivered
+          if (msgId) {
+            try {
+              const statusStr = dmOk ? "✓ Public reply posted & private DM delivered" : "⚠️ Public reply posted, private DM restricted";
+              const deliveredPayload = {
+                embeds: [{
+                  title: dmOk ? "Direct Message Delivered" : "Direct Message Restricted",
+                  description: dmOk ? `@${user} commented \`${text}\` and received the resource link.` : `@${user} commented \`${text}\`, but DMs are closed.`,
+                  color: dmOk ? 0x10B981 : 0xF59E0B,
+                  fields: [
+                    { name: "User", value: `@${user}`, inline: true },
+                    { name: "Keyword", value: text.toUpperCase(), inline: true },
+                    { name: "Status", value: statusStr, inline: false }
+                  ],
+                  footer: { text: "24/7 Cloudflare Edge Auto-Responder" }
+                }],
+                components
+              };
+              await fetch(`${dmsWebhook}/messages/${msgId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(deliveredPayload)
+              });
+            } catch (ePatch) {
+              console.error("Discord in-place patch error:", ePatch);
+            }
+          }
         }
       }
     }

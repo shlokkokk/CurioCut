@@ -166,56 +166,82 @@ def process_reels_comments(default_keyword="JARVIS", default_url="https://github
                 print(f"\n[!] MATCH FOUND on {permalink}:")
                 print(f"    User: @{c_user} | Comment: '{c_text}'")
 
-                # 1. Send public reply with follow psychological hook
+                # Step 1: Immediately post initial Discord notification with button
+                msg_id = None
+                components = []
+                if permalink:
+                    components = [{
+                        "type": 1,
+                        "components": [{
+                            "type": 2,
+                            "style": 5,
+                            "label": "View Reel on Instagram",
+                            "url": permalink
+                        }]
+                    }]
+
+                try:
+                    from discord_notifier import WEBHOOKS, post_webhook_message, patch_webhook_message
+                    init_embed = {
+                        "title": "New Comment Detected",
+                        "description": f"@{c_user} commented on your Reel:",
+                        "color": 0x3B82F6,
+                        "fields": [
+                            {"name": "User", "value": f"@{c_user}", "inline": True},
+                            {"name": "Comment", "value": c_text, "inline": True},
+                            {"name": "Status", "value": "⏳ Sending DM & Public Reply...", "inline": False}
+                        ],
+                        "footer": {"text": "Instagram Growth Engine"}
+                    }
+                    msg_id = post_webhook_message(WEBHOOKS["dms_sent"], init_embed, components=components)
+                except Exception as e_init:
+                    print(f"    Notice: Initial Discord notification: {e_init}")
+
+                # Step 2: Send public reply
                 public_msg = f"@{c_user} Sent to your DMs! Make sure you follow @curiocutt so Instagram doesn't filter the link to your hidden requests folder."
+                public_ok = False
                 try:
                     reply_public_comment(c_id, public_msg)
                     print(f"    ✓ Public reply posted successfully.")
+                    public_ok = True
                 except Exception as e:
                     print(f"    Notice: Public reply response: {e}")
 
-                # 2. Send private DM
+                # Step 3: Send private DM
                 dm_msg = (
                     f"Hey @{c_user}! Here is the direct link and prompt you requested for '{reel_title}':\n\n"
                     f"🔗 Resource: {reel_url}\n\n"
                     f"Setup instructions: Clone the repo or paste the link into Claude Code and say 'install this for me'.\n\n"
                     f"Follow @curiocutt for daily underground AI exploits!"
                 )
+                dm_ok = False
                 try:
                     send_private_dm_reply(c_id, dm_msg)
                     print(f"    ✓ Private DM sent successfully!")
+                    dm_ok = True
+                except Exception as e:
+                    print(f"    Notice: Private DM response: {e}")
+
+                # Step 4: In-place update the exact same Discord message to Delivered
+                if msg_id:
                     try:
-                        # Send rich notification to #dms-sent with a direct button to the Reel
-                        from discord_notifier import WEBHOOKS, send_embed
-                        dm_embed = {
-                            "title": "Direct Message Sent",
-                            "description": f"@{c_user} commented `{c_text}` and received the resource link.",
-                            "color": 0xEC4899,
+                        from discord_notifier import WEBHOOKS, patch_webhook_message
+                        status_str = "✓ Public reply posted & private DM delivered" if dm_ok else "⚠️ Public reply posted, private DM restricted"
+                        delivered_embed = {
+                            "title": "Direct Message Delivered" if dm_ok else "Direct Message Failed",
+                            "description": f"@{c_user} commented `{c_text}` and received the resource link." if dm_ok else f"@{c_user} commented `{c_text}`, but DMs are closed.",
+                            "color": 0x10B981 if dm_ok else 0xF59E0B,
                             "fields": [
                                 {"name": "User", "value": f"@{c_user}", "inline": True},
                                 {"name": "Keyword", "value": reel_keyword, "inline": True},
-                                {"name": "Resource", "value": f"[{reel_title}]({reel_url})", "inline": False}
+                                {"name": "Resource", "value": f"[{reel_title}]({reel_url})", "inline": False},
+                                {"name": "Status", "value": status_str, "inline": False}
                             ],
                             "footer": {"text": "Instagram Growth Engine"}
                         }
-                        components = []
-                        if permalink:
-                            components = [{
-                                "type": 1,
-                                "components": [
-                                    {
-                                        "type": 2,
-                                        "style": 5,
-                                        "label": "View Reel on Instagram",
-                                        "url": permalink
-                                    }
-                                ]
-                            }]
-                        send_embed(WEBHOOKS["dms_sent"], dm_embed, components=components)
-                    except Exception as e_dc:
-                        print(f"    Notice: Discord notification response: {e_dc}")
-                except Exception as e:
-                    print(f"    Notice: Private DM response: {e}")
+                        patch_webhook_message(WEBHOOKS["dms_sent"], msg_id, delivered_embed, components=components)
+                    except Exception as e_patch:
+                        print(f"    Notice: In-place Discord patch: {e_patch}")
 
                 save_processed_comment(c_id)
                 replied_users_per_media[m_id].add(c_user)
