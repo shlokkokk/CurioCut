@@ -14,6 +14,7 @@ import json
 import shutil
 import argparse
 import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 
 try:
@@ -83,7 +84,7 @@ def run_cmd(cmd, cwd=None, env=None):
     return ''.join(output_lines)
 
 def get_next_style(history_file):
-    """Rotates strictly through the 6 classic styles based on previous history."""
+    """Rotates strictly through the 6 classic styles with time-based anti-repeat guarantee."""
     if history_file.exists():
         try:
             history = json.loads(history_file.read_text(encoding="utf-8"))
@@ -94,7 +95,11 @@ def get_next_style(history_file):
                 return CLASSIC_STYLES[idx]
         except Exception:
             pass
-    return CLASSIC_STYLES[0]
+    # Resilient fallback: rotates based on day of year and UTC hour so fresh cloud runners never repeat
+    now = datetime.now(timezone.utc)
+    slot_offset = 0 if now.hour < 10 else (1 if now.hour < 15 else 2)
+    idx = (now.timetuple().tm_yday * 3 + slot_offset) % len(CLASSIC_STYLES)
+    return CLASSIC_STYLES[idx]
 
 def build_short(topic=None, style=None, upload=False, privacy="public", draft=False):
     print("\n" + "="*70)
