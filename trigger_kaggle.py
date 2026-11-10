@@ -43,6 +43,8 @@ secrets_to_pass = {
     "DISCORD_WEBHOOK_YT_ERRORS": os.environ.get("DISCORD_WEBHOOK_YT_ERRORS", ""),
     "DISCORD_WEBHOOK_IG_POSTS": os.environ.get("DISCORD_WEBHOOK_IG_POSTS", ""),
     "DISCORD_WEBHOOK_IG_ERRORS": os.environ.get("DISCORD_WEBHOOK_IG_ERRORS", ""),
+    "DISCORD_WEBHOOK_DMS_SENT": os.environ.get("DISCORD_WEBHOOK_DMS_SENT", ""),
+    "DISCORD_WEBHOOK_LIVE_PROGRESS": os.environ.get("DISCORD_WEBHOOK_LIVE_PROGRESS", ""),
     "CURIO_SLOT": os.environ.get("CURIO_SLOT", "auto"),
 }
 
@@ -66,6 +68,8 @@ os.environ["DISCORD_WEBHOOK_YT_POSTS"] = {repr(secrets_to_pass["DISCORD_WEBHOOK_
 os.environ["DISCORD_WEBHOOK_YT_ERRORS"] = {repr(secrets_to_pass["DISCORD_WEBHOOK_YT_ERRORS"])}
 os.environ["DISCORD_WEBHOOK_IG_POSTS"] = {repr(secrets_to_pass["DISCORD_WEBHOOK_IG_POSTS"])}
 os.environ["DISCORD_WEBHOOK_IG_ERRORS"] = {repr(secrets_to_pass["DISCORD_WEBHOOK_IG_ERRORS"])}
+os.environ["DISCORD_WEBHOOK_DMS_SENT"] = {repr(secrets_to_pass["DISCORD_WEBHOOK_DMS_SENT"])}
+os.environ["DISCORD_WEBHOOK_LIVE_PROGRESS"] = {repr(secrets_to_pass["DISCORD_WEBHOOK_LIVE_PROGRESS"])}
 # ----------------------------------------------------
 """
 
