@@ -3,10 +3,10 @@
  * Runs on Cloudflare's Global Edge Network (100,000 free requests/day, 0% delay).
  * Triggers GitHub Actions 'repository_dispatch' with zero cold-start delay.
  *
- * 3 Daily Upload Slots:
- * - 25 6 * * *   (11:55 AM IST / 06:25 UTC) -> Slot 1: Classic Story #1 (Live at 1:00 PM IST)
- * - 25 12 * * *  (05:55 PM IST / 12:25 UTC) -> Slot 2: Classic Story #2 (Live at 7:00 PM IST)
- * - 55 15 * * *  (08:55 PM IST / 15:55 UTC) -> Slot 3: Flagship 3D Claude-Desk Tech Exploit (Live at 9:30 PM IST)
+ * 3 Daily Upload Slots (Unified Cron: "25 6,12,15 * * *"):
+ * - Hour 6  (11:55 AM IST / 06:25 UTC) -> Slot 1: Classic Story #1 (Live at 1:00 PM IST)
+ * - Hour 12 (05:55 PM IST / 12:25 UTC) -> Slot 2: Classic Story #2 (Live at 7:00 PM IST)
+ * - Hour 15 (08:55 PM IST / 15:25 UTC) -> Slot 3: Flagship 3D Claude-Desk Tech Exploit (Live at 9:30 PM IST)
  */
 
 export default {
@@ -14,7 +14,7 @@ export default {
     const hourUTC = new Date().getUTCHours();
     const cronStr = (event && event.cron) || "";
 
-    // Late Night Slot (8:55 PM IST / 15:55 UTC) is the Flagship 3D Claude-Desk Tech Exploit
+    // Late Night Slot (8:55 PM IST / 15:25 UTC) is the Flagship 3D Claude-Desk Tech Exploit
     let slotType = "classic";
     if (hourUTC === 15 || cronStr.includes("15")) {
       slotType = "claude-desk";
@@ -118,5 +118,3 @@ export default {
     });
   }
 };
-
-

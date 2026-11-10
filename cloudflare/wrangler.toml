@@ -1,0 +1,18 @@
+name = "curiocut-corn"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+preview_urls = false
+
+# 3 Daily Upload Slots combined into 1 single cron expression (Uses 1/5 Free Tier limit):
+# - Hour 6 (06:25 UTC / 11:55 AM IST) -> Slot 1: Classic Story 1 (Live at 1:00 PM IST)
+# - Hour 12 (12:25 UTC / 05:55 PM IST) -> Slot 2: Classic Story 2 (Live at 7:00 PM IST)
+# - Hour 15 (15:25 UTC / 08:55 PM IST) -> Slot 3: Flagship 3D Claude-Desk (Live at 9:30 PM IST)
+[triggers]
+crons = [
+  "25 6,12,15 * * *"
+]
+
+[observability]
+enabled = true
+[observability.logs]
+enabled = true

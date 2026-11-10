@@ -48,6 +48,8 @@ temp/
 # Python & Node caches
 __pycache__/
 *.py[cod]
+.wrangler/
+
 *$py.class
 node_modules/
 .DS_Store
