@@ -1,0 +1,130 @@
+"""Multi-Speaker Synthesis Engine for CurioCut 2-Character Shorts.
+Alternates Kokoro TTS voices between Guide (calm human male) and Skeptic (soft expressive female).
+Outputs data/narration.wav + data/lines.json with exact millisecond timings and speaker tags.
+"""
+import os
+import sys
+import json
+import re
+import urllib.request
+from pathlib import Path
+import numpy as np
+from scipy.io import wavfile
+
+HOME = Path(os.environ.get('FACELESS_HOME', Path.home() / '.faceless-shorts'))
+KDIR = HOME / 'kokoro'
+FILES = {
+    'kokoro-v1.0.onnx': 'https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx',
+    'voices-v1.0.bin': 'https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin',
+}
+
+# Curated High-Retention Voice Pairings
+VOICE_PAIRS = {
+    "default": {
+        "guide": "am_michael",   # Calm, confident, authoritative US male (0% robotic)
+        "skeptic": "af_heart"     # Soft, warm, expressive US female
+    },
+    "lively": {
+        "guide": "am_adam",      # Crisp, energetic US male
+        "skeptic": "af_bella"     # Bright, youthful US female
+    }
+}
+SR = 24000
+
+def ensure_models():
+    KDIR.mkdir(parents=True, exist_ok=True)
+    for name, url in FILES.items():
+        p = KDIR / name
+        if p.exists() and p.stat().st_size > 1_000_000:
+            continue
+        print(f"  Downloading Kokoro speech model {name} (once)...", flush=True)
+        tmp = p.with_suffix('.part')
+        urllib.request.urlretrieve(url, tmp)
+        tmp.rename(p)
+
+def trim_silence(x, thr=0.008):
+    """Cuts leading and trailing silence so line timings are razor-sharp."""
+    idx = np.where(np.abs(x) > thr)[0]
+    if not len(idx):
+        return x
+    a = max(0, idx[0] - int(0.01 * SR))
+    b = min(len(x), idx[-1] + int(0.03 * SR))
+    return x[a:b]
+
+def synthesize_dialogue(project_dir, pair_name="default"):
+    """Takes project/script.json and creates data/narration.wav and data/lines.json."""
+    ensure_models()
+    from kokoro_onnx import Kokoro
+
+    P = Path(project_dir)
+    script_file = P / "script.json"
+    if not script_file.exists():
+        raise FileNotFoundError(f"Missing script.json in {project_dir}")
+
+    S = json.loads(script_file.read_text(encoding="utf-8"))
+    voices = VOICE_PAIRS.get(pair_name, VOICE_PAIRS["default"])
+
+    print(f"\n[Dual-Voice Engine] Synthesizing 2-character dialogue:")
+    print(f"  Guide: {voices['guide']} | Skeptic: {voices['skeptic']}")
+
+    k = Kokoro(str(KDIR / 'kokoro-v1.0.onnx'), str(KDIR / 'voices-v1.0.bin'))
+
+    audio_chunks = [np.zeros(int(S.get('lead', 0.35) * SR))]
+    current_time = len(audio_chunks[0]) / SR
+    lines_meta = []
+
+    for i, line in enumerate(S["lines"]):
+        spk = line.get("speaker", "guide").lower()
+        active_voice = voices["guide"] if spk == "guide" else voices["skeptic"]
+        speed = 1.05 if spk == "guide" else 1.02  # Slight tempo contrast
+
+        lang = 'en-gb' if active_voice.startswith('b') else 'en-us'
+        raw_audio = k.create(line["text"], voice=active_voice, speed=speed, lang=lang)[0]
+        cleaned_audio = trim_silence(np.asarray(raw_audio, dtype=np.float64))
+
+        dur = len(cleaned_audio) / SR
+        start_time = current_time
+        end_time = current_time + dur
+
+        lines_meta.append({
+            "i": i,
+            "speaker": spk,
+            "header": line.get("header", ""),
+            "prop": line.get("prop", ""),
+            "text": line["text"],
+            "start": round(start_time, 3),
+            "end": round(end_time, 3)
+        })
+
+        audio_chunks.append(cleaned_audio)
+
+        # Natural conversational pause between lines
+        gap = line.get("gap", 0.18 if spk == "guide" else 0.22)
+        pause_samples = np.zeros(int(gap * SR))
+        audio_chunks.append(pause_samples)
+        current_time = end_time + gap
+
+    # Trailing outro silence
+    audio_chunks.append(np.zeros(int(S.get('outro', 0.8) * SR)))
+    full_audio = np.concatenate(audio_chunks)
+
+    # Export narration.wav
+    data_dir = P / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    wav_path = data_dir / "narration.wav"
+    wavfile.write(str(wav_path), SR, (full_audio * 32767).astype(np.int16))
+
+    # Export lines.json
+    lines_path = data_dir / "lines.json"
+    lines_path.write_text(json.dumps(lines_meta, indent=2), encoding="utf-8")
+
+    total_sec = len(full_audio) / SR
+    print(f"  ✓ Dual-voice audio rendered: {total_sec:.1f}s ({len(lines_meta)} dialogue cuts)")
+    print(f"  ✓ Saved to {wav_path} and {lines_path}")
+    return lines_meta
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        synthesize_dialogue(sys.argv[1])
+    else:
+        print("Usage: python dual_voice.py <project_directory>")

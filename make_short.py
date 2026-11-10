@@ -42,6 +42,7 @@ node_candidate = BIN_DIR / ("node.exe" if os.name == 'nt' else "node")
 NODE_EXE = str(node_candidate) if node_candidate.exists() else "node"
 
 ROTATION_STYLES = [
+    "claude-desk",   # 3D 2-character tech dialogue exploit (@SKILLWARS.AI format)
     "tall-tale",     # 3D con/loophole story (e.g. The Girl Who Was Mailed to Grandma)
     "deep-dive",     # Zack D. Films 3D anatomy/science (e.g. What Happens If You Hold Your Breath)
     "night-file",    # Dark mystery / true crime (e.g. D.B. Cooper Hijacking)
@@ -110,7 +111,21 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
 
     # Determine script
     from generate_script import generate_script
-    if topic and topic != "auto":
+    if style == "claude-desk":
+        from tech_harvester import get_next_tech_story
+        from generate_tech_dialogue import generate_dialogue_script
+        if topic and topic != "auto":
+            story_data = {"title": topic, "premise": topic, "cta_keyword": "TOOL"}
+        else:
+            print("[1/5] Harvesting breaking tech/AI exploit (GitHub Trending / Hacker News / Master Vault)...")
+            story_data = get_next_tech_story()
+        print(f"[1/5] Generating 2-character dialogue script for '{story_data.get('title')}'...")
+        try:
+            script_data = generate_dialogue_script(story_data)
+        except Exception as e:
+            print(f"Notice: Dynamic tech dialogue exception: {e}. Using synchronized style script.")
+            script_data = None
+    elif topic and topic != "auto":
         print(f"[1/5] Writing viral script for topic: {topic}...")
         script_data = generate_script(topic)
     else:
@@ -159,8 +174,15 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
     (project_dir / "review").mkdir(exist_ok=True)
 
     # 3. Audio & Voiceover (Kokoro + Whisper + Mix)
-    print("[3/5] Generating voiceover (Kokoro TTS) & subtitle timings (Whisper)...")
-    run_cmd([PYTHON_EXE, str(SKILL_DIR / "scripts" / "voice.py"), "."], cwd=project_dir)
+    if style == "claude-desk":
+        print("[3/5] Generating dual-character voiceover (Guide: am_michael + Skeptic: af_heart)...")
+        from dual_voice import synthesize_dialogue
+        synthesize_dialogue(str(project_dir))
+    else:
+        print("[3/5] Generating voiceover (Kokoro TTS)...")
+        run_cmd([PYTHON_EXE, str(SKILL_DIR / "scripts" / "voice.py"), "."], cwd=project_dir)
+
+    print("Generating subtitle timings with Whisper...")
     run_cmd([PYTHON_EXE, str(SKILL_DIR / "scripts" / "words.py"), "."], cwd=project_dir)
 
     print("Synthesizing procedural sound effects and music bed...")
@@ -188,7 +210,16 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
     # 5. Multi-Platform Auto Upload (YouTube & Instagram)
     if upload:
         print("[5/5] Multi-Platform Publishing...")
-        desc = f"{title}. Watch daily animated stories on CurioCut! #shorts #viral #curiosity"
+        if style == "claude-desk":
+            cta = script_data.get("cta_keyword", "TOOL")
+            desc = (
+                f"{title}\n\n"
+                f"💬 Comment '{cta}' and I will DM you the direct repo link and setup prompt instantly!\n\n"
+                f"Follow @curiocutt for daily underground AI breakthroughs & open-source developer exploits.\n\n"
+                f"#ai #developer #claude #anthropic #tech #github #coding #automation #curiocut #programming #software #opensource #aitools"
+            )
+        else:
+            desc = f"{title}. Watch daily animated stories on CurioCut! #shorts #viral #curiosity"
 
         # 5a. YouTube Shorts
         yt_file = WORKSPACE / "youtube_token.json"
