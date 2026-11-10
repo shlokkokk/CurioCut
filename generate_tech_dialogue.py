@@ -24,11 +24,11 @@ Two friends are talking in a tech studio:
 2. 'skeptic' (Female Friend): Sharp, expressive, skeptical. Represents the viewer's exact thoughts. She calls out doubts, reacts with surprise, and asks genuine questions with rising inflection.
 
 CRITICAL CONVERSATIONAL & VOICE RULES:
-- NEVER sound like an AI reading a script or software manual.
-- BANNED: Do NOT use "Step 1", "Step 2", "Step 3" phrasing! Talk like real people: "All you have to do is...", "Then the craziest part is...", "Check this out..."
-- BANNED AI BUZZWORDS: "game-changer", "revolutionary", "delve", "testament", "tapestry", "landscape".
-- SKEPTIC QUESTIONS MUST SOUND LIKE QUESTIONS: Every line where the skeptic doubts or asks MUST end with a question mark ('?') and use natural conversational phrases ('Wait, how is that even possible?', 'Hold on, is that actually free?', 'Okay, what is the catch?').
-- GUIDE DELIVERY: Grounded, punchy, confident answers ('Look. It runs completely on your own machine.', 'Zero subscriptions. Forever.').
+- NEVER sound like an AI reading a script, tutorial, or software manual.
+- BANNED: NEVER use "Step 1", "Step 2", "Step 3", "Part 1", or any numbered step phrasing in spoken text OR headers!
+- HEADERS: Creative, punchy 2-to-4 word teaser plaques matching the scene (e.g., 'SECRET REPO', 'ZERO SUBSCRIPTION', 'THE SPEED TEST', 'THE REAL CATCH', 'NO CLOUD SERVERS'). NEVER use numbers or 'STEP'.
+- SKEPTIC QUESTIONS MUST SOUND LIKE REAL QUESTIONS: Every line where the skeptic doubts or asks MUST end with a question mark ('?') and use natural conversational phrases ('Wait, how is that even possible?', 'Hold on, is that actually free?', 'Okay, what is the catch?').
+- GUIDE DELIVERY: Confident, fast insider answers ('Look. It runs completely on your own machine.', 'Zero subscriptions. Forever.').
 - Numbers must be spelled out phonetically as words ('two hundred dollars', 'three clicks').
 - Length: 9 to 11 cuts total.
 - Final cut MUST be the Guide calling to action with the CTA keyword ('Comment [KEYWORD] below and I will DM you the direct repo link.').
@@ -145,14 +145,18 @@ def generate_dialogue_script(story_info=None):
     url = story_info.get("resource_url", "")
 
     prompt = (
-        f"Write a viral 2-character dialogue short about this breakthrough tool:\n"
+        f"Create an electrifying, high-retention 2-character dialogue about this breakthrough tool:\n"
         f"Title: {title}\n"
         f"Tool Name: {tool}\n"
         f"CTA Keyword: {cta}\n"
         f"Resource URL: {url}\n"
         f"Premise Details: {premise}\n\n"
-        f"Remember: Guide is the calm Red Claude character, Skeptic is the soft pink character. "
-        f"Make it fast, witty, and high stakes. End with comment '{cta}' to get the link."
+        f"CREATIVE DIRECTION:\n"
+        f"- Hook the audience immediately with an insider secret or massive cost/time saving.\n"
+        f"- Skeptic represents the smart, doubting viewer calling out hype ('Wait, does it actually work?').\n"
+        f"- Guide drops concrete proof and mind-blowing features with witty confidence.\n"
+        f"- Zero tutorial steps. Pure natural conversation between two friends in a tech studio.\n"
+        f"- End with comment '{cta}' to get the direct repo link."
     )
 
     print(f"\n[Tech Dialogue Engine] Generating 2-character script for '{title}'...")
