@@ -41,8 +41,7 @@ PYTHON_EXE = str(VENV_PYTHON) if VENV_PYTHON.exists() else sys.executable
 node_candidate = BIN_DIR / ("node.exe" if os.name == 'nt' else "node")
 NODE_EXE = str(node_candidate) if node_candidate.exists() else "node"
 
-ROTATION_STYLES = [
-    "claude-desk",   # 3D 2-character tech dialogue exploit (@SKILLWARS.AI format)
+CLASSIC_STYLES = [
     "tall-tale",     # 3D con/loophole story (e.g. The Girl Who Was Mailed to Grandma)
     "deep-dive",     # Zack D. Films 3D anatomy/science (e.g. What Happens If You Hold Your Breath)
     "night-file",    # Dark mystery / true crime (e.g. D.B. Cooper Hijacking)
@@ -50,6 +49,7 @@ ROTATION_STYLES = [
     "paper-atlas",   # Cut paper history (e.g. The Great Fire of London)
     "stick-story"    # Survival steps & life hacks (e.g. What If The Power Went Out)
 ]
+ROTATION_STYLES = CLASSIC_STYLES
 
 def run_cmd(cmd, cwd=None, env=None):
     """Helper to run command with properly configured PATH and stream output live."""
@@ -83,18 +83,18 @@ def run_cmd(cmd, cwd=None, env=None):
     return ''.join(output_lines)
 
 def get_next_style(history_file):
-    """Rotates through styles based on previous history."""
+    """Rotates strictly through the 6 classic styles based on previous history."""
     if history_file.exists():
         try:
             history = json.loads(history_file.read_text(encoding="utf-8"))
-            used_styles = [h.get("style") for h in history if h.get("style")]
+            used_styles = [h.get("style") for h in history if h.get("style") in CLASSIC_STYLES]
             if used_styles:
                 last_style = used_styles[-1]
-                idx = (ROTATION_STYLES.index(last_style) + 1) % len(ROTATION_STYLES) if last_style in ROTATION_STYLES else 0
-                return ROTATION_STYLES[idx]
+                idx = (CLASSIC_STYLES.index(last_style) + 1) % len(CLASSIC_STYLES)
+                return CLASSIC_STYLES[idx]
         except Exception:
             pass
-    return ROTATION_STYLES[0]
+    return CLASSIC_STYLES[0]
 
 def build_short(topic=None, style=None, upload=False, privacy="public", draft=False):
     print("\n" + "="*70)
@@ -102,7 +102,7 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
     print("="*70 + "\n")
 
     history_file = WORKSPACE / "history.json"
-    if not style or style == "auto":
+    if not style or style in ["auto", "classic"]:
         style = get_next_style(history_file)
 
     template_dir = SKILL_DIR / "styles" / style / "example"
