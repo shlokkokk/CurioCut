@@ -80,93 +80,61 @@ def save_history(title, topic, style=None):
     history.append({"title": title, "topic": topic, "style": style})
     HISTORY_FILE.write_text(json.dumps(history[-50:], indent=2), encoding="utf-8")
 
-# Distinct Peak Model Suites for Dual Gemini Keys:
-# Key 1: Flagship Pro reasoning, latest Flash 3.5, and balanced creative models.
-# Key 2: Dedicated alternate high-velocity models to eliminate repetition and quota collisions.
-KEY_1_MODELS = [
-    "gemini-pro-latest",
-    "gemini-3.5-flash",
-    "gemini-flash-latest",
-    "gemini-3.1-flash-lite"
-]
-
-KEY_2_MODELS = [
-    "gemini-3.1-pro-preview",
-    "gemini-3.8-flash",
-    "gemini-flash-lite-latest",
-    "gemini-2.5-flash-lite"
-]
-
-def call_gemini_api(prompt, api_key, models=None):
-    """Primary Brain: Direct HTTP call to Google Gemini REST API with progressive retry."""
-    if not models:
-        models = KEY_1_MODELS
-    last_err = None
-
-    try:
-        from discord_notifier import notify_alert
-    except Exception:
-        def notify_alert(*a, **kw): pass
-
-    delays = [2, 4, 6]
-
-    for m in models:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={api_key}"
-        payload = {
-            "systemInstruction": {
-                "parts": [{"text": PSYCHOLOGY_SYSTEM_PROMPT}]
-            },
-            "contents": [
-                {"parts": [{"text": prompt}]}
-            ],
-            "generationConfig": {
-                "temperature": 0.8,
-                "responseMimeType": "application/json"
-            }
+def call_gemini_single(prompt, api_key, model):
+    """Direct HTTP call to a specific Gemini model via REST API."""
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+    payload = {
+        "systemInstruction": {
+            "parts": [{"text": PSYCHOLOGY_SYSTEM_PROMPT}]
+        },
+        "contents": [
+            {"parts": [{"text": prompt}]}
+        ],
+        "generationConfig": {
+            "temperature": 0.8,
+            "responseMimeType": "application/json"
         }
+    }
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST"
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+        text = data["candidates"][0]["content"]["parts"][0]["text"]
+        return json.loads(text)
 
-        # Up to 3 attempts per model with progressive delays
-        max_attempts = 3
-        for attempt in range(max_attempts):
-            req = urllib.request.Request(
-                url,
-                data=json.dumps(payload).encode("utf-8"),
-                headers={"Content-Type": "application/json"},
-                method="POST"
-            )
+def build_quality_ladder(key1, key2):
+    """Quality-First Tiered Matrix across Dual Keys.
+    Prioritizes deep human psychology, narrative tension, and Pro-reasoning FIRST across BOTH keys
+    before ever dropping down to high-velocity flash or lite tiers.
+    """
+    ladder = []
+    # Tier 1: Absolute Peak Storytelling, Narrative Psychology & Pro Reasoning
+    if key1:
+        ladder.append((key1, "gemini-pro-latest", "Key 1 [Peak Pro Reasoning]"))
+    if key2:
+        ladder.append((key2, "gemini-3.1-pro-preview", "Key 2 [Peak Pro Alternate]"))
 
-            try:
-                with urllib.request.urlopen(req, timeout=30) as resp:
-                    data = json.loads(resp.read().decode("utf-8"))
-                    text = data["candidates"][0]["content"]["parts"][0]["text"]
-                    res = json.loads(text)
-                    if attempt > 0:
-                        try:
-                            notify_alert(
-                                title="Gemini Recovered",
-                                details=f"Gemini successfully recovered on attempt {attempt + 1} ({m})!"
-                            )
-                        except Exception:
-                            pass
-                    return res
-            except Exception as e:
-                last_err = e
-                err_str = str(e)
-                if ("503" in err_str or "500" in err_str or "502" in err_str or "504" in err_str or "429" in err_str) and attempt < (max_attempts - 1):
-                    delay = delays[min(attempt, len(delays) - 1)]
-                    print(f"  Gemini transient {err_str} on {m} (attempt {attempt + 1}/{max_attempts}). Retrying in {delay}s...", flush=True)
-                    try:
-                        notify_alert(
-                            title=f"Gemini Transient Spike ({err_str})",
-                            details=f"Gemini returned {err_str} on `{m}` (attempt {attempt + 1}/{max_attempts}). Retrying in {delay}s..."
-                        )
-                    except Exception:
-                        pass
-                    time.sleep(delay)
-                    continue
-                break
+    # Tier 2: Peak Creative Dynamic Nuance (3.5 & 3.8 Flash)
+    if key1:
+        ladder.append((key1, "gemini-3.5-flash", "Key 1 [Creative 3.5 Flash]"))
+    if key2:
+        ladder.append((key2, "gemini-3.5-flash", "Key 2 [Creative 3.5 Alternate]"))
+    if key2:
+        ladder.append((key2, "gemini-3.8-flash", "Key 2 [Ultra-Fast 3.8 Flash]"))
 
-    raise RuntimeError(f"Gemini API error after retries: {last_err}")
+    # Tier 3: High-Velocity Fallbacks (Only if Pro & 3.5 hit quota on both keys)
+    if key1:
+        ladder.append((key1, "gemini-flash-latest", "Key 1 [Flash Latest]"))
+    if key2:
+        ladder.append((key2, "gemini-flash-lite-latest", "Key 2 [Flash Lite]"))
+    if key1:
+        ladder.append((key1, "gemini-3.1-flash-lite", "Key 1 [Flash Lite]"))
+
+    return ladder
 
 def call_groq_api(prompt, api_key):
     """Backup Brain: Direct HTTP call to Groq LPU API using urllib (Zero dependencies)."""
@@ -251,25 +219,24 @@ def generate_script(topic=None):
 
     data = None
 
-    # 1. Primary Brain: Google Gemini (Primary & Backup Keys with distinct peak suites)
-    gemini_configs = [
-        (os.environ.get("GEMINI_API_KEY"), "Primary", KEY_1_MODELS),
-        (os.environ.get("GEMINI_API_KEY_BACKUP"), "Secondary Backup", KEY_2_MODELS),
-    ]
-    gemini_configs = [c for c in gemini_configs if c[0]]
+    # 1. Primary Brain: Quality-First Interleaved Gemini Ladder
+    key1 = os.environ.get("GEMINI_API_KEY")
+    key2 = os.environ.get("GEMINI_API_KEY_BACKUP")
+    quality_ladder = build_quality_ladder(key1, key2)
 
-    for idx, (g_key, label, models_suite) in enumerate(gemini_configs):
+    for idx, (g_key, model_name, tier_label) in enumerate(quality_ladder):
         try:
-            print(f"🧠 [{label} Brain] Requesting script from Google Gemini ({models_suite[0]})...")
-            data = call_gemini_api(user_prompt, g_key, models=models_suite)
-            print(f"  ✓ Successfully crafted with Google Gemini ({label})!")
+            print(f"🧠 Requesting script from {tier_label} ({model_name})...")
+            data = call_gemini_single(user_prompt, g_key, model_name)
+            print(f"  ✓ Successfully crafted with {tier_label} ({model_name})!")
             break
         except Exception as e:
-            print(f"  Gemini key {idx + 1} note: {e}.")
-            if idx < len(gemini_configs) - 1:
-                print("  Switching to secondary Gemini key suite...")
-            else:
-                print("  All Gemini keys exhausted. Switching to Backup Groq Brain...")
+            err_str = str(e)
+            print(f"  {tier_label} notice: {err_str}.")
+            if "429" in err_str:
+                time.sleep(1.5)
+            if idx == len(quality_ladder) - 1:
+                print("  All Gemini quality tiers exhausted. Switching to Backup Groq Brain...")
                 try:
                     from discord_notifier import notify_alert
                     notify_alert("AI Brain Failover", "Gemini busy, switched to Groq backup.")

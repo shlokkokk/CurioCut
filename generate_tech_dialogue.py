@@ -52,60 +52,57 @@ Output strictly valid JSON with no markdown wrapping:
 Props available: ["sword_cut", "glowing_orb", "terminal_desk", "falling_letters", "scanner_beam", "waveform_audio", "server_tower", "comment_ui"]
 """
 
-# Peak Model Suites for Dual Gemini Keys:
-# Key 1: Flagship Pro reasoning, latest Flash 3.5, and balanced creative dialogue models.
-# Key 2: Dedicated alternate high-velocity models to eliminate repetition and quota collisions.
-KEY_1_DIALOGUE_MODELS = [
-    "gemini-pro-latest",
-    "gemini-3.5-flash",
-    "gemini-flash-latest",
-    "gemini-3.1-flash-lite"
-]
-
-KEY_2_DIALOGUE_MODELS = [
-    "gemini-3.1-pro-preview",
-    "gemini-3.8-flash",
-    "gemini-flash-lite-latest",
-    "gemini-2.5-flash-lite"
-]
-
-def call_gemini_dialogue(prompt, api_key, models=None):
-    """Calls Google Gemini with smart progressive retries across peak models."""
-    if not models:
-        models = KEY_1_DIALOGUE_MODELS
-    delays = [2, 4]
-
-    for m in models:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={api_key}"
-        payload = {
-            "systemInstruction": {"parts": [{"text": DIALOGUE_SYSTEM_PROMPT}]},
-            "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {
-                "temperature": 0.8,
-                "responseMimeType": "application/json"
-            }
+def call_gemini_dialogue_single(prompt, api_key, model):
+    """Direct HTTP call to a specific Gemini model for tech dialogue."""
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+    payload = {
+        "systemInstruction": {"parts": [{"text": DIALOGUE_SYSTEM_PROMPT}]},
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "temperature": 0.8,
+            "responseMimeType": "application/json"
         }
+    }
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST"
+    )
+    with urllib.request.urlopen(req, timeout=25) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+        text = data["candidates"][0]["content"]["parts"][0]["text"]
+        return json.loads(text)
 
-        for attempt in range(2):
-            req = urllib.request.Request(
-                url,
-                data=json.dumps(payload).encode("utf-8"),
-                headers={"Content-Type": "application/json"},
-                method="POST"
-            )
-            try:
-                with urllib.request.urlopen(req, timeout=25) as resp:
-                    data = json.loads(resp.read().decode("utf-8"))
-                    text = data["candidates"][0]["content"]["parts"][0]["text"]
-                    return json.loads(text)
-            except Exception as e:
-                err_str = str(e)
-                if ("503" in err_str or "500" in err_str or "429" in err_str) and attempt < 1:
-                    time.sleep(delays[attempt])
-                    continue
-                break
+def build_dialogue_quality_ladder(key1, key2):
+    """Quality-First Ladder for 2-character tech dialogue.
+    Prioritizes human conversational banter, witty timing, and Pro reasoning across BOTH keys
+    before ever dropping down to high-velocity flash or lite tiers.
+    """
+    ladder = []
+    # Tier 1: Absolute Peak Conversational Banter & Pro Reasoning
+    if key1:
+        ladder.append((key1, "gemini-pro-latest", "Key 1 [Peak Pro Reasoning]"))
+    if key2:
+        ladder.append((key2, "gemini-3.1-pro-preview", "Key 2 [Peak Pro Alternate]"))
 
-    raise RuntimeError("All Gemini models failed for dialogue generation.")
+    # Tier 2: Peak Creative Dialogue Dynamic Flow (3.5 & 3.8 Flash)
+    if key1:
+        ladder.append((key1, "gemini-3.5-flash", "Key 1 [Creative 3.5 Flash]"))
+    if key2:
+        ladder.append((key2, "gemini-3.5-flash", "Key 2 [Creative 3.5 Alternate]"))
+    if key2:
+        ladder.append((key2, "gemini-3.8-flash", "Key 2 [Ultra-Fast 3.8 Flash]"))
+
+    # Tier 3: High-Velocity Fallbacks (Only if Pro & 3.5 hit quota on both keys)
+    if key1:
+        ladder.append((key1, "gemini-flash-latest", "Key 1 [Flash Latest]"))
+    if key2:
+        ladder.append((key2, "gemini-flash-lite-latest", "Key 2 [Flash Lite]"))
+    if key1:
+        ladder.append((key1, "gemini-3.1-flash-lite", "Key 1 [Flash Lite]"))
+
+    return ladder
 
 def call_groq_dialogue(prompt, api_key):
     """Fallback to Groq high-speed OSS models."""
@@ -159,21 +156,22 @@ def generate_dialogue_script(story_info=None):
     )
 
     print(f"\n[Tech Dialogue Engine] Generating 2-character script for '{title}'...")
-    gemini_configs = [
-        (os.environ.get("GEMINI_API_KEY"), "Primary", KEY_1_DIALOGUE_MODELS),
-        (os.environ.get("GEMINI_API_KEY_BACKUP"), "Backup", KEY_2_DIALOGUE_MODELS)
-    ]
-    gemini_configs = [c for c in gemini_configs if c[0]]
+    key1 = os.environ.get("GEMINI_API_KEY")
+    key2 = os.environ.get("GEMINI_API_KEY_BACKUP")
+    quality_ladder = build_dialogue_quality_ladder(key1, key2)
 
     script_data = None
-    for idx, (g_key, label, models_suite) in enumerate(gemini_configs):
+    for idx, (g_key, model_name, tier_label) in enumerate(quality_ladder):
         try:
-            print(f"  Attempting with {label} Gemini key ({models_suite[0]})...")
-            script_data = call_gemini_dialogue(prompt, g_key, models=models_suite)
-            print(f"  ✓ Dialogue script successfully crafted via {label} Gemini!")
+            print(f"  Attempting with {tier_label} ({model_name})...")
+            script_data = call_gemini_dialogue_single(prompt, g_key, model_name)
+            print(f"  ✓ Dialogue script successfully crafted via {tier_label} ({model_name})!")
             break
         except Exception as e:
-            print(f"  Gemini key {idx + 1} notice: {e}")
+            err_str = str(e)
+            print(f"  {tier_label} notice: {err_str}")
+            if "429" in err_str:
+                time.sleep(1.5)
 
     if not script_data or not script_data.get("lines"):
         groq_key = os.environ.get("GROQ_API_KEY")
