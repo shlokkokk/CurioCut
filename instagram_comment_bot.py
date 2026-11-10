@@ -222,15 +222,35 @@ def process_reels_comments(default_keyword="JARVIS", default_url="https://github
                 except Exception as e:
                     print(f"    Notice: Private DM response: {e}")
 
-                # Step 4: In-place update the exact same Discord message to Delivered
+                # Step 4: In-place update the exact same Discord message to Delivered or Failed
                 if msg_id:
                     try:
                         from discord_notifier import WEBHOOKS, patch_webhook_message
-                        status_str = "✓ Public reply posted & private DM delivered" if dm_ok else "⚠️ Public reply posted, private DM restricted"
+                        if dm_ok and public_ok:
+                            title = "Direct Message Delivered"
+                            desc = f"@{c_user} commented `{c_text}` and received the resource link."
+                            color = 0x10B981 # Green
+                            status_str = "✓ Public reply posted & private DM delivered"
+                        elif dm_ok and not public_ok:
+                            title = "Private DM Delivered (Public Reply Skipped)"
+                            desc = f"@{c_user} received the resource link via DM."
+                            color = 0x10B981
+                            status_str = "✓ Private DM sent (public reply restricted)"
+                        elif not dm_ok and public_ok:
+                            title = "Direct Message Restricted"
+                            desc = f"@{c_user} commented `{c_text}`, but their private DMs are restricted."
+                            color = 0xF59E0B # Amber
+                            status_str = "⚠️ Public reply posted, private DM blocked by user privacy"
+                        else:
+                            title = "Response Delivery Failed"
+                            desc = f"@{c_user} commented `{c_text}`, but Meta API delivery failed."
+                            color = 0xEF4444 # Red
+                            status_str = "❌ Failed to send DM and public reply"
+
                         delivered_embed = {
-                            "title": "Direct Message Delivered" if dm_ok else "Direct Message Failed",
-                            "description": f"@{c_user} commented `{c_text}` and received the resource link." if dm_ok else f"@{c_user} commented `{c_text}`, but DMs are closed.",
-                            "color": 0x10B981 if dm_ok else 0xF59E0B,
+                            "title": title,
+                            "description": desc,
+                            "color": color,
                             "fields": [
                                 {"name": "User", "value": f"@{c_user}", "inline": True},
                                 {"name": "Keyword", "value": reel_keyword, "inline": True},

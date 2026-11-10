@@ -468,15 +468,36 @@ async function handleInstagramWebhook(request, env) {
             console.error("Private DM error:", eDm);
           }
 
-          // Stage 4: In-place update the exact same Discord message to Delivered
+          // Stage 4: In-place update the exact same Discord message to Delivered or Failed
           if (msgId) {
             try {
-              const statusStr = dmOk ? "✓ Public reply posted & private DM delivered" : "⚠️ Public reply posted, private DM restricted";
+              let title = "Direct Message Delivered";
+              let desc = `@${user} commented \`${text}\` and received the resource link.`;
+              let color = 0x10B981; // Green
+              let statusStr = "✓ Public reply posted & private DM delivered";
+
+              if (dmOk && !publicOk) {
+                title = "Private DM Delivered (Public Reply Skipped)";
+                desc = `@${user} received the resource link via DM.`;
+                color = 0x10B981;
+                statusStr = "✓ Private DM sent (public reply restricted)";
+              } else if (!dmOk && publicOk) {
+                title = "Direct Message Restricted";
+                desc = `@${user} commented \`${text}\`, but their private DMs are restricted.`;
+                color = 0xF59E0B; // Amber
+                statusStr = "⚠️ Public reply posted, private DM blocked by user privacy";
+              } else if (!dmOk && !publicOk) {
+                title = "Response Delivery Failed";
+                desc = `@${user} commented \`${text}\`, but Meta API delivery failed.`;
+                color = 0xEF4444; // Red
+                statusStr = "❌ Failed to send DM and public reply";
+              }
+
               const deliveredPayload = {
                 embeds: [{
-                  title: dmOk ? "Direct Message Delivered" : "Direct Message Restricted",
-                  description: dmOk ? `@${user} commented \`${text}\` and received the resource link.` : `@${user} commented \`${text}\`, but DMs are closed.`,
-                  color: dmOk ? 0x10B981 : 0xF59E0B,
+                  title,
+                  description: desc,
+                  color,
                   fields: [
                     { name: "User", value: `@${user}`, inline: true },
                     { name: "Keyword", value: text.toUpperCase(), inline: true },
