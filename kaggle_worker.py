@@ -84,12 +84,16 @@ print(f"\n[4/4] Starting 3D short generation (Slot: {slot} | Style: {style_arg})
 try:
     from discord_notifier import notify_engine, notify_error
     notify_engine(
-        title="Generating Video",
-        description=f"Cloud container started for **{slot.upper()}**.",
+        title="Cloud Video Engine Booted",
+        description=f"GPU execution environment active for **{slot.upper()}**.",
         fields=[
-            {"name": "Style", "value": style_arg, "inline": True}
+            {"name": "Slot", "value": slot.upper(), "inline": True},
+            {"name": "Visual Style", "value": style_arg.upper(), "inline": True},
+            {"name": "Audio Engine", "value": "Dual Kokoro Stereo", "inline": True}
         ],
-        color=0x10B981
+        color=0x10B981,
+        button_label="View GitHub Repository",
+        button_url="https://github.com/shlokkokk/CurioCut"
     )
 except Exception:
     pass

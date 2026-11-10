@@ -113,14 +113,16 @@ def push_kernel(enable_gpu=True):
         try:
             from discord_notifier import notify_engine
             notify_engine(
-                title="Starting Video Run",
-                description="Sent job to Kaggle cloud runner.",
+                title="Autonomous Video Pipeline Triggered",
+                description=f"CurioCut dispatched **{secrets_to_pass['CURIO_SLOT'].upper()}** to Kaggle Cloud GPU runner.",
                 fields=[
                     {"name": "Slot", "value": secrets_to_pass["CURIO_SLOT"].upper(), "inline": True},
-                    {"name": "Hardware", "value": "GPU" if "GPU" in mode_str else "Cloud CPU", "inline": True},
-                    {"name": "Progress", "value": f"[View on Kaggle](https://www.kaggle.com/code/{KAGGLE_USER}/{KERNEL_SLUG})", "inline": False}
+                    {"name": "Hardware", "value": "NVIDIA GPU (T4/P100)" if "GPU" in mode_str else "Cloud CPU", "inline": True},
+                    {"name": "Status", "value": "Autonomous Worker Dispatched", "inline": True}
                 ],
-                color=0x38BDF8
+                color=0x38BDF8,
+                button_label="View Cloud Runner on Kaggle",
+                button_url=f"https://www.kaggle.com/code/{KAGGLE_USER}/{KERNEL_SLUG}"
             )
         except Exception:
             pass

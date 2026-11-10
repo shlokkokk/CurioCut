@@ -32,6 +32,24 @@ WEBHOOKS = {
     "live_progress": os.environ.get("DISCORD_WEBHOOK_LIVE_PROGRESS") or "https://discord.com/api/webhooks/1569785063535546450/7MZUMEDK1u7okE7a_a5YsstKQ-bN2GFai2Ww2nHDAG4HlBwD8Gg8FSOiQ-eixJyk0aBb"
 }
 
+def make_button(label, url, style=5):
+    """Creates a Discord Link Button component (Style 5 = Link Button)."""
+    return {
+        "type": 2,
+        "style": style,
+        "label": label,
+        "url": url
+    }
+
+def make_action_row(buttons):
+    """Wraps buttons into a Discord Action Row (type 1)."""
+    if not buttons:
+        return []
+    return [{
+        "type": 1,
+        "components": buttons[:5]
+    }]
+
 def send_embed(webhook_url, embed_payload, components=None):
     """Sends a Discord webhook embed with retry logic and interactive components."""
     if not webhook_url or not webhook_url.startswith("https://discord.com/api/webhooks/"):
@@ -98,105 +116,133 @@ def patch_webhook_message(webhook_url, message_id, embed_payload, components=Non
         print(f"Notice: Failed to patch webhook message: {e}")
         return False
 
-def notify_engine(title, description, fields=None, color=0x2B2D31):
-    """Sends clean updates to #engine-logs."""
+def notify_engine(title, description, fields=None, color=0x38BDF8, button_label=None, button_url=None, components=None):
+    """Sends rich updates with optional interactive buttons to #engine-logs."""
     embed = {
         "title": title,
         "description": description,
         "color": color,
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "footer": {"text": "CurioCut"}
+        "footer": {"text": "CurioCut Autonomous Pipeline"}
     }
     if fields:
         embed["fields"] = fields
-    return send_embed(WEBHOOKS["engine_logs"], embed)
+        
+    if not components and button_label and button_url:
+        components = make_action_row([make_button(button_label, button_url)])
 
-def notify_alert(title, details, severity="warning"):
-    """Sends warnings to #alerts."""
+    return send_embed(WEBHOOKS["engine_logs"], embed, components=components)
+
+def notify_alert(title, details, severity="warning", button_label=None, button_url=None):
+    """Sends warnings to #alerts with actionable links."""
     embed = {
-        "title": title,
+        "title": f"⚠️ {title}",
         "description": details,
         "color": 0xF59E0B, # Amber
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "footer": {"text": "CurioCut Alert"}
+        "footer": {"text": "CurioCut Sentinel"}
     }
-    return send_embed(WEBHOOKS["alerts"], embed)
+    components = None
+    if button_label and button_url:
+        components = make_action_row([make_button(button_label, button_url)])
+    return send_embed(WEBHOOKS["alerts"], embed, components=components)
 
-def notify_error(context, error_msg, stack_trace=None):
-    """Sends errors to #errors."""
-    fields = [{"name": "Where", "value": context, "inline": True}]
+def notify_error(context, error_msg, stack_trace=None, button_label=None, button_url=None):
+    """Sends diagnostic errors to #errors with direct access button."""
+    fields = [{"name": "Failed Stage", "value": f"`{context}`", "inline": True}]
     if stack_trace:
-        fields.append({"name": "Details", "value": f"```{stack_trace[-600:]}```", "inline": False})
+        fields.append({"name": "Diagnostics", "value": f"```{stack_trace[-600:]}```", "inline": False})
         
     embed = {
-        "title": "Pipeline Error",
+        "title": "Pipeline Execution Notice",
         "description": error_msg,
-        "color": 0xDC2626, # Red
+        "color": 0xEF4444, # Red
         "fields": fields,
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "footer": {"text": "CurioCut"}
+        "footer": {"text": "CurioCut Crash Reporter"}
     }
-    return send_embed(WEBHOOKS["errors"], embed)
+    repo_url = button_url or "https://github.com/shlokkokk/CurioCut/actions"
+    repo_label = button_label or "View Cloud Workflow"
+    components = make_action_row([make_button(repo_label, repo_url)])
+    return send_embed(WEBHOOKS["errors"], embed, components=components)
 
 def notify_youtube_post(title, video_url, video_id, duration_sec=None, size_mb=None, privacy="public", style="tall-tale"):
-    """Sends post confirmation to #youtube-posts."""
+    """Sends rich post confirmation with interactive button to #youtube-posts."""
     fields = [
-        {"name": "Link", "value": f"[Watch Short]({video_url})", "inline": True},
-        {"name": "Style", "value": style, "inline": True},
+        {"name": "Status", "value": "✓ Live & Streaming", "inline": True},
+        {"name": "Style", "value": style.replace("-", " ").title(), "inline": True},
+        {"name": "Resolution", "value": "1080x1920 (9:16)", "inline": True},
+        {"name": "Audio Engine", "value": "Dual-Speaker Kokoro Stereo", "inline": True},
     ]
     if duration_sec:
         fields.append({"name": "Duration", "value": f"{duration_sec:.0f}s", "inline": True})
+    if size_mb:
+        fields.append({"name": "File Size", "value": f"{size_mb:.1f} MB", "inline": True})
         
     embed = {
-        "title": f"YouTube: {title}",
+        "title": f"YouTube Shorts: {title}",
         "url": video_url,
-        "description": "Short is live on YouTube!",
-        "color": 0x10B981, # Green
+        "description": "Short is officially published and live on YouTube.",
+        "color": 0xFF0000, # YouTube Red
         "fields": fields,
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "footer": {"text": "YouTube"}
+        "footer": {"text": "YouTube Autonomous Publisher"}
     }
-    return send_embed(WEBHOOKS["yt_posts"], embed)
+    buttons = [make_button("Watch on YouTube Shorts", video_url)]
+    return send_embed(WEBHOOKS["yt_posts"], embed, components=make_action_row(buttons))
 
 def notify_youtube_error(error_msg, context="Upload"):
-    """Sends error to #youtube-errors."""
+    """Sends error to #youtube-errors with link to Studio."""
     embed = {
-        "title": "YouTube Upload Failed",
+        "title": "YouTube Upload Disrupted",
         "description": error_msg,
         "color": 0xDC2626,
         "fields": [{"name": "Step", "value": context, "inline": True}],
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "footer": {"text": "YouTube"}
+        "footer": {"text": "YouTube Error Dispatcher"}
     }
-    return send_embed(WEBHOOKS["yt_errors"], embed)
+    components = make_action_row([make_button("Check YouTube Studio", "https://studio.youtube.com")])
+    return send_embed(WEBHOOKS["yt_errors"], embed, components=components)
 
-def notify_instagram_post(caption, permalink, media_id=None):
-    """Sends post confirmation to #instagram-posts."""
-    clean_caption = caption[:200] + ("..." if len(caption) > 200 else "")
-    fields = [{"name": "Link", "value": f"[Watch Reel]({permalink})", "inline": False}]
+def notify_instagram_post(caption, permalink, media_id=None, keyword=None, resource_url=None, title=None):
+    """Sends rich post confirmation with interactive buttons to #instagram-posts."""
+    clean_hook = caption.split("\n")[0] if caption else "New Reel is live on Instagram."
+    fields = [
+        {"name": "Account", "value": "@curiocutt", "inline": True},
+        {"name": "Status", "value": "✓ Published to Reels Feed", "inline": True},
+    ]
+    if keyword:
+        fields.append({"name": "Growth Trigger", "value": f"Comment `{keyword}`", "inline": True})
+    if resource_url:
+        fields.append({"name": "Resource Delivered", "value": f"[{title or 'Direct Link'}]({resource_url})", "inline": False})
+    fields.append({"name": "Auto-Responder", "value": "Active 24/7 (Cloudflare Edge)", "inline": False})
         
     embed = {
-        "title": "New Reel Live on Instagram",
+        "title": f"Instagram Reel: {title or 'New Reel Published'}",
         "url": permalink,
-        "description": clean_caption,
-        "color": 0x10B981,
+        "description": f"**Hook:** {clean_hook}",
+        "color": 0xE1306C, # Instagram Pink / Gradient
         "fields": fields,
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "footer": {"text": "Instagram"}
+        "footer": {"text": "Instagram Autonomous Publisher"}
     }
-    return send_embed(WEBHOOKS["ig_posts"], embed)
+    buttons = [make_button("Watch Reel on Instagram", permalink)]
+    if resource_url and resource_url.startswith("http"):
+        buttons.append(make_button("Direct Resource Repo", resource_url))
+    return send_embed(WEBHOOKS["ig_posts"], embed, components=make_action_row(buttons))
 
 def notify_instagram_error(error_msg, context="Upload"):
-    """Sends error to #instagram-errors."""
+    """Sends error to #instagram-errors with link to Meta App."""
     embed = {
-        "title": "Instagram Upload Failed",
+        "title": "Instagram Reels Upload Disrupted",
         "description": error_msg,
         "color": 0xDC2626,
         "fields": [{"name": "Step", "value": context, "inline": True}],
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "footer": {"text": "Instagram"}
+        "footer": {"text": "Instagram Error Dispatcher"}
     }
-    return send_embed(WEBHOOKS["ig_errors"], embed)
+    components = make_action_row([make_button("Check Meta App Status", "https://developers.facebook.com/apps/1569685211846913/dashboard/")])
+    return send_embed(WEBHOOKS["ig_errors"], embed, components=components)
 
 def get_discord_bot_token():
     tok = os.environ.get("DISCORD_BOT_TOKEN")
@@ -245,6 +291,21 @@ def update_live_progress(step_title, percent, details=None, is_done=False, links
         "footer": {"text": "CurioCut Live Progress"}
     }
 
+    # Extract interactive buttons if links are provided
+    buttons = []
+    if links:
+        import re
+        for k, v in links.items():
+            m = re.search(r'\((https?://[^\)]+)\)', v)
+            url = m.group(1) if m else (v if v.startswith("http") else None)
+            if url:
+                label = f"Watch on {k}" if k in ("YouTube", "Instagram") else f"Open {k}"
+                buttons.append(make_button(label, url))
+
+    body_dict = {"embeds": [embed]}
+    if buttons:
+        body_dict["components"] = make_action_row(buttons)
+
     headers = {
         "Authorization": f"Bot {bot_token}",
         "Content-Type": "application/json",
@@ -267,14 +328,14 @@ def update_live_progress(step_title, percent, details=None, is_done=False, links
         # If we have a message ID, edit in-place
         if _progress_msg_id:
             url = f"https://discord.com/api/v10/channels/{channel_id}/messages/{_progress_msg_id}"
-            req = urllib.request.Request(url, data=json.dumps({"embeds": [embed]}).encode("utf-8"), headers=headers, method="PATCH")
+            req = urllib.request.Request(url, data=json.dumps(body_dict).encode("utf-8"), headers=headers, method="PATCH")
             with urllib.request.urlopen(req, timeout=8) as resp:
                 _last_progress_edit = time.time()
                 return resp.status == 200
         else:
             # Create the initial message
             url = f"https://discord.com/api/v10/channels/{channel_id}/messages"
-            req = urllib.request.Request(url, data=json.dumps({"embeds": [embed]}).encode("utf-8"), headers=headers, method="POST")
+            req = urllib.request.Request(url, data=json.dumps(body_dict).encode("utf-8"), headers=headers, method="POST")
             with urllib.request.urlopen(req, timeout=8) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 _progress_msg_id = data.get("id")

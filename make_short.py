@@ -324,7 +324,14 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
                 from instagram_uploader import upload_reel
                 ig_media_id, ig_permalink = upload_reel(str(output_mp4), caption=desc)
                 print(f"  Live on Instagram: {ig_permalink}")
-                notify_instagram_post(caption=desc, permalink=ig_permalink, media_id=ig_media_id)
+                notify_instagram_post(
+                    caption=desc,
+                    permalink=ig_permalink,
+                    media_id=ig_media_id,
+                    keyword=script_data.get("cta_keyword"),
+                    resource_url=script_data.get("resource_url"),
+                    title=title
+                )
 
                 # Record reel mapping for dynamic Comment-to-DM responder
                 reels_map_file = WORKSPACE / "published_reels.json"
