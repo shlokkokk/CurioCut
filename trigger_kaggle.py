@@ -153,6 +153,12 @@ while time.time() - start_t < max_wait:
             
             print(f"  [{elapsed}s] Cloud Worker Status: {st.upper()}")
             
+            # Kaggle API takes 30-45s to transition away from previous run's status.
+            # If status reports complete/error in the first 60 seconds, it's stale status from the prior run.
+            if elapsed < 60 and st in ("error", "complete"):
+                print(f"  [{elapsed}s] Waiting for Kaggle container to initialize new job (ignoring stale '{st}')...")
+                continue
+
             # Keep waiting for GPU (Kaggle batch GPU queue normally takes 2-8 minutes, ceiling 30 mins)
             if gpu_requested and st == "queued" and (time.time() - queued_start) > 1800:
                 print("\n⚠️ GPU queue reached 30-minute wait ceiling. Failing over to Cloud Compute...")
