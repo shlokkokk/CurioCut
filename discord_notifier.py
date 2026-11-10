@@ -302,9 +302,10 @@ def update_live_progress(step_title, percent, details=None, is_done=False, links
                 label = f"Watch on {k}" if k in ("YouTube", "Instagram") else f"Open {k}"
                 buttons.append(make_button(label, url))
 
-    body_dict = {"embeds": [embed]}
-    if buttons:
-        body_dict["components"] = make_action_row(buttons)
+    body_dict = {
+        "embeds": [embed],
+        "components": make_action_row(buttons) if buttons else []
+    }
 
     headers = {
         "Authorization": f"Bot {bot_token}",
