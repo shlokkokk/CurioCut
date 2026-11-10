@@ -80,9 +80,27 @@ def save_history(title, topic, style=None):
     history.append({"title": title, "topic": topic, "style": style})
     HISTORY_FILE.write_text(json.dumps(history[-50:], indent=2), encoding="utf-8")
 
-def call_gemini_api(prompt, api_key):
-    """Primary Brain: Direct HTTP call to Google Gemini Flash REST API with progressive retry."""
-    models = ["gemini-flash-lite-latest", "gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-flash-latest"]
+# Distinct Peak Model Suites for Dual Gemini Keys:
+# Key 1: Flagship Pro reasoning, latest Flash 3.5, and balanced creative models.
+# Key 2: Dedicated alternate high-velocity models to eliminate repetition and quota collisions.
+KEY_1_MODELS = [
+    "gemini-pro-latest",
+    "gemini-3.5-flash",
+    "gemini-flash-latest",
+    "gemini-3.1-flash-lite"
+]
+
+KEY_2_MODELS = [
+    "gemini-3.1-pro-preview",
+    "gemini-3.8-flash",
+    "gemini-flash-lite-latest",
+    "gemini-2.5-flash-lite"
+]
+
+def call_gemini_api(prompt, api_key, models=None):
+    """Primary Brain: Direct HTTP call to Google Gemini REST API with progressive retry."""
+    if not models:
+        models = KEY_1_MODELS
     last_err = None
 
     try:
@@ -123,10 +141,13 @@ def call_gemini_api(prompt, api_key):
                     text = data["candidates"][0]["content"]["parts"][0]["text"]
                     res = json.loads(text)
                     if attempt > 0:
-                        notify_alert(
-                            title="Gemini Recovered",
-                            description=f"Gemini successfully recovered on attempt {attempt + 1} ({m})!"
-                        )
+                        try:
+                            notify_alert(
+                                title="Gemini Recovered",
+                                details=f"Gemini successfully recovered on attempt {attempt + 1} ({m})!"
+                            )
+                        except Exception:
+                            pass
                     return res
             except Exception as e:
                 last_err = e
@@ -134,10 +155,13 @@ def call_gemini_api(prompt, api_key):
                 if ("503" in err_str or "500" in err_str or "502" in err_str or "504" in err_str or "429" in err_str) and attempt < (max_attempts - 1):
                     delay = delays[min(attempt, len(delays) - 1)]
                     print(f"  Gemini transient {err_str} on {m} (attempt {attempt + 1}/{max_attempts}). Retrying in {delay}s...", flush=True)
-                    notify_alert(
-                        title=f"Gemini Transient Spike ({err_str})",
-                        description=f"Gemini returned {err_str} on `{m}` (attempt {attempt + 1}/{max_attempts}). Retrying in {delay}s..."
-                    )
+                    try:
+                        notify_alert(
+                            title=f"Gemini Transient Spike ({err_str})",
+                            details=f"Gemini returned {err_str} on `{m}` (attempt {attempt + 1}/{max_attempts}). Retrying in {delay}s..."
+                        )
+                    except Exception:
+                        pass
                     time.sleep(delay)
                     continue
                 break
@@ -227,19 +251,23 @@ def generate_script(topic=None):
 
     data = None
 
-    # 1. Primary Brain: Google Gemini (Primary & Backup Keys)
-    gemini_keys = [k for k in [os.environ.get("GEMINI_API_KEY"), os.environ.get("GEMINI_API_KEY_BACKUP")] if k]
-    for idx, g_key in enumerate(gemini_keys):
+    # 1. Primary Brain: Google Gemini (Primary & Backup Keys with distinct peak suites)
+    gemini_configs = [
+        (os.environ.get("GEMINI_API_KEY"), "Primary", KEY_1_MODELS),
+        (os.environ.get("GEMINI_API_KEY_BACKUP"), "Secondary Backup", KEY_2_MODELS),
+    ]
+    gemini_configs = [c for c in gemini_configs if c[0]]
+
+    for idx, (g_key, label, models_suite) in enumerate(gemini_configs):
         try:
-            label = "Primary" if idx == 0 else "Secondary Backup"
-            print(f"🧠 [{label} Brain] Requesting script from Google Gemini Flash...")
-            data = call_gemini_api(user_prompt, g_key)
+            print(f"🧠 [{label} Brain] Requesting script from Google Gemini ({models_suite[0]})...")
+            data = call_gemini_api(user_prompt, g_key, models=models_suite)
             print(f"  ✓ Successfully crafted with Google Gemini ({label})!")
             break
         except Exception as e:
             print(f"  Gemini key {idx + 1} note: {e}.")
-            if idx < len(gemini_keys) - 1:
-                print("  Switching to secondary Gemini key...")
+            if idx < len(gemini_configs) - 1:
+                print("  Switching to secondary Gemini key suite...")
             else:
                 print("  All Gemini keys exhausted. Switching to Backup Groq Brain...")
                 try:

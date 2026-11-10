@@ -52,9 +52,27 @@ Output strictly valid JSON with no markdown wrapping:
 Props available: ["sword_cut", "glowing_orb", "terminal_desk", "falling_letters", "scanner_beam", "waveform_audio", "server_tower", "comment_ui"]
 """
 
-def call_gemini_dialogue(prompt, api_key):
-    """Calls Google Gemini with smart progressive retries."""
-    models = ["gemini-3.5-flash", "gemini-3.1-flash-lite"]
+# Peak Model Suites for Dual Gemini Keys:
+# Key 1: Flagship Pro reasoning, latest Flash 3.5, and balanced creative dialogue models.
+# Key 2: Dedicated alternate high-velocity models to eliminate repetition and quota collisions.
+KEY_1_DIALOGUE_MODELS = [
+    "gemini-pro-latest",
+    "gemini-3.5-flash",
+    "gemini-flash-latest",
+    "gemini-3.1-flash-lite"
+]
+
+KEY_2_DIALOGUE_MODELS = [
+    "gemini-3.1-pro-preview",
+    "gemini-3.8-flash",
+    "gemini-flash-lite-latest",
+    "gemini-2.5-flash-lite"
+]
+
+def call_gemini_dialogue(prompt, api_key, models=None):
+    """Calls Google Gemini with smart progressive retries across peak models."""
+    if not models:
+        models = KEY_1_DIALOGUE_MODELS
     delays = [2, 4]
 
     for m in models:
@@ -141,15 +159,18 @@ def generate_dialogue_script(story_info=None):
     )
 
     print(f"\n[Tech Dialogue Engine] Generating 2-character script for '{title}'...")
-    gemini_keys = [k for k in [os.environ.get("GEMINI_API_KEY"), os.environ.get("GEMINI_API_KEY_BACKUP")] if k]
+    gemini_configs = [
+        (os.environ.get("GEMINI_API_KEY"), "Primary", KEY_1_DIALOGUE_MODELS),
+        (os.environ.get("GEMINI_API_KEY_BACKUP"), "Backup", KEY_2_DIALOGUE_MODELS)
+    ]
+    gemini_configs = [c for c in gemini_configs if c[0]]
 
     script_data = None
-    for idx, g_key in enumerate(gemini_keys):
+    for idx, (g_key, label, models_suite) in enumerate(gemini_configs):
         try:
-            label = "Primary" if idx == 0 else "Backup"
-            print(f"  Attempting with {label} Gemini key...")
-            script_data = call_gemini_dialogue(prompt, g_key)
-            print("  ✓ Dialogue script successfully crafted!")
+            print(f"  Attempting with {label} Gemini key ({models_suite[0]})...")
+            script_data = call_gemini_dialogue(prompt, g_key, models=models_suite)
+            print(f"  ✓ Dialogue script successfully crafted via {label} Gemini!")
             break
         except Exception as e:
             print(f"  Gemini key {idx + 1} notice: {e}")
