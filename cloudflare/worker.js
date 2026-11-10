@@ -113,7 +113,7 @@ export default {
           await triggerGitHub(env.GITHUB_TOKEN, slot === "claude-desk" ? "claude-desk" : "classic");
           return Response.json({
             type: 4,
-            data: { content: `Triggered ${slotName}. Live frame rendering will appear in #live-progress.`, flags: 64 }
+            data: { content: `Triggered ${slotName}. Live frame rendering will appear in <#1569750972975288441>.`, flags: 64 }
           });
         }
 
@@ -139,7 +139,7 @@ export default {
           await triggerGitHub(env.GITHUB_TOKEN, style, topic);
           return Response.json({
             type: 4,
-            data: { content: `Started generating custom short for "${topic}" in style "${style}". Watch live frame progress in #live-progress.`, flags: 64 }
+            data: { content: `Started generating custom short for "${topic}" in style "${style}". Watch live frame progress in <#1569750972975288441>.`, flags: 64 }
           });
         }
       }
@@ -154,7 +154,7 @@ export default {
         return Response.json({
           type: 4,
           data: {
-            content: `Started generating custom short for "${topic}" in style "${style}". Progress will show in #live-progress.`,
+            content: `Started generating custom short for "${topic}" in style "${style}". Progress will show in <#1569750972975288441>.`,
             flags: 64
           }
         });
@@ -209,13 +209,13 @@ export default {
 
         if (customId === "trigger_slot_1") {
           await triggerGitHub(env.GITHUB_TOKEN, "classic");
-          replyText = "Started generating Slot 1 Classic Story (1:00 PM). Live frame rendering will appear in #live-progress.";
+          replyText = "Started generating Slot 1 Classic Story (1:00 PM). Live frame rendering will appear in <#1569750972975288441>.";
         } else if (customId === "trigger_slot_2") {
           await triggerGitHub(env.GITHUB_TOKEN, "classic");
-          replyText = "Started generating Slot 2 Classic Story (7:00 PM). Live frame rendering will appear in #live-progress.";
+          replyText = "Started generating Slot 2 Classic Story (7:00 PM). Live frame rendering will appear in <#1569750972975288441>.";
         } else if (customId === "trigger_tech" || customId === "trigger_slot_3") {
           await triggerGitHub(env.GITHUB_TOKEN, "claude-desk");
-          replyText = "Started generating Slot 3 (9:30 PM 3D Claude-Desk Tech Exploit). Live frame rendering will appear in #live-progress.";
+          replyText = "Started generating Slot 3 (9:30 PM 3D Claude-Desk Tech Exploit). Live frame rendering will appear in <#1569750972975288441>.";
         } else if (customId === "skip_next_trigger") {
           await setSlotSkipped(12);
           replyText = "Next scheduled slot skipped for today. It will run normally tomorrow.";
@@ -323,7 +323,7 @@ async function getHumanStatus(token) {
 
   if (!run) return "All quiet right now. No jobs in queue.";
   if (run.status === "in_progress" || run.status === "queued") {
-    return "A video is currently rendering in the cloud (working on 3D scene). Live frame counts are updating in #live-progress.";
+    return "A video is currently rendering in the cloud (working on 3D scene). Live frame counts are updating in <#1569750972975288441>.";
   }
   if (run.conclusion === "success") {
     return "Last video rendered and published successfully. Next automated slot is on schedule.";
