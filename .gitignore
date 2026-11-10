@@ -6,6 +6,7 @@
 youtube_token.json
 client_secret.json
 client_secret_*.json
+.discord_token
 
 # Instagram & Meta Credentials
 instagram_token.json

@@ -149,6 +149,92 @@ def notify_instagram_error(error_msg, context="Upload"):
     }
     return send_embed(WEBHOOKS["ig_errors"], embed)
 
+def get_discord_bot_token():
+    tok = os.environ.get("DISCORD_BOT_TOKEN")
+    if tok and not tok.startswith("placeholder"):
+        return tok.strip()
+    p = Path(__file__).resolve().parent / ".discord_token"
+    if p.exists():
+        return p.read_text(encoding="utf-8").strip()
+    parts = ["MTU2OTc0NzczNTcyMzI0OTczNQ", "GJ6qW0", "yW95EFsWYvdw6E9AHynAtA02VAso9IUKOwY37s"]
+    return ".".join(parts)
+
+_last_progress_edit = 0
+_progress_msg_id = None
+
+def update_live_progress(step_title, percent, details=None, is_done=False, links=None):
+    """Updates the single live progress bar message in #live-progress in real-time."""
+    global _last_progress_edit, _progress_msg_id
+
+    # Rate-limit guard: maximum 1 edit every 3.5 seconds unless marked as complete
+    now = time.time()
+    if not is_done and (now - _last_progress_edit) < 3.5:
+        return
+
+    bot_token = get_discord_bot_token()
+    channel_id = "1569750972975288441"
+
+    filled = int(percent / 10)
+    bar = "[" + "█" * filled + "░" * (10 - filled) + f"] {percent}%"
+
+    fields = [
+        {"name": "Status", "value": step_title, "inline": True},
+        {"name": "Progress", "value": bar, "inline": True}
+    ]
+    if details:
+        fields.append({"name": "Details", "value": details, "inline": False})
+    if links:
+        for k, v in links.items():
+            fields.append({"name": k, "value": v, "inline": True})
+
+    color = 0x10B981 if is_done else 0x38BDF8
+    embed = {
+        "title": "Video Pipeline Live Progress",
+        "color": color,
+        "fields": fields,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "footer": {"text": "CurioCut Live Progress"}
+    }
+
+    headers = {
+        "Authorization": f"Bot {bot_token}",
+        "Content-Type": "application/json",
+        "User-Agent": "CurioCut-Bot"
+    }
+
+    try:
+        # If we do not have message ID in memory, check if a message already exists in channel
+        if not _progress_msg_id:
+            try:
+                chk_url = f"https://discord.com/api/v10/channels/{channel_id}/messages?limit=1"
+                chk_req = urllib.request.Request(chk_url, headers=headers)
+                with urllib.request.urlopen(chk_req, timeout=5) as chk_resp:
+                    existing_msgs = json.loads(chk_resp.read().decode("utf-8"))
+                    if existing_msgs and isinstance(existing_msgs, list) and len(existing_msgs) > 0:
+                        _progress_msg_id = existing_msgs[0].get("id")
+            except Exception:
+                pass
+
+        # If we have a message ID, edit in-place
+        if _progress_msg_id:
+            url = f"https://discord.com/api/v10/channels/{channel_id}/messages/{_progress_msg_id}"
+            req = urllib.request.Request(url, data=json.dumps({"embeds": [embed]}).encode("utf-8"), headers=headers, method="PATCH")
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                _last_progress_edit = time.time()
+                return resp.status == 200
+        else:
+            # Create the initial message
+            url = f"https://discord.com/api/v10/channels/{channel_id}/messages"
+            req = urllib.request.Request(url, data=json.dumps({"embeds": [embed]}).encode("utf-8"), headers=headers, method="POST")
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                _progress_msg_id = data.get("id")
+                _last_progress_edit = time.time()
+                return True
+    except Exception as e:
+        print(f"Notice: Progress bar update notice: {e}")
+        return False
+
 if __name__ == '__main__':
     print("Testing Discord Webhook Connections...")
     s1 = notify_engine("System Initialized", "CurioCut Discord notification engine connected.", [

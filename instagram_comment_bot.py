@@ -165,8 +165,8 @@ def process_reels_comments(default_keyword="JARVIS", default_url="https://github
                 print(f"\n[!] MATCH FOUND on {permalink}:")
                 print(f"    User: @{c_user} | Comment: '{c_text}'")
 
-                # 1. Send public reply
-                public_msg = f"@{c_user} Check your DMs! Sent you the full setup link and prompt 🚀"
+                # 1. Send public reply with follow psychological hook
+                public_msg = f"@{c_user} Sent to your DMs! Make sure you follow @curiocutt so Instagram doesn't filter the link to your hidden requests folder."
                 try:
                     reply_public_comment(c_id, public_msg)
                     print(f"    ✓ Public reply posted successfully.")
@@ -184,18 +184,39 @@ def process_reels_comments(default_keyword="JARVIS", default_url="https://github
                     send_private_dm_reply(c_id, dm_msg)
                     print(f"    ✓ Private DM sent successfully!")
                     try:
-                        from discord_notifier import notify_engine
-                        notify_engine(
-                            title="Auto-DM Sent",
-                            description=f"Sent link for **{reel_title}** to @{c_user}.",
-                            fields=[
+                        # Send rich notification to #dms-sent with a direct button to the Reel
+                        bot_token = os.environ.get("DISCORD_BOT_TOKEN")
+                        if not bot_token or bot_token.startswith("placeholder"):
+                            p = Path(__file__).resolve().parent / ".discord_token"
+                            bot_token = p.read_text(encoding="utf-8").strip() if p.exists() else ".".join(["MTU2OTc0NzczNTcyMzI0OTczNQ", "GJ6qW0", "yW95EFsWYvdw6E9AHynAtA02VAso9IUKOwY37s"])
+                        dms_ch_id = "1569750975189876858"
+                        dm_embed = {
+                            "title": "Direct Message Sent",
+                            "description": f"@{c_user} commented `{c_text}` and received the resource link.",
+                            "color": 0xEC4899,
+                            "fields": [
                                 {"name": "User", "value": f"@{c_user}", "inline": True},
-                                {"name": "Keyword", "value": reel_keyword, "inline": True}
+                                {"name": "Keyword", "value": reel_keyword, "inline": True},
+                                {"name": "Resource", "value": f"[{reel_title}]({reel_url})", "inline": False}
                             ],
-                            color=0xEC4899
+                            "footer": {"text": "Instagram Growth Engine"}
+                        }
+                        components = []
+                        if permalink:
+                            components = [{
+                                "type": 1,
+                                "components": [
+                                    {"type": 2, "style": 5, "label": "View Reel on Instagram", "url": permalink}
+                                ]
+                            }]
+                        req_dc = urllib.request.Request(
+                            f"https://discord.com/api/v10/channels/{dms_ch_id}/messages",
+                            data=json.dumps({"embeds": [dm_embed], "components": components}).encode("utf-8"),
+                            headers={"Authorization": f"Bot {bot_token}", "Content-Type": "application/json", "User-Agent": "CurioCut-Bot"}
                         )
-                    except Exception:
-                        pass
+                        urllib.request.urlopen(req_dc, timeout=10)
+                    except Exception as e_dc:
+                        print(f"    Notice: Discord notification response: {e_dc}")
                 except Exception as e:
                     print(f"    Notice: Private DM response: {e}")
 

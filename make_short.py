@@ -13,6 +13,8 @@ import sys
 import json
 import shutil
 import argparse
+import re
+import math
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -21,7 +23,8 @@ try:
     from discord_notifier import (
         notify_engine, notify_alert, notify_error,
         notify_youtube_post, notify_youtube_error,
-        notify_instagram_post, notify_instagram_error
+        notify_instagram_post, notify_instagram_error,
+        update_live_progress
     )
 except ImportError:
     def notify_engine(*a, **kw): pass
@@ -31,6 +34,7 @@ except ImportError:
     def notify_youtube_error(*a, **kw): pass
     def notify_instagram_post(*a, **kw): pass
     def notify_instagram_error(*a, **kw): pass
+    def update_live_progress(*a, **kw): pass
 
 WORKSPACE = Path(__file__).resolve().parent
 SKILL_DIR = WORKSPACE / "faceless-shorts-skill" / "faceless-shorts"
@@ -52,7 +56,7 @@ CLASSIC_STYLES = [
 ]
 ROTATION_STYLES = CLASSIC_STYLES
 
-def run_cmd(cmd, cwd=None, env=None):
+def run_cmd(cmd, cwd=None, env=None, on_line=None):
     """Helper to run command with properly configured PATH and stream output live."""
     merged_env = os.environ.copy()
     if env:
@@ -61,7 +65,6 @@ def run_cmd(cmd, cwd=None, env=None):
     bin_str = str(BIN_DIR)
     if bin_str not in merged_env.get("PATH", ""):
         merged_env["PATH"] = f"{bin_str};{merged_env.get('PATH', '')}" if os.name == 'nt' else f"{bin_str}:{merged_env.get('PATH', '')}"
-
 
     process = subprocess.Popen(
         cmd,
@@ -77,6 +80,11 @@ def run_cmd(cmd, cwd=None, env=None):
         for line in iter(process.stdout.readline, ''):
             print(line, end='', flush=True)
             output_lines.append(line)
+            if on_line:
+                try:
+                    on_line(line)
+                except Exception:
+                    pass
         process.stdout.close()
     return_code = process.wait()
     if return_code != 0:
@@ -157,6 +165,11 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
             {"name": "Upload Target", "value": "YouTube + Instagram" if upload else "Local Only", "inline": True}
         ]
     )
+    update_live_progress(
+        step_title="Script & Story Initialized",
+        percent=15,
+        details=f"Topic: **{title}**\nStyle: `{style}` • Target: {'YouTube + Instagram' if upload else 'Local Only'}"
+    )
 
     # 2. Setup Project Folder
     slug = "".join(c if c.isalnum() else "_" for c in title.lower())[:30].strip("_")
@@ -166,6 +179,11 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
         
     print(f"[2/5] Initializing '{style}' scene in {project_dir.name}...")
     shutil.copytree(template_dir, project_dir)
+    update_live_progress(
+        step_title="Setting Up 3D Stage Assets",
+        percent=25,
+        details=f"Loading WebGL scene template for `{style}`..."
+    )
     
     # Save script.json (preserving perfectly matched line cues)
     (project_dir / "script.json").write_text(json.dumps(script_data, indent=2), encoding="utf-8")
@@ -179,6 +197,11 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
     (project_dir / "review").mkdir(exist_ok=True)
 
     # 3. Audio & Voiceover (Kokoro + Whisper + Mix)
+    update_live_progress(
+        step_title="Synthesizing Dialogue & Narration",
+        percent=35,
+        details="Generating neural speech with Kokoro TTS..."
+    )
     if style == "claude-desk":
         print("[3/5] Generating dual-character voiceover (Guide: am_michael + Skeptic: af_heart)...")
         from dual_voice import synthesize_dialogue
@@ -187,6 +210,11 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
         print("[3/5] Generating voiceover (Kokoro TTS)...")
         run_cmd([PYTHON_EXE, str(SKILL_DIR / "scripts" / "voice.py"), "."], cwd=project_dir)
 
+    update_live_progress(
+        step_title="Whisper Subtitle Alignment",
+        percent=45,
+        details="Computing word-level phonetic timestamps & sound cues..."
+    )
     print("Generating subtitle timings with Whisper...")
     run_cmd([PYTHON_EXE, str(SKILL_DIR / "scripts" / "words.py"), "."], cwd=project_dir)
 
@@ -200,8 +228,21 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
     capture_args = [NODE_EXE, "tools/capture.mjs", "video", str(output_mp4)]
     if draft:
         capture_args.append("--draft")
-        
-    run_cmd(capture_args, cwd=project_dir)
+
+    def on_render_frame(line):
+        m = re.search(r"\[Render\]\s+Frame\s+(\d+)/(\d+)\s+\((\d+)%\)", line)
+        if m:
+            cur = int(m.group(1))
+            tot = int(m.group(2))
+            pct = int(m.group(3))
+            overall = 50 + int(pct * 0.38) # scales 50% to 88%
+            update_live_progress(
+                step_title="Rendering 3D Scene in Chrome",
+                percent=overall,
+                details=f"Frame {cur}/{tot} ({pct}%) • Headless WebGL @ 1080x1920"
+            )
+
+    run_cmd(capture_args, cwd=project_dir, on_line=on_render_frame)
     file_size_mb = output_mp4.stat().st_size / (1024 * 1024)
     print(f"Render complete: {output_mp4.resolve()} ({file_size_mb:.2f} MB)")
 
@@ -228,8 +269,15 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
         pass
 
     # 5. Multi-Platform Auto Upload (YouTube & Instagram)
+    v_url = None
+    ig_permalink = None
     if upload:
         print("[5/5] Multi-Platform Publishing...")
+        update_live_progress(
+            step_title="Publishing to Platforms",
+            percent=90,
+            details=f"Publishing {file_size_mb:.1f} MB vertical short to YouTube Shorts & Instagram Reels..."
+        )
         if style == "claude-desk":
             cta = script_data.get("cta_keyword", "TOOL")
             desc = (
@@ -298,6 +346,20 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
             print("  Skipping Instagram (INSTAGRAM_ACCESS_TOKEN not configured or placeholder).")
     else:
         print(f"[5/5] Video ready! (Pass --upload to publish to YouTube & Instagram).")
+
+    links = {}
+    if v_url:
+        links["YouTube"] = f"[Watch Short]({v_url})"
+    if ig_permalink:
+        links["Instagram"] = f"[Watch Reel]({ig_permalink})"
+
+    update_live_progress(
+        step_title="Video Pipeline Complete",
+        percent=100,
+        details=f"**{title}** is rendered and live!\nFile size: {file_size_mb:.1f} MB",
+        is_done=True,
+        links=links if links else None
+    )
 
     print("\n" + "="*70)
     print("ALL DONE! Short ready to watch.")
