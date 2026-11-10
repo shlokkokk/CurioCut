@@ -44,13 +44,13 @@ export function buildShots(E) {
 
   // Characters
   const claude = new ClaudeBot();
-  claude.group.position.set(-1.8, 0.9, 0.1);
-  claude.group.rotation.y = 0.32;
+  claude.group.position.set(-1.3, 0.9, 0.2);
+  claude.group.rotation.y = 0.28;
   scene.add(claude.group);
 
   const skeptic = new SkepticBot();
-  skeptic.group.position.set(1.8, 0.9, 0.1);
-  skeptic.group.rotation.y = -0.32;
+  skeptic.group.position.set(1.3, 0.9, 0.2);
+  skeptic.group.rotation.y = -0.28;
   scene.add(skeptic.group);
 
   // Procedural 3D Props
@@ -76,9 +76,11 @@ export function buildShots(E) {
   scriptLines.forEach((ln, idx) => {
     const isFirst = idx === 0;
     const isLast = idx === scriptLines.length - 1;
-    const lineStart = isFirst ? 0 : ln.s - 0.04;
+    const startVal = ln.s ?? ln.start ?? 0;
+    const lineStart = isFirst ? 0 : Math.max(0, startVal - 0.04);
     const nextLn = scriptLines[idx + 1];
-    const lineEnd = nextLn ? nextLn.s - 0.04 : T.dur;
+    const nextStartVal = nextLn ? (nextLn.s ?? nextLn.start ?? T.dur) : T.dur;
+    const lineEnd = Math.max(lineStart + 0.1, nextStartVal - 0.04);
 
     // Determine speaker and prop
     const rawLine = (OP?.script?.lines && OP.script.lines[idx]) || {};
@@ -120,24 +122,29 @@ export function buildShots(E) {
         // Camera Choreography
         if (isLast) {
           // Final CTA Shot: Centered hero shot of comment UI
-          cam.position.set(0, 2.3, 3.8);
-          cam.lookAt(V3(0, 1.4, 0.4));
+          cam.position.set(0, 2.0, 3.6);
+          cam.lookAt(V3(0, 1.35, 0.4));
+        } else if (isFirst) {
+          // Opening hook: wide shot showing both characters at the studio desk
+          const camZ = 4.2 - (lt / Math.max(1, d)) * 0.25;
+          cam.position.set(0, 2.1, camZ);
+          cam.lookAt(V3(0, 1.5, 0.2));
         } else if (isSpeakingGuide) {
-          // Camera snaps / pushes in toward Claude
+          // Camera cuts to Claude medium close-up
           const progress = Math.min(1, lt / Math.max(1, d));
-          const camX = -1.2 + Math.sin(progress * 0.4) * 0.2;
-          cam.position.set(camX, 2.2, 3.6);
-          cam.lookAt(V3(-0.9, 1.8, 0.2));
+          const camX = -0.8 + Math.sin(progress * 0.4) * 0.15;
+          cam.position.set(camX, 2.05, 3.1);
+          cam.lookAt(V3(-1.1, 1.65, 0.2));
         } else {
-          // Camera cuts to Skeptic Avatar
+          // Camera cuts to Skeptic Avatar medium close-up
           const progress = Math.min(1, lt / Math.max(1, d));
-          const camX = 1.2 - Math.sin(progress * 0.4) * 0.2;
-          cam.position.set(camX, 2.1, 3.5);
-          cam.lookAt(V3(0.9, 1.7, 0.2));
+          const camX = 0.8 - Math.sin(progress * 0.4) * 0.15;
+          cam.position.set(camX, 1.95, 3.1);
+          cam.lookAt(V3(1.1, 1.55, 0.2));
         }
 
         // Render 3D WebGL scene and blit to 2D canvas
-        E.render(scene, cam, { bloom: 0.25, aperture: 0.001, focus: 3.5 });
+        E.render(scene, cam, { bloom: 0.25, aperture: 0.001, focus: 3.2 });
         blit();
       }
     });

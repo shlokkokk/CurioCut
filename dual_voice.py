@@ -21,11 +21,11 @@ FILES = {
 # Curated High-Retention Voice Pairings
 VOICE_PAIRS = {
     "default": {
-        "guide": "am_michael",   # Calm, confident, authoritative US male (0% robotic)
+        "guide": "am_adam",       # Crisp, energetic, natural conversational US male (sounds real, not like an AI)
         "skeptic": "af_heart"     # Soft, warm, expressive US female
     },
     "lively": {
-        "guide": "am_adam",      # Crisp, energetic US male
+        "guide": "am_puck",       # Dynamic, playful US male
         "skeptic": "af_bella"     # Bright, youthful US female
     }
 }
@@ -124,7 +124,9 @@ def synthesize_dialogue(project_dir, pair_name="default"):
             "header": line.get("header", ""),
             "prop": line.get("prop", ""),
             "text": line["text"],
+            "s": round(start_time, 3),
             "start": round(start_time, 3),
+            "e": round(end_time, 3),
             "end": round(end_time, 3)
         })
 

@@ -79,8 +79,8 @@ Output strictly valid JSON with no markdown wrapping:
 
 def call_gemini_dialogue(prompt, api_key):
     """Calls Google Gemini with smart progressive retries."""
-    models = ["gemini-3.8-flash", "gemini-flash-latest", "gemini-3.5-flash", "gemini-2.0-flash"]
-    delays = [2, 4, 6]
+    models = ["gemini-3.5-flash", "gemini-3.1-flash-lite"]
+    delays = [2, 4]
 
     for m in models:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={api_key}"
@@ -93,7 +93,7 @@ def call_gemini_dialogue(prompt, api_key):
             }
         }
 
-        for attempt in range(3):
+        for attempt in range(2):
             req = urllib.request.Request(
                 url,
                 data=json.dumps(payload).encode("utf-8"),
@@ -101,18 +101,46 @@ def call_gemini_dialogue(prompt, api_key):
                 method="POST"
             )
             try:
-                with urllib.request.urlopen(req, timeout=30) as resp:
+                with urllib.request.urlopen(req, timeout=25) as resp:
                     data = json.loads(resp.read().decode("utf-8"))
                     text = data["candidates"][0]["content"]["parts"][0]["text"]
                     return json.loads(text)
             except Exception as e:
                 err_str = str(e)
-                if ("503" in err_str or "500" in err_str or "429" in err_str) and attempt < 2:
+                if ("503" in err_str or "500" in err_str or "429" in err_str) and attempt < 1:
                     time.sleep(delays[attempt])
                     continue
                 break
 
     raise RuntimeError("All Gemini models failed for dialogue generation.")
+
+def call_groq_dialogue(prompt, api_key):
+    """Fallback to Groq high-speed OSS models."""
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+    models = ["openai/gpt-oss-120b", "llama-3.1-70b-versatile"]
+    for m in models:
+        payload = {
+            "model": m,
+            "messages": [
+                {"role": "system", "content": DIALOGUE_SYSTEM_PROMPT + "\nRespond with valid JSON only."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.8,
+            "response_format": {"type": "json_object"}
+        }
+        try:
+            req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
+            with urllib.request.urlopen(req, timeout=25) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                return json.loads(data["choices"][0]["message"]["content"])
+        except Exception:
+            continue
+    raise RuntimeError("All Groq models failed for dialogue generation.")
 
 def generate_dialogue_script(story_info=None):
     """Generates the full 2-character dialogue script from harvested tech intel."""
@@ -150,6 +178,16 @@ def generate_dialogue_script(story_info=None):
             break
         except Exception as e:
             print(f"  Gemini key {idx + 1} notice: {e}")
+
+    if not script_data or not script_data.get("lines"):
+        groq_key = os.environ.get("GROQ_API_KEY")
+        if groq_key:
+            try:
+                print("  Failing over to Groq 120B...")
+                script_data = call_groq_dialogue(prompt, groq_key)
+                print("  ✓ Dialogue script generated via Groq!")
+            except Exception as e:
+                print(f"  Groq notice: {e}")
 
     # Fallback to guaranteed OpenJarvis template if offline
     if not script_data or not script_data.get("lines"):

@@ -89,6 +89,7 @@ export function swordCutProp() {
     ctx.textBaseline = 'middle';
     ctx.fillText(sign < 0 ? '$1B' : 'JARVIS', 128, 128);
     const tex = new THREE.CanvasTexture(c);
+    tex.needsUpdate = true;
     const label = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 0.75), new THREE.MeshBasicMaterial({ map: tex }));
     label.position.set(0, 0, 0.21);
     half.add(label);
@@ -202,6 +203,8 @@ export function terminalDeskProp() {
     }
     tex.needsUpdate = true;
   };
+
+  g.update(0);
 
   return g;
 }
@@ -334,6 +337,7 @@ export function serverTowerProp() {
   ctx.textBaseline = 'middle';
   ctx.fillText('$0 / 100% LOCAL', 200, 62);
   const tex = new THREE.CanvasTexture(c);
+  tex.needsUpdate = true;
   const badge = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.42), new THREE.MeshBasicMaterial({ map: tex }));
   badge.position.set(0, 0.2, 0.42);
   g.add(badge);
@@ -365,12 +369,12 @@ export function commentUiProp(keyword = 'JARVIS') {
   g.update = (t) => {
     ctx.clearRect(0, 0, 800, 200);
 
-    // Instagram style rounded comment pill
-    ctx.fillStyle = '#FFFFFF';
-    ctx.roundRect(10, 10, 780, 180, 40);
+    // Dark sleek glass comment pill (matches cyber tech studio look)
+    ctx.fillStyle = '#141624';
+    ctx.roundRect(10, 10, 780, 180, 36);
     ctx.fill();
-    ctx.lineWidth = 6;
-    ctx.strokeStyle = '#E0E0E0';
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#00F0FF';
     ctx.stroke();
 
     // User avatar icon
@@ -388,7 +392,7 @@ export function commentUiProp(keyword = 'JARVIS') {
     const charsToShow = Math.min(keyword.length, Math.floor((t * 5) % (keyword.length + 4)));
     const typed = keyword.slice(0, charsToShow);
 
-    ctx.fillStyle = '#1A1A1A';
+    ctx.fillStyle = '#FFFFFF';
     ctx.font = '800 44px Inter, sans-serif';
     ctx.textAlign = 'left';
     ctx.fillText(typed, 160, 102);
@@ -409,6 +413,8 @@ export function commentUiProp(keyword = 'JARVIS') {
 
     tex.needsUpdate = true;
   };
+
+  g.update(0);
 
   return g;
 }
