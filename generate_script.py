@@ -228,19 +228,26 @@ def generate_script(topic=None):
 
     data = None
 
-    # 1. Primary Brain: Google Gemini
-    if gemini_key:
+    # 1. Primary Brain: Google Gemini (Primary & Backup Keys)
+    gemini_keys = [k for k in [os.environ.get("GEMINI_API_KEY"), os.environ.get("GEMINI_API_KEY_BACKUP")] if k]
+    for idx, g_key in enumerate(gemini_keys):
         try:
-            print("🧠 [Primary Brain] Requesting script from Google Gemini Flash...")
-            data = call_gemini_api(user_prompt, gemini_key)
-            print("  ✓ Successfully crafted with Google Gemini!")
+            label = "Primary" if idx == 0 else "Secondary Backup"
+            print(f"🧠 [{label} Brain] Requesting script from Google Gemini Flash...")
+            data = call_gemini_api(user_prompt, g_key)
+            print(f"  ✓ Successfully crafted with Google Gemini ({label})!")
+            break
         except Exception as e:
-            print(f"  Gemini note: {e}. Switching to Backup Brain...")
-            try:
-                from discord_notifier import notify_alert
-                notify_alert("AI Brain Failover", f"Gemini returned error ({e}). Seamlessly failed over to Groq Llama 3.3 70B.")
-            except Exception:
-                pass
+            print(f"  Gemini key {idx + 1} note: {e}.")
+            if idx < len(gemini_keys) - 1:
+                print("  Switching to secondary Gemini key...")
+            else:
+                print("  All Gemini keys exhausted. Switching to Backup Groq Brain...")
+                try:
+                    from discord_notifier import notify_alert
+                    notify_alert("AI Brain Failover", f"All Gemini keys returned error ({e}). Failing over to Groq Llama 3.3 70B.")
+                except Exception:
+                    pass
 
     # 2. Backup Brain: Groq (Llama 3.3 70B)
     if not data and groq_key:

@@ -32,6 +32,7 @@ worker_code = WORKER_SCRIPT.read_text(encoding="utf-8")
 secrets_to_pass = {
     "GROQ_API_KEY": os.environ.get("GROQ_API_KEY", ""),
     "GEMINI_API_KEY": os.environ.get("GEMINI_API_KEY", ""),
+    "GEMINI_API_KEY_BACKUP": os.environ.get("GEMINI_API_KEY_BACKUP", ""),
     "INSTAGRAM_ACCOUNT_ID": os.environ.get("INSTAGRAM_ACCOUNT_ID", ""),
     "INSTAGRAM_ACCESS_TOKEN": os.environ.get("INSTAGRAM_ACCESS_TOKEN", ""),
     "YOUTUBE_TOKEN_JSON": os.environ.get("YOUTUBE_TOKEN_JSON", ""),
@@ -52,6 +53,7 @@ injected_header = f"""# AUTO-INJECTED CLOUD SECRETS
 import os
 os.environ["GROQ_API_KEY"] = {repr(secrets_to_pass["GROQ_API_KEY"])}
 os.environ["GEMINI_API_KEY"] = {repr(secrets_to_pass["GEMINI_API_KEY"])}
+os.environ["GEMINI_API_KEY_BACKUP"] = {repr(secrets_to_pass["GEMINI_API_KEY_BACKUP"])}
 os.environ["INSTAGRAM_ACCOUNT_ID"] = {repr(secrets_to_pass["INSTAGRAM_ACCOUNT_ID"])}
 os.environ["INSTAGRAM_ACCESS_TOKEN"] = {repr(secrets_to_pass["INSTAGRAM_ACCESS_TOKEN"])}
 os.environ["YOUTUBE_TOKEN_JSON"] = {repr(secrets_to_pass["YOUTUBE_TOKEN_JSON"])}
