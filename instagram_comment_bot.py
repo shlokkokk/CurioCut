@@ -82,8 +82,15 @@ def send_private_dm_reply(comment_id, message_text):
     with urllib.request.urlopen(req, timeout=10) as resp:
         return json.loads(resp.read().decode("utf-8"))
 
-def process_reels_comments(keyword="JARVIS", resource_url="https://github.com/open-jarvis/OpenJarvis"):
-    """Scans recent Reels and auto-replies to users commenting the keyword."""
+def extract_keyword_from_caption(caption, default="TOOL"):
+    """Dynamically extracts the CTA keyword from the Reel's caption."""
+    match = re.search(r"Comment\s*['\"]([A-Za-z0-9_]+)['\"]", caption, flags=re.IGNORECASE)
+    if match:
+        return match.group(1).upper()
+    return default
+
+def process_reels_comments(default_keyword="JARVIS", default_url="https://github.com/open-jarvis/OpenJarvis"):
+    """Scans recent Reels, dynamically detects each Reel's CTA keyword, and auto-replies."""
     if not ACCESS_TOKEN or ACCESS_TOKEN.startswith("placeholder"):
         print("Error: INSTAGRAM_ACCESS_TOKEN not configured.")
         return
@@ -91,7 +98,6 @@ def process_reels_comments(keyword="JARVIS", resource_url="https://github.com/op
     processed = load_processed_comments()
     print("\n" + "="*60)
     print("   CURIO CUT AUTONOMOUS COMMENT-TO-DM BOT   ")
-    print(f"   Keyword: {keyword} | Target: {resource_url}")
     print("="*60)
 
     try:
@@ -102,10 +108,16 @@ def process_reels_comments(keyword="JARVIS", resource_url="https://github.com/op
         return
 
     total_replied = 0
+    replied_users_per_media = {}
+
     for m in media_list:
         m_id = m.get("id")
         caption = m.get("caption", "")
         permalink = m.get("permalink", "")
+        
+        # Dynamic keyword detection per Reel
+        reel_keyword = extract_keyword_from_caption(caption, default=default_keyword)
+        print(f"\n[Scanning Reel] {permalink} | Target Keyword: '{reel_keyword}'")
 
         try:
             comments = get_media_comments(m_id)
@@ -113,33 +125,44 @@ def process_reels_comments(keyword="JARVIS", resource_url="https://github.com/op
             print(f"  Error fetching comments for {m_id}: {e}")
             continue
 
+        replied_users_per_media[m_id] = set()
+
         for c in comments:
             c_id = c.get("id")
             c_text = c.get("text", "").strip()
             c_user = c.get("username", "user")
 
-            if c_id in processed:
+            if c_id in processed or c_user in replied_users_per_media[m_id]:
                 continue
 
-            # Check if user mentioned the keyword
-            if keyword.lower() in c_text.lower():
+            # Flexible keyword matching: matches keyword or 'send link' / 'repo' / 'prompt'
+            clean_text = re.sub(r'[^a-zA-Z0-9\s]', '', c_text).upper()
+            is_match = (
+                reel_keyword in clean_text
+                or "SEND LINK" in clean_text
+                or "GIVE LINK" in clean_text
+                or "REPO" in clean_text
+                or "PROMPT" in clean_text
+            )
+
+            if is_match:
                 print(f"\n[!] MATCH FOUND on {permalink}:")
                 print(f"    User: @{c_user} | Comment: '{c_text}'")
 
                 # 1. Send public reply
-                public_msg = f"@{c_user} Check your DMs! Sent you the full repo link and prompt 🚀"
+                public_msg = f"@{c_user} Check your DMs! Sent you the full setup link and prompt 🚀"
                 try:
                     reply_public_comment(c_id, public_msg)
                     print(f"    ✓ Public reply posted successfully.")
                 except Exception as e:
-                    print(f"    Notice: Public reply error: {e}")
+                    print(f"    Notice: Public reply response: {e}")
 
                 # 2. Send private DM
                 dm_msg = (
-                    f"Hey @{c_user}! Here is the direct link and prompt you requested:\n\n"
-                    f"🔗 Resource: {resource_url}\n\n"
+                    f"Hey @{c_user}! Here is the direct link and prompt you requested for '{reel_keyword}':\n\n"
+                    f"🔗 Resource: {default_url}\n\n"
                     f"Setup instructions: Clone the repo or paste the link into Claude Code and say 'install this for me'.\n\n"
-                    f"Follow @curiocutt for daily AI exploits!"
+                    f"Follow @curiocutt for daily underground AI exploits!"
                 )
                 try:
                     send_private_dm_reply(c_id, dm_msg)
@@ -148,6 +171,7 @@ def process_reels_comments(keyword="JARVIS", resource_url="https://github.com/op
                     print(f"    Notice: Private DM response: {e}")
 
                 save_processed_comment(c_id)
+                replied_users_per_media[m_id].add(c_user)
                 total_replied += 1
                 time.sleep(1.5)
 
@@ -157,3 +181,4 @@ if __name__ == "__main__":
     kw = sys.argv[1] if len(sys.argv) > 1 else "JARVIS"
     url = sys.argv[2] if len(sys.argv) > 2 else "https://github.com/open-jarvis/OpenJarvis"
     process_reels_comments(keyword=kw, resource_url=url)
+

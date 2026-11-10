@@ -51,6 +51,37 @@ def trim_silence(x, thr=0.008):
     b = min(len(x), idx[-1] + int(0.03 * SR))
     return x[a:b]
 
+def normalize_tech_phonetics(text):
+    """Normalizes tech acronyms and numbers to 100% natural conversational human speech."""
+    s = text
+    # Currency and numbers
+    s = re.sub(r'\$([0-9]+)\s*B(?:illion)?\b', r'\1 billion dollars', s, flags=re.IGNORECASE)
+    s = re.sub(r'\$([0-9]+)\s*M(?:illion)?\b', r'\1 million dollars', s, flags=re.IGNORECASE)
+    s = re.sub(r'\$([0-9]+)\s*K\b', r'\1 thousand dollars', s, flags=re.IGNORECASE)
+    s = re.sub(r'\$([0-9]+)', r'\1 dollars', s)
+    s = re.sub(r'\b100%', 'one hundred percent', s)
+    s = re.sub(r'\b0%', 'zero percent', s)
+    s = re.sub(r'%', ' percent', s)
+    # Tech acronyms spoken cleanly
+    s = re.sub(r'\bAI\b', 'A.I.', s)
+    s = re.sub(r'\bAPI\b', 'A.P.I.', s)
+    s = re.sub(r'\bAPIs\b', 'A.P.I.s', s)
+    s = re.sub(r'\bLLM\b', 'L.L.M.', s)
+    s = re.sub(r'\bLLMs\b', 'L.L.M.s', s)
+    s = re.sub(r'\bUI\b', 'U.I.', s)
+    s = re.sub(r'\bUX\b', 'U.X.', s)
+    s = re.sub(r'\bURL\b', 'U.R.L.', s)
+    s = re.sub(r'\bPR\b', 'P.R.', s)
+    s = re.sub(r'\bPRs\b', 'P.R.s', s)
+    s = re.sub(r'\bC\+\+', 'C plus plus', s)
+    s = re.sub(r'\bMCP\b', 'M.C.P.', s)
+    s = re.sub(r'\bCLI\b', 'C.L.I.', s)
+    s = re.sub(r'\bSQL\b', 'sequel', s, flags=re.IGNORECASE)
+    s = re.sub(r'\bGitHub\b', 'Git Hub', s, flags=re.IGNORECASE)
+    s = re.sub(r'\bVS\s*Code\b', 'V.S. Code', s, flags=re.IGNORECASE)
+    s = re.sub(r'\bv([0-9]+)\.([0-9]+)\b', r'version \1 point \2', s)
+    return s
+
 def synthesize_dialogue(project_dir, pair_name="default"):
     """Takes project/script.json and creates data/narration.wav and data/lines.json."""
     ensure_models()
@@ -79,7 +110,8 @@ def synthesize_dialogue(project_dir, pair_name="default"):
         speed = 1.05 if spk == "guide" else 1.02  # Slight tempo contrast
 
         lang = 'en-gb' if active_voice.startswith('b') else 'en-us'
-        raw_audio = k.create(line["text"], voice=active_voice, speed=speed, lang=lang)[0]
+        spoken_text = normalize_tech_phonetics(line["text"])
+        raw_audio = k.create(spoken_text, voice=active_voice, speed=speed, lang=lang)[0]
         cleaned_audio = trim_silence(np.asarray(raw_audio, dtype=np.float64))
 
         dur = len(cleaned_audio) / SR
@@ -128,3 +160,4 @@ if __name__ == "__main__":
         synthesize_dialogue(sys.argv[1])
     else:
         print("Usage: python dual_voice.py <project_directory>")
+

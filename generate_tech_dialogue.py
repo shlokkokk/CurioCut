@@ -244,3 +244,4 @@ if __name__ == "__main__":
     for line in script["lines"]:
         spk = line["speaker"].upper()
         print(f"[{spk}] ({line['header']}) -> {line['text']}")
+

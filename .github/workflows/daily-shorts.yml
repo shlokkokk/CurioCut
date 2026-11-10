@@ -8,6 +8,8 @@ on:
     # (Scheduled at :55 to bypass GitHub's top-of-the-hour :00 congestion queue drops)
     - cron: '55 6,12 * * *'
   workflow_dispatch: # Allows manual 1-click trigger from GitHub website anytime!
+  repository_dispatch: # Allows external cron triggers (cron-job.org, Cloudflare Workers, webhooks)
+    types: [daily_short, tech_short, run_pipeline]
 
 jobs:
   dispatch-cloud-gpu-engine:

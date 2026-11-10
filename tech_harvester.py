@@ -272,36 +272,55 @@ def fetch_github_trending():
 
     raise RuntimeError("No suitable GitHub repos found")
 
-def get_next_tech_story():
-    """Multi-tiered robust harvester: GitHub Trending -> Hacker News -> Reddit -> Evergreen Master Vault."""
+def get_next_tech_story(force_mode=None):
+    """Multi-tiered robust harvester:
+    1. Live GitHub Trending AI Repos (fresh breaking developer tools)
+    2. Infinite Claude Skills & MCP Superpowers (high engagement, practical)
+    3. Hacker News Top Stories & Show HN
+    4. Remake of High-Performing Previous Story with New Hook
+    5. Evergreen Master Exploit Vault (Guaranteed 10/10)
+    """
     print("\n" + "="*60)
     print("   CURIO CUT TECH & AI INTELLIGENCE HARVESTER   ")
     print("="*60)
 
-    # 1. Try GitHub Trending AI Repos (Free, high-velocity developer tools)
+    from claude_skills_vault import get_random_claude_skill, CLAUDE_SKILLS_CATALOG
+
+    # Mode 1: Claude Skills Superpower Feature
+    if force_mode == "skill" or random.random() < 0.35:
+        available_skills = [s for s in CLAUDE_SKILLS_CATALOG if not is_duplicate(s["title"])]
+        if not available_skills:
+            available_skills = CLAUDE_SKILLS_CATALOG
+        picked_skill = random.choice(available_skills)
+        print(f"  [Claude Skills Engine] Selected high-converting skill: '{picked_skill['title']}' ({picked_skill.get('skill_category', 'Automation')})")
+        return picked_skill
+
+    # Mode 2: Live GitHub Trending AI Repos (Free, high-velocity developer tools)
     try:
         return fetch_github_trending()
     except Exception as e:
         print(f"  GitHub Harvester notice: {e}. Switching to Tier 2 (Hacker News)...")
 
-    # 2. Try Hacker News Firebase API
+    # Mode 3: Hacker News Firebase API
     try:
         return fetch_hacker_news()
     except Exception as e:
-        print(f"  Hacker News notice: {e}. Switching to Tier 3 (Reddit)...")
+        print(f"  Hacker News notice: {e}. Switching to Tier 3 (Claude Skills)...")
 
-    # 3. Try Reddit Developer Goldmines
+    # Mode 4: Claude Skills Vault Failover
     try:
-        return fetch_reddit_tech()
+        picked_skill = get_random_claude_skill()
+        print(f"  [Claude Skills Engine] Failover selected skill: '{picked_skill['title']}'")
+        return picked_skill
     except Exception as e:
-        print(f"  Reddit Harvester notice: {e}. Switching to Tier 4 (Evergreen Vault)...")
+        print(f"  Claude Skills notice: {e}. Switching to Tier 4 (Evergreen Vault)...")
 
-    # 4. Guaranteed Evergreen Master Vault
+    # Mode 5: Guaranteed Evergreen Master Vault
     available = [s for s in EVERGREEN_TECH_VAULT if not is_duplicate(s["title"])]
     if not available:
         available = EVERGREEN_TECH_VAULT
     picked = random.choice(available)
-    print(f"  [Tier 4 Vault] Loaded master verified tech exploit: '{picked['title']}'")
+    print(f"  [Tier 5 Vault] Loaded master verified tech exploit: '{picked['title']}'")
     return picked
 
 if __name__ == "__main__":
