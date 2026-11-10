@@ -103,6 +103,20 @@ def push_kernel(enable_gpu=True):
         res = json.loads(resp.read().decode("utf-8"))
         print(f"🚀 Job accepted by Kaggle cloud API!")
         print(f"URL: https://www.kaggle.com/code/{KAGGLE_USER}/{KERNEL_SLUG}")
+        try:
+            from discord_notifier import notify_engine
+            notify_engine(
+                title="Cloud GPU Engine Dispatched",
+                description=f"CurioCut autonomous video pipeline dispatched to Kaggle Cloud runner.",
+                fields=[
+                    {"name": "Hardware", "value": mode_str, "inline": True},
+                    {"name": "Slot", "value": secrets_to_pass["CURIO_SLOT"].upper(), "inline": True},
+                    {"name": "Kaggle Runner", "value": f"[View Kernel](https://www.kaggle.com/code/{KAGGLE_USER}/{KERNEL_SLUG})", "inline": False}
+                ],
+                color=0x38BDF8
+            )
+        except Exception:
+            pass
         return res
 
 print("\n" + "="*70)

@@ -183,6 +183,20 @@ def process_reels_comments(default_keyword="JARVIS", default_url="https://github
                 try:
                     send_private_dm_reply(c_id, dm_msg)
                     print(f"    ✓ Private DM sent successfully!")
+                    try:
+                        from discord_notifier import notify_engine
+                        notify_engine(
+                            title="Auto-DM Dispatched to Commenter",
+                            description=f"Delivered resource link to @{c_user} on Instagram Reel.",
+                            fields=[
+                                {"name": "User", "value": f"@{c_user}", "inline": True},
+                                {"name": "Keyword", "value": reel_keyword, "inline": True},
+                                {"name": "Tool / Resource", "value": f"[{reel_title}]({reel_url})", "inline": False}
+                            ],
+                            color=0xEC4899
+                        )
+                    except Exception:
+                        pass
                 except Exception as e:
                     print(f"    Notice: Private DM response: {e}")
 

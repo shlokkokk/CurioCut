@@ -81,6 +81,20 @@ slot = os.environ.get("CURIO_SLOT", "auto").lower()
 style_arg = "claude-desk" if ("claude" in slot or "tech" in slot) else "auto"
 print(f"\n[4/4] Starting 3D short generation (Slot: {slot} | Style: {style_arg})...", flush=True)
 
+try:
+    from discord_notifier import notify_engine, notify_error
+    notify_engine(
+        title="Kaggle Tesla T4 GPU Execution Started",
+        description="Autonomous cloud container initialized. Generating short...",
+        fields=[
+            {"name": "Slot", "value": slot.upper(), "inline": True},
+            {"name": "Target Style", "value": style_arg, "inline": True}
+        ],
+        color=0x10B981
+    )
+except Exception:
+    pass
+
 cmd = [sys.executable, "make_short.py", "--style", style_arg, "--upload", "--privacy", "public"]
 res = subprocess.run(cmd)
 
@@ -97,4 +111,9 @@ if res.returncode == 0:
         print(f"Notice: Comment bot notice: {e}", flush=True)
 else:
     print(f"\nWorker exited with error code {res.returncode}", flush=True)
+    try:
+        from discord_notifier import notify_error
+        notify_error(f"Worker exited with error code {res.returncode}", context="Kaggle GPU Execution")
+    except Exception:
+        pass
     sys.exit(res.returncode)

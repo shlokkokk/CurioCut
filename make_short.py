@@ -197,7 +197,19 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
         capture_args.append("--draft")
         
     run_cmd(capture_args, cwd=project_dir)
-    print(f"Render complete: {output_mp4.resolve()} ({output_mp4.stat().st_size / (1024*1024):.2f} MB)")
+    file_size_mb = output_mp4.stat().st_size / (1024 * 1024)
+    print(f"Render complete: {output_mp4.resolve()} ({file_size_mb:.2f} MB)")
+
+    notify_engine(
+        title="3D Render Complete",
+        description=f"Generated 1080x1920 MP4 for **{title}**",
+        fields=[
+            {"name": "Style", "value": style, "inline": True},
+            {"name": "Size", "value": f"{file_size_mb:.2f} MB", "inline": True},
+            {"name": "Status", "value": "Ready for upload", "inline": True}
+        ],
+        color=0x3B82F6
+    )
 
     # Record history
     try:
