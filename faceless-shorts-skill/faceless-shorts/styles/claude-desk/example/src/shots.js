@@ -43,15 +43,15 @@ export function buildShots(E) {
   const studio = techStudio();
   scene.add(studio);
 
-  // Characters (Positioned with ample stage room, fully in frame)
+  // Characters (Positioned comfortably within the 9:16 mobile frame)
   const claude = new ClaudeBot();
-  claude.group.position.set(-1.15, 0, 0.4);
-  claude.group.rotation.y = 0.26;
+  claude.group.position.set(-0.72, 0, 0.4);
+  claude.group.rotation.y = 0.32;
   scene.add(claude.group);
 
   const skeptic = new SkepticBot();
-  skeptic.group.position.set(1.15, 0, 0.4);
-  skeptic.group.rotation.y = -0.26;
+  skeptic.group.position.set(0.72, 0, 0.4);
+  skeptic.group.rotation.y = -0.32;
   scene.add(skeptic.group);
 
   // Global Script Context
@@ -72,7 +72,7 @@ export function buildShots(E) {
     return propGroup;
   });
 
-  const cam = camera(38);
+  const cam = camera(42);
 
   scriptLines.forEach((ln, idx) => {
     const isFirst = idx === 0;
@@ -136,27 +136,27 @@ export function buildShots(E) {
           skeptic.set({ mood: skepticMood, talk: talkVal, blink: blinkVal }, t);
         }
 
-        // Camera Choreography (Both characters remain in-frame with balanced composition)
+        // Camera Choreography (Both characters always 100% visible, zero edge-clipping)
         const progress = Math.min(1, lt / Math.max(1, d));
 
         if (isLast) {
           // Final CTA: Wide centered shot showing both toons + floating comment UI + flying airplane
-          cam.position.set(0, 1.82, 4.45 - progress * 0.18);
-          cam.lookAt(V3(0, 1.25, 0.2));
+          cam.position.set(0, 1.68, 5.1 - progress * 0.15);
+          cam.lookAt(V3(0, 1.08, 0.2));
         } else if (isFirst) {
-          // Opening hook: Dramatic push-in from wide establishing shot
-          cam.position.set(0, 1.78, 4.75 - progress * 0.35);
-          cam.lookAt(V3(0, 1.18, 0.2));
+          // Opening hook: Push-in from establishing two-shot
+          cam.position.set(0, 1.65, 5.3 - progress * 0.25);
+          cam.lookAt(V3(0, 1.05, 0.2));
         } else if (isSpeakingGuide) {
-          // Medium two-shot biased slightly toward Claude
-          const camX = -0.45 + Math.sin(progress * 0.3) * 0.08;
-          cam.position.set(camX, 1.74, 4.15);
-          cam.lookAt(V3(-0.55, 1.15, 0.35));
+          // Balanced two-shot with subtle bias toward Claude
+          const camX = -0.22 + Math.sin(progress * 0.3) * 0.05;
+          cam.position.set(camX, 1.62, 4.9);
+          cam.lookAt(V3(-0.28, 1.05, 0.3));
         } else {
-          // Medium two-shot biased slightly toward Skeptic
-          const camX = 0.45 - Math.sin(progress * 0.3) * 0.08;
-          cam.position.set(camX, 1.72, 4.15);
-          cam.lookAt(V3(0.55, 1.15, 0.35));
+          // Balanced two-shot with subtle bias toward Skeptic
+          const camX = 0.22 - Math.sin(progress * 0.3) * 0.05;
+          cam.position.set(camX, 1.62, 4.9);
+          cam.lookAt(V3(0.28, 1.05, 0.3));
         }
 
         // Render WebGL frame

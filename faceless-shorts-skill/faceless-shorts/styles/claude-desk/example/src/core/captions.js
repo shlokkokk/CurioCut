@@ -4,7 +4,7 @@
 import { ctx, clamp, lerp, seg, eob } from './lib.js';
 import { T, lineWords } from './timing.js';
 
-export const CAP = { y: 1360, size: 84, maxW: 960 };
+export const CAP = { y: 1530, size: 80, maxW: 960 };
 let caps = [];
 let scriptHeaders = [];
 
