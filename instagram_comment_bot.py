@@ -186,12 +186,11 @@ def process_reels_comments(default_keyword="JARVIS", default_url="https://github
                     try:
                         from discord_notifier import notify_engine
                         notify_engine(
-                            title="Auto-DM Dispatched to Commenter",
-                            description=f"Delivered resource link to @{c_user} on Instagram Reel.",
+                            title="Auto-DM Sent",
+                            description=f"Sent link for **{reel_title}** to @{c_user}.",
                             fields=[
                                 {"name": "User", "value": f"@{c_user}", "inline": True},
-                                {"name": "Keyword", "value": reel_keyword, "inline": True},
-                                {"name": "Tool / Resource", "value": f"[{reel_title}]({reel_url})", "inline": False}
+                                {"name": "Keyword", "value": reel_keyword, "inline": True}
                             ],
                             color=0xEC4899
                         )

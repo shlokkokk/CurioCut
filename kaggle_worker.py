@@ -84,11 +84,10 @@ print(f"\n[4/4] Starting 3D short generation (Slot: {slot} | Style: {style_arg})
 try:
     from discord_notifier import notify_engine, notify_error
     notify_engine(
-        title="Kaggle Tesla T4 GPU Execution Started",
-        description="Autonomous cloud container initialized. Generating short...",
+        title="Generating Video",
+        description=f"Cloud container started for **{slot.upper()}**.",
         fields=[
-            {"name": "Slot", "value": slot.upper(), "inline": True},
-            {"name": "Target Style", "value": style_arg, "inline": True}
+            {"name": "Style", "value": style_arg, "inline": True}
         ],
         color=0x10B981
     )
@@ -113,7 +112,7 @@ else:
     print(f"\nWorker exited with error code {res.returncode}", flush=True)
     try:
         from discord_notifier import notify_error
-        notify_error(f"Worker exited with error code {res.returncode}", context="Kaggle GPU Execution")
+        notify_error("Cloud Runner", f"Worker stopped with code {res.returncode}")
     except Exception:
         pass
     sys.exit(res.returncode)

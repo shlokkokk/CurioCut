@@ -50,106 +50,102 @@ def send_embed(webhook_url, embed_payload):
         return False
 
 def notify_engine(title, description, fields=None, color=0x2B2D31):
-    """Sends engine-level runtime and benchmark metrics to #engine-logs."""
+    """Sends clean updates to #engine-logs."""
     embed = {
         "title": title,
         "description": description,
         "color": color,
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "footer": {"text": "CurioCut Engine Runtime"}
+        "footer": {"text": "CurioCut"}
     }
     if fields:
         embed["fields"] = fields
     return send_embed(WEBHOOKS["engine_logs"], embed)
 
 def notify_alert(title, details, severity="warning"):
-    """Sends system warnings, retries, and quota notices to #alerts."""
+    """Sends warnings to #alerts."""
     embed = {
         "title": title,
         "description": details,
         "color": 0xF59E0B, # Amber
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "footer": {"text": f"Severity: {severity.upper()}"}
+        "footer": {"text": "CurioCut Alert"}
     }
     return send_embed(WEBHOOKS["alerts"], embed)
 
 def notify_error(context, error_msg, stack_trace=None):
-    """Sends critical pipeline crashes and exceptions to #errors."""
-    fields = [{"name": "Context", "value": context, "inline": True}]
+    """Sends errors to #errors."""
+    fields = [{"name": "Where", "value": context, "inline": True}]
     if stack_trace:
-        fields.append({"name": "Traceback", "value": f"```{stack_trace[-800:]}```", "inline": False})
+        fields.append({"name": "Details", "value": f"```{stack_trace[-600:]}```", "inline": False})
         
     embed = {
-        "title": "Pipeline Execution Error",
+        "title": "Pipeline Error",
         "description": error_msg,
-        "color": 0xDC2626, # Crimson
+        "color": 0xDC2626, # Red
         "fields": fields,
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "footer": {"text": "CurioCut Error Handler"}
+        "footer": {"text": "CurioCut"}
     }
     return send_embed(WEBHOOKS["errors"], embed)
 
 def notify_youtube_post(title, video_url, video_id, duration_sec=None, size_mb=None, privacy="public", style="tall-tale"):
-    """Sends rich success card to #youtube-posts when a Short is published."""
+    """Sends post confirmation to #youtube-posts."""
     fields = [
-        {"name": "Watch Short", "value": f"[▶️ Watch on YouTube Shorts]({video_url})\n{video_url}", "inline": False},
-        {"name": "Visibility", "value": privacy.capitalize(), "inline": True},
+        {"name": "Link", "value": f"[Watch Short]({video_url})", "inline": True},
         {"name": "Style", "value": style, "inline": True},
     ]
     if duration_sec:
-        fields.append({"name": "Duration", "value": f"{duration_sec:.1f}s", "inline": True})
-    if size_mb:
-        fields.append({"name": "Size", "value": f"{size_mb:.2f} MB", "inline": True})
+        fields.append({"name": "Duration", "value": f"{duration_sec:.0f}s", "inline": True})
         
     embed = {
-        "title": title,
+        "title": f"YouTube: {title}",
         "url": video_url,
-        "description": "Short successfully published to YouTube.",
-        "color": 0x10B981, # Emerald
+        "description": "Short is live on YouTube!",
+        "color": 0x10B981, # Green
         "fields": fields,
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "footer": {"text": "YouTube Data API v3"}
+        "footer": {"text": "YouTube"}
     }
     return send_embed(WEBHOOKS["yt_posts"], embed)
 
 def notify_youtube_error(error_msg, context="Upload"):
-    """Sends upload rejections and API quota errors to #youtube-errors."""
+    """Sends error to #youtube-errors."""
     embed = {
-        "title": "YouTube Publication Failure",
+        "title": "YouTube Upload Failed",
         "description": error_msg,
-        "color": 0xDC2626, # Crimson
-        "fields": [{"name": "Operation", "value": context, "inline": True}],
+        "color": 0xDC2626,
+        "fields": [{"name": "Step", "value": context, "inline": True}],
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "footer": {"text": "YouTube Uploader"}
+        "footer": {"text": "YouTube"}
     }
     return send_embed(WEBHOOKS["yt_errors"], embed)
 
 def notify_instagram_post(caption, permalink, media_id=None):
-    """Sends rich success card to #instagram-posts when a Reel is published."""
-    fields = [{"name": "Watch Reel", "value": f"[▶️ Watch on Instagram Reels]({permalink})\n{permalink}", "inline": False}]
-    if media_id:
-        fields.append({"name": "Media ID", "value": str(media_id), "inline": True})
+    """Sends post confirmation to #instagram-posts."""
+    clean_caption = caption[:200] + ("..." if len(caption) > 200 else "")
+    fields = [{"name": "Link", "value": f"[Watch Reel]({permalink})", "inline": False}]
         
     embed = {
-        "title": "Reel Published",
+        "title": "New Reel Live on Instagram",
         "url": permalink,
-        "description": caption[:300] + ("..." if len(caption) > 300 else ""),
-        "color": 0x10B981, # Emerald
+        "description": clean_caption,
+        "color": 0x10B981,
         "fields": fields,
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "footer": {"text": "Meta Graph API v21.0"}
+        "footer": {"text": "Instagram"}
     }
     return send_embed(WEBHOOKS["ig_posts"], embed)
 
 def notify_instagram_error(error_msg, context="Upload"):
-    """Sends Instagram upload failures to #instagram-errors."""
+    """Sends error to #instagram-errors."""
     embed = {
-        "title": "Instagram Publication Failure",
+        "title": "Instagram Upload Failed",
         "description": error_msg,
-        "color": 0xDC2626, # Crimson
-        "fields": [{"name": "Operation", "value": context, "inline": True}],
+        "color": 0xDC2626,
+        "fields": [{"name": "Step", "value": context, "inline": True}],
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "footer": {"text": "Instagram Reels Uploader"}
+        "footer": {"text": "Instagram"}
     }
     return send_embed(WEBHOOKS["ig_errors"], embed)
 

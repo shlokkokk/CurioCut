@@ -201,12 +201,10 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
     print(f"Render complete: {output_mp4.resolve()} ({file_size_mb:.2f} MB)")
 
     notify_engine(
-        title="3D Render Complete",
-        description=f"Generated 1080x1920 MP4 for **{title}**",
+        title="Video Render Complete",
+        description=f"**{title}** is rendered ({file_size_mb:.1f} MB). Ready to upload.",
         fields=[
-            {"name": "Style", "value": style, "inline": True},
-            {"name": "Size", "value": f"{file_size_mb:.2f} MB", "inline": True},
-            {"name": "Status", "value": "Ready for upload", "inline": True}
+            {"name": "Style", "value": style, "inline": True}
         ],
         color=0x3B82F6
     )
