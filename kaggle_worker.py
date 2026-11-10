@@ -77,8 +77,11 @@ if yt_token and not (WORKSPACE / "youtube_token.json").exists():
     print("Restored YouTube authentication token.", flush=True)
 
 # Step 4: Run autonomous 3D short generation & upload
-print("\n[4/4] Starting 3D short generation and publishing...", flush=True)
-cmd = [sys.executable, "make_short.py", "--upload", "--privacy", "public"]
+slot = os.environ.get("CURIO_SLOT", "auto").lower()
+style_arg = "claude-desk" if ("claude" in slot or "tech" in slot) else "auto"
+print(f"\n[4/4] Starting 3D short generation (Slot: {slot} | Style: {style_arg})...", flush=True)
+
+cmd = [sys.executable, "make_short.py", "--style", style_arg, "--upload", "--privacy", "public"]
 res = subprocess.run(cmd)
 
 if res.returncode == 0:

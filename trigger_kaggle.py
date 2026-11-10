@@ -43,6 +43,7 @@ secrets_to_pass = {
     "DISCORD_WEBHOOK_YT_ERRORS": os.environ.get("DISCORD_WEBHOOK_YT_ERRORS", ""),
     "DISCORD_WEBHOOK_IG_POSTS": os.environ.get("DISCORD_WEBHOOK_IG_POSTS", ""),
     "DISCORD_WEBHOOK_IG_ERRORS": os.environ.get("DISCORD_WEBHOOK_IG_ERRORS", ""),
+    "CURIO_SLOT": os.environ.get("CURIO_SLOT", "auto"),
 }
 
 yt_file = Path(__file__).resolve().parent / "youtube_token.json"
@@ -57,6 +58,7 @@ os.environ["GEMINI_API_KEY_BACKUP"] = {repr(secrets_to_pass["GEMINI_API_KEY_BACK
 os.environ["INSTAGRAM_ACCOUNT_ID"] = {repr(secrets_to_pass["INSTAGRAM_ACCOUNT_ID"])}
 os.environ["INSTAGRAM_ACCESS_TOKEN"] = {repr(secrets_to_pass["INSTAGRAM_ACCESS_TOKEN"])}
 os.environ["YOUTUBE_TOKEN_JSON"] = {repr(secrets_to_pass["YOUTUBE_TOKEN_JSON"])}
+os.environ["CURIO_SLOT"] = {repr(secrets_to_pass["CURIO_SLOT"])}
 os.environ["DISCORD_WEBHOOK_ENGINE_LOGS"] = {repr(secrets_to_pass["DISCORD_WEBHOOK_ENGINE_LOGS"])}
 os.environ["DISCORD_WEBHOOK_ALERTS"] = {repr(secrets_to_pass["DISCORD_WEBHOOK_ALERTS"])}
 os.environ["DISCORD_WEBHOOK_ERRORS"] = {repr(secrets_to_pass["DISCORD_WEBHOOK_ERRORS"])}

@@ -236,6 +236,9 @@ def generate_dialogue_script(story_info=None):
         }
 
     script_data["style"] = "claude-desk"
+    script_data["category"] = story_info.get("category", "breaking_tech")
+    script_data["tool_name"] = story_info.get("tool_name", "")
+    script_data["resource_url"] = story_info.get("resource_url", "")
     return script_data
 
 if __name__ == "__main__":

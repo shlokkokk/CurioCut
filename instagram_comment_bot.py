@@ -82,6 +82,16 @@ def send_private_dm_reply(comment_id, message_text):
     with urllib.request.urlopen(req, timeout=10) as resp:
         return json.loads(resp.read().decode("utf-8"))
 
+REELS_MAP_FILE = Path(__file__).resolve().parent / "published_reels.json"
+
+def load_reels_map():
+    if REELS_MAP_FILE.exists():
+        try:
+            return json.loads(REELS_MAP_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+    return {}
+
 def extract_keyword_from_caption(caption, default="TOOL"):
     """Dynamically extracts the CTA keyword from the Reel's caption."""
     match = re.search(r"Comment\s*['\"]([A-Za-z0-9_]+)['\"]", caption, flags=re.IGNORECASE)
@@ -90,12 +100,14 @@ def extract_keyword_from_caption(caption, default="TOOL"):
     return default
 
 def process_reels_comments(default_keyword="JARVIS", default_url="https://github.com/open-jarvis/OpenJarvis"):
-    """Scans recent Reels, dynamically detects each Reel's CTA keyword, and auto-replies."""
+    """Scans recent Reels, dynamically detects each Reel's CTA keyword and target link, and auto-replies."""
     if not ACCESS_TOKEN or ACCESS_TOKEN.startswith("placeholder"):
         print("Error: INSTAGRAM_ACCESS_TOKEN not configured.")
         return
 
     processed = load_processed_comments()
+    reels_map = load_reels_map()
+
     print("\n" + "="*60)
     print("   CURIO CUT AUTONOMOUS COMMENT-TO-DM BOT   ")
     print("="*60)
@@ -115,9 +127,13 @@ def process_reels_comments(default_keyword="JARVIS", default_url="https://github
         caption = m.get("caption", "")
         permalink = m.get("permalink", "")
         
-        # Dynamic keyword detection per Reel
-        reel_keyword = extract_keyword_from_caption(caption, default=default_keyword)
-        print(f"\n[Scanning Reel] {permalink} | Target Keyword: '{reel_keyword}'")
+        # Dynamic keyword and resource URL per Reel
+        reel_info = reels_map.get(str(m_id), {})
+        reel_keyword = reel_info.get("cta_keyword") or extract_keyword_from_caption(caption, default=default_keyword)
+        reel_url = reel_info.get("resource_url") or default_url
+        reel_title = reel_info.get("title", "Tool")
+
+        print(f"\n[Scanning Reel] {permalink} | Keyword: '{reel_keyword}' | Link: {reel_url}")
 
         try:
             comments = get_media_comments(m_id)
@@ -135,7 +151,7 @@ def process_reels_comments(default_keyword="JARVIS", default_url="https://github
             if c_id in processed or c_user in replied_users_per_media[m_id]:
                 continue
 
-            # Flexible keyword matching: matches keyword or 'send link' / 'repo' / 'prompt'
+            # Flexible keyword matching
             clean_text = re.sub(r'[^a-zA-Z0-9\s]', '', c_text).upper()
             is_match = (
                 reel_keyword in clean_text
@@ -159,8 +175,8 @@ def process_reels_comments(default_keyword="JARVIS", default_url="https://github
 
                 # 2. Send private DM
                 dm_msg = (
-                    f"Hey @{c_user}! Here is the direct link and prompt you requested for '{reel_keyword}':\n\n"
-                    f"🔗 Resource: {default_url}\n\n"
+                    f"Hey @{c_user}! Here is the direct link and prompt you requested for '{reel_title}':\n\n"
+                    f"🔗 Resource: {reel_url}\n\n"
                     f"Setup instructions: Clone the repo or paste the link into Claude Code and say 'install this for me'.\n\n"
                     f"Follow @curiocutt for daily underground AI exploits!"
                 )

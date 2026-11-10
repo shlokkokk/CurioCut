@@ -48,6 +48,7 @@ jobs:
           DISCORD_WEBHOOK_YT_ERRORS: ${{ secrets.DISCORD_WEBHOOK_YT_ERRORS }}
           DISCORD_WEBHOOK_IG_POSTS: ${{ secrets.DISCORD_WEBHOOK_IG_POSTS }}
           DISCORD_WEBHOOK_IG_ERRORS: ${{ secrets.DISCORD_WEBHOOK_IG_ERRORS }}
+          CURIO_SLOT: ${{ github.event.client_payload.slot || 'auto' }}
           PYTHONUNBUFFERED: "1"
         run: |
           python trigger_kaggle.py

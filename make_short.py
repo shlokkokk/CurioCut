@@ -202,7 +202,12 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
     # Record history
     try:
         history = json.loads(history_file.read_text(encoding="utf-8")) if history_file.exists() else []
-        history.append({"title": title, "style": style})
+        history.append({
+            "title": title,
+            "style": style,
+            "category": script_data.get("category", "breaking_tech"),
+            "tool_name": script_data.get("tool_name", "")
+        })
         history_file.write_text(json.dumps(history[-50:], indent=2), encoding="utf-8")
     except Exception:
         pass
@@ -257,6 +262,20 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
                 ig_media_id, ig_permalink = upload_reel(str(output_mp4), caption=desc)
                 print(f"  Live on Instagram: {ig_permalink}")
                 notify_instagram_post(caption=desc, permalink=ig_permalink, media_id=ig_media_id)
+
+                # Record reel mapping for dynamic Comment-to-DM responder
+                reels_map_file = WORKSPACE / "published_reels.json"
+                try:
+                    reels_map = json.loads(reels_map_file.read_text(encoding="utf-8")) if reels_map_file.exists() else {}
+                    reels_map[str(ig_media_id)] = {
+                        "title": title,
+                        "cta_keyword": script_data.get("cta_keyword", "TOOL"),
+                        "resource_url": script_data.get("resource_url", ""),
+                        "permalink": ig_permalink
+                    }
+                    reels_map_file.write_text(json.dumps(reels_map, indent=2), encoding="utf-8")
+                except Exception:
+                    pass
             except Exception as e:
                 print(f"  Instagram Reels upload error: {e}")
                 notify_instagram_error(str(e))
