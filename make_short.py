@@ -281,7 +281,7 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
         if style == "claude-desk":
             cta = script_data.get("cta_keyword", "TOOL")
             desc = (
-                f"💬 Follow @curiocutt & comment '{cta}' to get the direct link in your DMs!\n\n"
+                f"💬 Follow & comment '{cta}' for the direct link in your DMs!\n\n"
                 f"{title}\n\n"
                 f"Daily underground AI breakthroughs & open-source developer exploits.\n\n"
                 f"#ai #developer #claude #anthropic #tech #github #coding #automation #curiocut #programming #software #opensource #aitools"
