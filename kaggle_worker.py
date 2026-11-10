@@ -105,13 +105,7 @@ if res.returncode == 0:
     print("\n" + "="*70, flush=True)
     print("🎉 SHORT SUCCESSFULLY CREATED AND PUBLISHED TO CLOUD!", flush=True)
     print("="*70 + "\n", flush=True)
-
-    # Run Instagram Comment-to-DM Engine
-    print("\n[5/5] Scanning and auto-replying to Instagram Reel comments...", flush=True)
-    try:
-        subprocess.run([sys.executable, "instagram_comment_bot.py"], check=False, timeout=120)
-    except Exception as e:
-        print(f"Notice: Comment bot notice: {e}", flush=True)
+    # Note: Instagram Comment-to-DM is handled 24/7 in real-time by Cloudflare Edge Webhooks
 else:
     print(f"\nWorker exited with error code {res.returncode}", flush=True)
     try:

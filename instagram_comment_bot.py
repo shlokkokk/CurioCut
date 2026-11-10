@@ -56,6 +56,23 @@ def get_media_comments(media_id):
         data = json.loads(resp.read().decode("utf-8"))
         return data.get("data", [])
 
+def has_existing_reply(comment_id):
+    """Checks via Meta API if this comment already received a reply from CurioCut."""
+    try:
+        url = f"https://graph.facebook.com/v21.0/{comment_id}/replies?fields=id,from,text&access_token={ACCESS_TOKEN}"
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            replies = data.get("data", [])
+            for r in replies:
+                from_id = r.get("from", {}).get("id")
+                txt = r.get("text", "").lower()
+                if from_id == IG_ACCOUNT_ID or "check your dm" in txt:
+                    return True
+    except Exception:
+        pass
+    return False
+
 def reply_public_comment(comment_id, text):
     """Posts a public reply under the user's comment."""
     url = f"https://graph.facebook.com/v21.0/{comment_id}/replies"
@@ -149,7 +166,8 @@ def process_reels_comments(default_keyword="JARVIS", default_url="https://github
             c_text = c.get("text", "").strip()
             c_user = c.get("username", "user")
 
-            if c_id in processed or c_user in replied_users_per_media[m_id]:
+            if c_id in processed or c_user in replied_users_per_media[m_id] or has_existing_reply(c_id):
+                mark_comment_processed(c_id)
                 continue
 
             # Flexible keyword matching
