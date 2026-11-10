@@ -18,15 +18,21 @@ FILES = {
     'voices-v1.0.bin': 'https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin',
 }
 
-# Curated High-Retention Voice Pairings
+# Curated High-Retention Voice Pairings:
+# Guide: am_fenrir (Deep, masculine, chest-resonant US male. Sounds like a confident tech founder, 0% robotic)
+# Skeptic: af_bella (Expressive, bright, curious US female. Naturally raises pitch on questions with real emotion)
 VOICE_PAIRS = {
     "default": {
-        "guide": "am_adam",       # Crisp, energetic, natural conversational US male (sounds real, not like an AI)
-        "skeptic": "af_heart"     # Soft, warm, expressive US female
+        "guide": "am_fenrir",    # Deep, masculine, resonant male
+        "skeptic": "af_bella"     # Expressive, lively, questioning female
+    },
+    "deep_duo": {
+        "guide": "am_onyx",       # Deep, commanding male
+        "skeptic": "af_sarah"     # Conversational, sharp female
     },
     "lively": {
-        "guide": "am_puck",       # Dynamic, playful US male
-        "skeptic": "af_bella"     # Bright, youthful US female
+        "guide": "am_adam",       # Crisp, fast tech male
+        "skeptic": "af_bella"     # Bright female
     }
 }
 SR = 24000
@@ -107,10 +113,26 @@ def synthesize_dialogue(project_dir, pair_name="default"):
     for i, line in enumerate(S["lines"]):
         spk = line.get("speaker", "guide").lower()
         active_voice = voices["guide"] if spk == "guide" else voices["skeptic"]
-        speed = 1.05 if spk == "guide" else 1.02  # Slight tempo contrast
-
+        
+        # Guide: deep, grounded pacing (1.03x). Skeptic: expressive, questioning pace (1.06x).
+        speed = 1.03 if spk == "guide" else 1.06
         lang = 'en-gb' if active_voice.startswith('b') else 'en-us'
-        spoken_text = normalize_tech_phonetics(line["text"])
+
+        raw_text = line["text"].strip()
+
+        # Infuse real human conversational prosody
+        if spk == "skeptic":
+            # Force genuine rising question pitch when asking or reacting with disbelief
+            if not raw_text.endswith("?") and not raw_text.endswith("!"):
+                if re.search(r'^(wait|hold on|what|how|why|is that|can you|and|okay but|so)\b', raw_text, re.IGNORECASE):
+                    raw_text = raw_text.rstrip(".") + "?"
+            # Natural thinking beat after conversational openers ("Wait—", "Hold on—")
+            raw_text = re.sub(r'^(wait|hold on|okay|look)[,\s]+', r'\1— ', raw_text, flags=re.IGNORECASE)
+        else:
+            # Guide: assertive, natural cadence without run-ons
+            raw_text = re.sub(r'\b(yep|yeah|look|see)[,\s]+', r'\1. ', raw_text, flags=re.IGNORECASE)
+
+        spoken_text = normalize_tech_phonetics(raw_text)
         raw_audio = k.create(spoken_text, voice=active_voice, speed=speed, lang=lang)[0]
         cleaned_audio = trim_silence(np.asarray(raw_audio, dtype=np.float64))
 

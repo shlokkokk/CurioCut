@@ -18,63 +18,38 @@ if ENV_FILE.exists():
             k, v = line.split("=", 1)
             os.environ.setdefault(k.strip(), v.strip())
 
-DIALOGUE_SYSTEM_PROMPT = """You are an elite short-form scriptwriter creating viral 2-character 3D dialogue shorts (@SKILLWARS.AI format).
-The video features two 3D characters in a tech lab / studio:
-1. 'guide' (Red Claude Character): Calm, authoritative, tech-insider male. Explains the crazy tech exploit or tool in simple, jaw-dropping steps.
-2. 'skeptic' (Pink Avatar): Soft, expressive, skeptical female. Represents the viewer's exact thoughts, objections, and disbelief.
+DIALOGUE_SYSTEM_PROMPT = """You are an elite short-form scriptwriter creating natural, viral 2-character dialogue for YouTube Shorts and Instagram Reels.
+Two friends are talking in a tech studio:
+1. 'guide' (Male Tech Creator): Deep, masculine, confident insider. Speaks like he is showing a close friend a crazy secret on his laptop. Natural spoken cadence, direct, punchy, zero robotic script-reading vibes.
+2. 'skeptic' (Female Friend): Sharp, expressive, skeptical. Represents the viewer's exact thoughts. She calls out doubts, reacts with surprise, and asks genuine questions with rising inflection.
 
-SCRIPT STRUCTURE FORMULA:
-1. CUT 1 ('guide'): The 2-second pattern interrupt hook. Cut through the noise with an unbelievable claim.
-   Example: "Claude just killed the billion dollar Jarvis."
-2. CUT 2 ('skeptic'): Disbelief / question.
-   Example: "Wait, Tony Stark's Jarvis?"
-3. CUT 3 ('guide'): Tool reveal & open-source loophole.
-   Example: "Yep. Now it is free. Built by Stanford researchers, open source on GitHub."
-4. CUT 4 ('skeptic'): The viewer's biggest barrier.
-   Example: "Okay, but I'm not a coder."
-5. CUT 5 ('guide'): Step 1 — Dead simple setup.
-   Example: "You don't need to be. Step one: paste the GitHub link into Claude Code and say install this for me."
-6. CUT 6 ('guide'): Step 2 — The integration.
-   Example: "Step two: connect your Gmail and calendar."
-7. CUT 7 ('skeptic'): Curiosity escalation.
-   Example: "And then what?"
-8. CUT 8 ('guide'): The payoff / superpower.
-   Example: "Tomorrow morning you wake up to forty unread emails. It reads them all and speaks an audio briefing of only what actually matters."
-9. CUT 9 ('skeptic'): The price objection.
-   Example: "And what does it cost every month?"
-10. CUT 10 ('guide'): Zero cost punchline.
-    Example: "Nothing. It runs on your own computer. Zero subscriptions."
-11. CUT 11 ('guide'): The viral comment-for-DM Call to Action.
-    Example: "Comment JARVIS below and I will send you the direct link and the setup prompt."
-
-STRICT RULES:
-- Zero robotic AI buzzwords: NEVER say "in today's digital landscape", "delve", "game-changer", "revolutionary", "testament".
-- Speak like two friends talking in real life.
-- All numbers MUST be spelled out as spoken words ("one billion dollars", "forty unread emails", "step one").
-- Each cut MUST have:
-  - "speaker": "guide" OR "skeptic"
-  - "text": The spoken line (8 to 15 words)
-  - "header": Chapter title displayed on the top plaque (ALL CAPS, under 6 words, e.g. "CLAUDE KILLED $1B JARVIS", "STEP 1: PASTE THE LINK")
-  - "prop": 3D prop action. Choose from:
-    ["sword_cut", "glowing_orb", "terminal_desk", "floating_envelope", "pile_letters", "scanner_beam", "waveform_audio", "server_tower", "scale_balance", "comment_ui"]
+CRITICAL CONVERSATIONAL & VOICE RULES:
+- NEVER sound like an AI reading a script or software manual.
+- BANNED: Do NOT use "Step 1", "Step 2", "Step 3" phrasing! Talk like real people: "All you have to do is...", "Then the craziest part is...", "Check this out..."
+- BANNED AI BUZZWORDS: "game-changer", "revolutionary", "delve", "testament", "tapestry", "landscape".
+- SKEPTIC QUESTIONS MUST SOUND LIKE QUESTIONS: Every line where the skeptic doubts or asks MUST end with a question mark ('?') and use natural conversational phrases ('Wait, how is that even possible?', 'Hold on, is that actually free?', 'Okay, what is the catch?').
+- GUIDE DELIVERY: Grounded, punchy, confident answers ('Look. It runs completely on your own machine.', 'Zero subscriptions. Forever.').
+- Numbers must be spelled out phonetically as words ('two hundred dollars', 'three clicks').
+- Length: 9 to 11 cuts total.
+- Final cut MUST be the Guide calling to action with the CTA keyword ('Comment [KEYWORD] below and I will DM you the direct repo link.').
 
 JSON OUTPUT FORMAT:
 Output strictly valid JSON with no markdown wrapping:
 {
   "title": "Short Punchy Title (under 7 words)",
-  "cta_keyword": "JARVIS",
-  "tool_name": "OpenJarvis",
+  "cta_keyword": "KEYWORD",
+  "tool_name": "ToolName",
   "resource_url": "https://github.com/...",
   "lines": [
     {
       "speaker": "guide",
-      "text": "Claude just killed the billion dollar Jarvis.",
-      "header": "CLAUDE KILLED $1B JARVIS",
+      "text": "Spoken line (8 to 14 words)",
+      "header": "SHORT HEADER (ALL CAPS)",
       "prop": "sword_cut"
-    },
-    ...
+    }
   ]
 }
+Props available: ["sword_cut", "glowing_orb", "terminal_desk", "falling_letters", "scanner_beam", "waveform_audio", "server_tower", "comment_ui"]
 """
 
 def call_gemini_dialogue(prompt, api_key):
@@ -189,85 +164,73 @@ def generate_dialogue_script(story_info=None):
             except Exception as e:
                 print(f"  Groq notice: {e}")
 
-    # Fallback to guaranteed OpenJarvis template if offline
+    # Fallback to verified conversational master dialogue if offline
     if not script_data or not script_data.get("lines"):
-        print("  Loading verified master OpenJarvis dialogue...")
+        print("  Loading verified high-retention conversational tech dialogue...")
         script_data = {
-            "title": "Claude Just Killed the $1B Jarvis",
-            "cta_keyword": "JARVIS",
-            "tool_name": "OpenJarvis",
-            "resource_url": "https://github.com/open-jarvis/OpenJarvis",
+            "title": "Run Full AI On Your Laptop",
+            "cta_keyword": "LOCAL",
+            "tool_name": "Ollama DeepSeek",
+            "resource_url": "https://github.com/ollama/ollama",
             "lines": [
                 {
                     "speaker": "guide",
-                    "text": "Claude just killed the billion dollar Jarvis.",
-                    "header": "CLAUDE KILLED $1B JARVIS",
+                    "text": "Stop paying twenty dollars a month for artificial intelligence.",
+                    "header": "STOP PAYING FOR AI",
                     "prop": "sword_cut"
                 },
                 {
                     "speaker": "skeptic",
-                    "text": "Wait, Tony Stark's Jarvis?",
-                    "header": "TONY STARK'S JARVIS?",
+                    "text": "Wait— what do you mean? How else am I supposed to use it?",
+                    "header": "HOW ELSE CAN I USE IT?",
                     "prop": "glowing_orb"
                 },
                 {
                     "speaker": "guide",
-                    "text": "Yep. Now it is free. It is called OpenJarvis, built by Stanford researchers, open source on GitHub.",
-                    "header": "IT'S CALLED OPENJARVIS",
+                    "text": "You can download the entire model directly to your laptop for free.",
+                    "header": "DOWNLOAD IT FOR FREE",
                     "prop": "glowing_orb"
                 },
                 {
                     "speaker": "skeptic",
-                    "text": "Okay, but I'm not a coder.",
-                    "header": "I'M NOT A CODER",
+                    "text": "Hold on— don't you need a ten thousand dollar supercomputer for that?",
+                    "header": "DO I NEED A SUPERCOMPUTER?",
                     "prop": "terminal_desk"
                 },
                 {
                     "speaker": "guide",
-                    "text": "You don't need to be. Step one: copy the link, paste it into Claude Code, and say install this for me.",
-                    "header": "STEP 1: PASTE THE LINK",
+                    "text": "Not anymore. A brand new breakthrough lets you run full reasoning models on a basic Mac.",
+                    "header": "RUNS ON A BASIC LAPTOP",
                     "prop": "terminal_desk"
-                },
-                {
-                    "speaker": "guide",
-                    "text": "Step two: connect your Gmail and calendar.",
-                    "header": "STEP 2: GMAIL + CALENDAR",
-                    "prop": "floating_envelope"
                 },
                 {
                     "speaker": "skeptic",
-                    "text": "And then what?",
-                    "header": "AND THEN WHAT?",
-                    "prop": "pile_letters"
-                },
-                {
-                    "speaker": "guide",
-                    "text": "Tomorrow morning you wake up to forty unread emails. Jarvis reads them first and tells you what actually matters.",
-                    "header": "JARVIS READS THEM FIRST",
+                    "text": "Okay, but is it actually as smart as ChatGPT?",
+                    "header": "IS IT AS SMART?",
                     "prop": "scanner_beam"
                 },
                 {
                     "speaker": "guide",
-                    "text": "Step three: turn on the spoken briefing. It literally talks to you like a real assistant.",
-                    "header": "STEP 3: SPOKEN BRIEFING",
-                    "prop": "waveform_audio"
+                    "text": "It literally beat ChatGPT in math and coding benchmarks last week.",
+                    "header": "BEAT CHATGPT IN CODING",
+                    "prop": "scanner_beam"
                 },
                 {
                     "speaker": "skeptic",
-                    "text": "And what does it cost every month?",
-                    "header": "WHAT DOES IT COST?",
+                    "text": "And it works when my WiFi is completely disconnected?",
+                    "header": "WORKS OFFLINE?",
                     "prop": "server_tower"
                 },
                 {
                     "speaker": "guide",
-                    "text": "Nothing. It runs on your own computer. Zero subscriptions.",
-                    "header": "FREE · NO SUBSCRIPTION",
+                    "text": "Completely offline. One hundred percent private. Zero monthly fees.",
+                    "header": "100% PRIVATE · $0.00",
                     "prop": "server_tower"
                 },
                 {
                     "speaker": "guide",
-                    "text": "Comment JARVIS below and I will send you the direct link and the setup prompt.",
-                    "header": "COMMENT 'JARVIS'",
+                    "text": "Comment LOCAL below and I will send you the one-click install link right now.",
+                    "header": "COMMENT 'LOCAL' BELOW",
                     "prop": "comment_ui"
                 }
             ]
