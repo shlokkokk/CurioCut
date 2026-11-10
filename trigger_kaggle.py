@@ -101,6 +101,9 @@ def push_kernel(enable_gpu=True):
 
     with urllib.request.urlopen(req, timeout=30) as resp:
         res = json.loads(resp.read().decode("utf-8"))
+        if res.get("hasError") or res.get("error"):
+            err_msg = res.get("error") or res.get("errorNullable") or "Unknown Kaggle API error"
+            raise RuntimeError(f"Kaggle API Error: {err_msg}")
         print(f"🚀 Job accepted by Kaggle cloud API!")
         print(f"URL: https://www.kaggle.com/code/{KAGGLE_USER}/{KERNEL_SLUG}")
         try:
