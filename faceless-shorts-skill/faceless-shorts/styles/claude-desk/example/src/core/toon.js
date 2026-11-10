@@ -386,15 +386,15 @@ export class ClaudeBot {
       this.antBeacon.scale.setScalar(1 + Math.sin(t * 8) * 0.25);
     }
 
-    // Waddling leg physics
-    this.legs[0].position.y = 0.19 + Math.max(0, Math.sin(t * animSpeed)) * 0.1 * walkAmt;
-    this.legs[1].position.y = 0.19 + Math.max(0, Math.sin(t * animSpeed + Math.PI)) * 0.1 * walkAmt;
-    this.legs[2].position.y = 0.19 + Math.max(0, Math.sin(t * animSpeed + Math.PI)) * 0.1 * walkAmt;
-    this.legs[3].position.y = 0.19 + Math.max(0, Math.sin(t * animSpeed)) * 0.1 * walkAmt;
+    // Solid grounded footing on the studio floor (zero jittery leg dancing)
+    this.legs[0].position.y = 0.19;
+    this.legs[1].position.y = 0.19;
+    this.legs[2].position.y = 0.19;
+    this.legs[3].position.y = 0.19;
 
-    // Rhythmic body bounce
-    this.bodyGroup.position.y = Math.sin(t * animSpeed * 2) * 0.038 * walkAmt;
-    this.bodyGroup.rotation.z = Math.sin(t * animSpeed) * 0.045 * walkAmt;
+    // Calm, subtle, natural posture breathing (grounded presenter presence)
+    this.bodyGroup.position.y = Math.sin(t * 2.0) * 0.012;
+    this.bodyGroup.rotation.z = Math.sin(t * 1.5) * 0.01;
 
     // Dynamic Action Choreography
     if (action === 'slash' || action === 'cut') {
@@ -540,15 +540,16 @@ export class SkepticBot {
     const walkAmt = isTalking ? 0.75 : 0.2;
     const mood = this.st.mood || 'neutral';
 
-    // Walking leg cycle
-    this.legs[0].position.y = 0.175 + Math.max(0, Math.sin(t * animSpeed)) * 0.09 * walkAmt;
-    this.legs[1].position.y = 0.175 + Math.max(0, Math.sin(t * animSpeed + Math.PI)) * 0.09 * walkAmt;
-    this.legs[2].position.y = 0.175 + Math.max(0, Math.sin(t * animSpeed + Math.PI)) * 0.09 * walkAmt;
-    this.legs[3].position.y = 0.175 + Math.max(0, Math.sin(t * animSpeed)) * 0.09 * walkAmt;
+    // Solid grounded footing on the studio floor (zero jittery leg dancing)
+    this.legs[0].position.y = 0.175;
+    this.legs[1].position.y = 0.175;
+    this.legs[2].position.y = 0.175;
+    this.legs[3].position.y = 0.175;
 
-    this.bodyGroup.position.y = Math.sin(t * animSpeed * 2) * 0.032 * walkAmt;
-    this.bodyGroup.rotation.z = (mood === 'skeptic' ? -0.07 : 0) + Math.sin(t * animSpeed) * 0.04 * walkAmt;
-    this.bow.rotation.z = Math.sin(t * 12) * 0.09 * walkAmt;
+    // Calm subtle breathing & inquisitive posture
+    this.bodyGroup.position.y = Math.sin(t * 2.2) * 0.01;
+    this.bodyGroup.rotation.z = (mood === 'skeptic' ? -0.04 : 0) + Math.sin(t * 1.6) * 0.01;
+    this.bow.rotation.z = Math.sin(t * 3.5) * 0.03;
 
     // Hide all reaction bubbles by default
     this.bubbleShock.visible = false;

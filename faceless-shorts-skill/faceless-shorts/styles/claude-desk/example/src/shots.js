@@ -43,15 +43,15 @@ export function buildShots(E) {
   const studio = techStudio();
   scene.add(studio);
 
-  // Characters (Positioned comfortably within the 9:16 mobile frame)
+  // Characters (Positioned with optimal two-shot spacing for 9:16 mobile frame)
   const claude = new ClaudeBot();
-  claude.group.position.set(-0.72, 0, 0.4);
-  claude.group.rotation.y = 0.32;
+  claude.group.position.set(-0.65, 0, 0.4);
+  claude.group.rotation.y = 0.35;
   scene.add(claude.group);
 
   const skeptic = new SkepticBot();
-  skeptic.group.position.set(0.72, 0, 0.4);
-  skeptic.group.rotation.y = -0.32;
+  skeptic.group.position.set(0.65, 0, 0.4);
+  skeptic.group.rotation.y = -0.35;
   scene.add(skeptic.group);
 
   // Global Script Context
@@ -136,27 +136,27 @@ export function buildShots(E) {
           skeptic.set({ mood: skepticMood, talk: talkVal, blink: blinkVal }, t);
         }
 
-        // Camera Choreography (Both characters always 100% visible, zero edge-clipping)
+        // Cinematic Conversational Camera Director (Dynamic cuts to speaker + Wide establishing)
         const progress = Math.min(1, lt / Math.max(1, d));
 
         if (isLast) {
-          // Final CTA: Wide centered shot showing both toons + floating comment UI + flying airplane
-          cam.position.set(0, 1.68, 5.1 - progress * 0.15);
-          cam.lookAt(V3(0, 1.08, 0.2));
+          // Final CTA: Centered two-shot framing both characters and the floating Instagram Comment Box
+          cam.position.set(0, 1.62, 5.0 - progress * 0.15);
+          cam.lookAt(V3(0, 1.05, 0.2));
         } else if (isFirst) {
-          // Opening hook: Push-in from establishing two-shot
-          cam.position.set(0, 1.65, 5.3 - progress * 0.25);
+          // Opening hook: Dramatic push-in from establishing two-shot
+          cam.position.set(0, 1.62, 5.2 - progress * 0.3);
           cam.lookAt(V3(0, 1.05, 0.2));
         } else if (isSpeakingGuide) {
-          // Balanced two-shot with subtle bias toward Claude
-          const camX = -0.22 + Math.sin(progress * 0.3) * 0.05;
-          cam.position.set(camX, 1.62, 4.9);
-          cam.lookAt(V3(-0.28, 1.05, 0.3));
+          // Medium Close-Up on Claude (Centered in 9:16 mobile frame, 0% clipping)
+          const drift = Math.sin(progress * 0.2) * 0.04;
+          cam.position.set(-0.65 + drift, 1.38, 3.25);
+          cam.lookAt(V3(-0.65, 1.05, 0.4));
         } else {
-          // Balanced two-shot with subtle bias toward Skeptic
-          const camX = 0.22 - Math.sin(progress * 0.3) * 0.05;
-          cam.position.set(camX, 1.62, 4.9);
-          cam.lookAt(V3(0.28, 1.05, 0.3));
+          // Medium Close-Up on Skeptic (Centered in 9:16 mobile frame, 0% clipping)
+          const drift = Math.sin(progress * 0.2) * 0.04;
+          cam.position.set(0.65 - drift, 1.35, 3.25);
+          cam.lookAt(V3(0.65, 1.02, 0.4));
         }
 
         // Render WebGL frame

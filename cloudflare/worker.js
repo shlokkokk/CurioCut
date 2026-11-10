@@ -43,6 +43,33 @@ async function clearSlotSkipped() {
   }
 }
 
+async function isCommentProcessed(commentId) {
+  if (!commentId) return false;
+  try {
+    const url = `https://curiocut.internal/processed-comment/${commentId}`;
+    const res = await caches.default.match(url);
+    return !!res;
+  } catch {
+    return false;
+  }
+}
+
+async function markCommentProcessed(commentId) {
+  if (!commentId) return;
+  try {
+    const url = `https://curiocut.internal/processed-comment/${commentId}`;
+    const res = new Response(JSON.stringify({ commentId, processedAt: Date.now() }), {
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "max-age=86400"
+      }
+    });
+    await caches.default.put(url, res);
+  } catch (e) {
+    console.error("Cache comment error:", e);
+  }
+}
+
 export default {
   async scheduled(event, env, ctx) {
     // Check if user requested to skip the upcoming slot
@@ -393,6 +420,13 @@ async function handleInstagramWebhook(request, env) {
 
           // Ignore own bot comments
           if (comment.from?.id === accountId) continue;
+
+          // Deduplicate comment IDs to prevent repeated replies
+          if (await isCommentProcessed(commentId)) {
+            console.log(`[Instagram Webhook] Comment ${commentId} already processed. Skipping duplicate.`);
+            continue;
+          }
+          await markCommentProcessed(commentId);
 
           // Resolve reel metadata and Claude Skill status
           let reelTitle = "Underground AI Exploit";
