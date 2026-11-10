@@ -394,15 +394,58 @@ async function handleInstagramWebhook(request, env) {
           // Ignore own bot comments
           if (comment.from?.id === accountId) continue;
 
+          // Resolve reel metadata and Claude Skill status
+          let reelTitle = "Underground AI Exploit";
+          let reelKeyword = text.toUpperCase();
+          let resourceUrl = "https://github.com/open-jarvis/OpenJarvis";
+          let isClaudeSkill = false;
+
+          try {
+            const registryRes = await fetch("https://raw.githubusercontent.com/shlokkokk/CurioCut/main/published_reels.json", {
+              headers: { "User-Agent": "CurioCut-Edge/1.0" }
+            });
+            if (registryRes.ok) {
+              const registry = await registryRes.json();
+              const matched = registry[mediaId] || Object.values(registry).find(r =>
+                r.cta_keyword && text.toUpperCase().includes(r.cta_keyword.toUpperCase())
+              );
+              if (matched) {
+                reelTitle = matched.title || reelTitle;
+                reelKeyword = matched.cta_keyword || reelKeyword;
+                resourceUrl = matched.resource_url || resourceUrl;
+                if (matched.category === "claude_skill" || (matched.title && matched.title.toLowerCase().includes("claude"))) {
+                  isClaudeSkill = true;
+                }
+              }
+            }
+          } catch (eReg) {
+            console.error("Registry fetch error:", eReg);
+          }
+
+          if (reelTitle.toLowerCase().includes("claude") || reelTitle.toLowerCase().includes("mcp") || text.toUpperCase().includes("MCP") || text.toUpperCase().includes("SKILL")) {
+            isClaudeSkill = true;
+          }
+
           const reelUrl = `https://www.instagram.com/reel/${comment.media?.id || ""}`;
-          const components = [{
-            type: 1,
-            components: [{
+          const actionButtons = [
+            {
               type: 2,
               style: 5,
               label: "View Reel on Instagram",
               url: reelUrl
-            }]
+            }
+          ];
+          if (resourceUrl && resourceUrl.startsWith("http")) {
+            actionButtons.push({
+              type: 2,
+              style: 5,
+              label: isClaudeSkill ? "Open Claude Skill Repo" : "Open Tool Repo",
+              url: resourceUrl
+            });
+          }
+          const components = [{
+            type: 1,
+            components: actionButtons
           }];
 
           // Stage 1: Immediately post initial notification to Discord
@@ -410,9 +453,9 @@ async function handleInstagramWebhook(request, env) {
           try {
             const initPayload = {
               embeds: [{
-                title: "New Comment Detected",
+                title: isClaudeSkill ? "Claude Skill Comment Detected" : "New Comment Detected",
                 description: `@${user} commented on your Reel:`,
-                color: 0x3B82F6,
+                color: isClaudeSkill ? 0x8B5CF6 : 0x3B82F6,
                 fields: [
                   { name: "User", value: `@${user}`, inline: true },
                   { name: "Comment", value: text, inline: true },
@@ -438,7 +481,10 @@ async function handleInstagramWebhook(request, env) {
           // Stage 2: Send public reply on Reel
           let publicOk = false;
           try {
-            const replyUrl = `https://graph.facebook.com/v21.0/${commentId}/replies?message=${encodeURIComponent("Check your DMs! Sent you the full repo link and setup prompt 🚀")}&access_token=${token}`;
+            const pubText = isClaudeSkill
+              ? `Check your DMs! Sent you the full Claude Skill prompt & setup guide 🚀`
+              : `Check your DMs! Sent you the full repo link and setup prompt 🚀`;
+            const replyUrl = `https://graph.facebook.com/v21.0/${commentId}/replies?message=${encodeURIComponent(pubText)}&access_token=${token}`;
             const rRes = await fetch(replyUrl, { method: "POST" });
             publicOk = rRes.ok;
           } catch (eRep) {
@@ -449,11 +495,16 @@ async function handleInstagramWebhook(request, env) {
           let dmOk = false;
           try {
             const dmUrl = `https://graph.facebook.com/v21.0/${accountId}/messages`;
+            let dmText = "";
+            if (isClaudeSkill) {
+              dmText = `Hey @${user}! Here is the Claude Skill you requested for '${reelTitle}':\n\n⚡ 1-Click Install via Claude Code:\nAsk Claude Code in your terminal: 'install ${resourceUrl}'\n\n🔗 Direct MCP Repository & Docs:\n${resourceUrl}\n\n💡 Tip: You can also add this to your claude_desktop_config.json under mcpServers.\n\nFollow @curiocutt for daily underground AI exploits!`;
+            } else {
+              dmText = `Hey @${user}! Here is the direct link and prompt you requested for '${reelTitle}':\n\n🔗 Link: ${resourceUrl}\n\nSetup prompt: Clone the repo or ask Claude Code to install it for you.\n\nFollow @curiocutt for daily underground AI exploits!`;
+            }
+
             const dmPayload = {
               recipient: { comment_id: commentId },
-              message: {
-                text: `Here is the direct open-source repository link and setup guide for the tool you requested:\n\n🔗 Link: https://github.com/open-jarvis/OpenJarvis\n\nSetup prompt: Clone the repo or ask Claude Code to install it for you.\n\nFollow @curiocutt for daily underground AI exploits!`
-              }
+              message: { text: dmText }
             };
             const dmRes = await fetch(dmUrl, {
               method: "POST",
@@ -471,18 +522,20 @@ async function handleInstagramWebhook(request, env) {
           // Stage 4: In-place update the exact same Discord message to Delivered or Failed
           if (msgId) {
             try {
-              let title = "Direct Message Delivered";
-              let desc = `@${user} commented \`${text}\` and received the resource link.`;
+              let title = isClaudeSkill ? "Claude Skill Delivered" : "Direct Message Delivered";
+              let desc = isClaudeSkill
+                ? `@${user} commented \`${text}\` and received the Claude Skill setup.`
+                : `@${user} commented \`${text}\` and received the resource link.`;
               let color = 0x10B981; // Green
               let statusStr = "✓ Public reply posted & private DM delivered";
 
               if (dmOk && !publicOk) {
-                title = "Private DM Delivered (Public Reply Skipped)";
-                desc = `@${user} received the resource link via DM.`;
+                title = isClaudeSkill ? "Claude Skill DM Delivered" : "Private DM Delivered";
+                desc = `@${user} received the setup link via DM.`;
                 color = 0x10B981;
                 statusStr = "✓ Private DM sent (public reply restricted)";
               } else if (!dmOk && publicOk) {
-                title = "Direct Message Restricted";
+                title = isClaudeSkill ? "Claude Skill Restricted" : "Direct Message Restricted";
                 desc = `@${user} commented \`${text}\`, but their private DMs are restricted.`;
                 color = 0xF59E0B; // Amber
                 statusStr = "⚠️ Public reply posted, private DM blocked by user privacy";
@@ -500,7 +553,8 @@ async function handleInstagramWebhook(request, env) {
                   color,
                   fields: [
                     { name: "User", value: `@${user}`, inline: true },
-                    { name: "Keyword", value: text.toUpperCase(), inline: true },
+                    { name: "Keyword", value: reelKeyword, inline: true },
+                    { name: isClaudeSkill ? "Claude Skill" : "Resource", value: `[${reelTitle}](${resourceUrl})`, inline: false },
                     { name: "Status", value: statusStr, inline: false }
                   ],
                   footer: { text: "24/7 Cloudflare Edge Auto-Responder" }

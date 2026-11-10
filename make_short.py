@@ -315,10 +315,13 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
         else:
             print("  Skipping YouTube (youtube_token.json not found).")
 
-        # 5b. Instagram Reels
+        # 5b. Instagram Reels (Paused during Meta review)
+        pause_ig = os.environ.get("PAUSE_INSTAGRAM", "false").lower() in ("true", "1", "yes")
         ig_token = os.environ.get("INSTAGRAM_ACCESS_TOKEN")
         ig_id = os.environ.get("INSTAGRAM_ACCOUNT_ID")
-        if ig_token and ig_id and not ig_token.startswith("placeholder"):
+        if pause_ig:
+            print("  [!] Instagram Reels upload temporarily paused while Meta verification appeal is in progress.")
+        elif ig_token and ig_id and not ig_token.startswith("placeholder"):
             try:
                 print("\n  >> Uploading to Instagram Reels...")
                 from instagram_uploader import upload_reel

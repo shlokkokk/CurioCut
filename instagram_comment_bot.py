@@ -166,26 +166,33 @@ def process_reels_comments(default_keyword="JARVIS", default_url="https://github
                 print(f"\n[!] MATCH FOUND on {permalink}:")
                 print(f"    User: @{c_user} | Comment: '{c_text}'")
 
+                is_claude_skill = any(k in (reel_title + " " + reel_keyword + " " + c_text).lower() for k in ["claude", "mcp", "skill"])
+
                 # Step 1: Immediately post initial Discord notification with button
                 msg_id = None
-                components = []
+                action_buttons = []
                 if permalink:
-                    components = [{
-                        "type": 1,
-                        "components": [{
-                            "type": 2,
-                            "style": 5,
-                            "label": "View Reel on Instagram",
-                            "url": permalink
-                        }]
-                    }]
+                    action_buttons.append({
+                        "type": 2,
+                        "style": 5,
+                        "label": "View Reel on Instagram",
+                        "url": permalink
+                    })
+                if reel_url and reel_url.startswith("http"):
+                    action_buttons.append({
+                        "type": 2,
+                        "style": 5,
+                        "label": "Open Claude Skill Repo" if is_claude_skill else "Open Tool Repo",
+                        "url": reel_url
+                    })
+                components = [{"type": 1, "components": action_buttons}] if action_buttons else []
 
                 try:
                     from discord_notifier import WEBHOOKS, post_webhook_message, patch_webhook_message
                     init_embed = {
-                        "title": "New Comment Detected",
+                        "title": "Claude Skill Comment Detected" if is_claude_skill else "New Comment Detected",
                         "description": f"@{c_user} commented on your Reel:",
-                        "color": 0x3B82F6,
+                        "color": 0x8B5CF6 if is_claude_skill else 0x3B82F6,
                         "fields": [
                             {"name": "User", "value": f"@{c_user}", "inline": True},
                             {"name": "Comment", "value": c_text, "inline": True},
@@ -198,7 +205,11 @@ def process_reels_comments(default_keyword="JARVIS", default_url="https://github
                     print(f"    Notice: Initial Discord notification: {e_init}")
 
                 # Step 2: Send public reply
-                public_msg = f"@{c_user} Sent to your DMs! Make sure you follow @curiocutt so Instagram doesn't filter the link to your hidden requests folder."
+                public_msg = (
+                    f"@{c_user} Sent the Claude Skill setup prompt to your DMs! Follow @curiocutt so IG doesn't hide it in message requests."
+                    if is_claude_skill else
+                    f"@{c_user} Sent to your DMs! Make sure you follow @curiocutt so Instagram doesn't filter the link to your hidden requests folder."
+                )
                 public_ok = False
                 try:
                     reply_public_comment(c_id, public_msg)
@@ -208,12 +219,23 @@ def process_reels_comments(default_keyword="JARVIS", default_url="https://github
                     print(f"    Notice: Public reply response: {e}")
 
                 # Step 3: Send private DM
-                dm_msg = (
-                    f"Hey @{c_user}! Here is the direct link and prompt you requested for '{reel_title}':\n\n"
-                    f"🔗 Resource: {reel_url}\n\n"
-                    f"Setup instructions: Clone the repo or paste the link into Claude Code and say 'install this for me'.\n\n"
-                    f"Follow @curiocutt for daily underground AI exploits!"
-                )
+                if is_claude_skill:
+                    dm_msg = (
+                        f"Hey @{c_user}! Here is the Claude Skill you requested for '{reel_title}':\n\n"
+                        f"⚡ 1-Click Install via Claude Code:\n"
+                        f"Ask Claude Code in terminal: 'install {reel_url}'\n\n"
+                        f"🔗 Direct MCP Repository & Guide:\n"
+                        f"{reel_url}\n\n"
+                        f"💡 Desktop Tip: You can also add this to your claude_desktop_config.json under 'mcpServers'.\n\n"
+                        f"Follow @curiocutt for daily underground AI exploits!"
+                    )
+                else:
+                    dm_msg = (
+                        f"Hey @{c_user}! Here is the direct link and prompt you requested for '{reel_title}':\n\n"
+                        f"🔗 Resource: {reel_url}\n\n"
+                        f"Setup instructions: Clone the repo or paste the link into Claude Code and say 'install this for me'.\n\n"
+                        f"Follow @curiocutt for daily underground AI exploits!"
+                    )
                 dm_ok = False
                 try:
                     send_private_dm_reply(c_id, dm_msg)
@@ -227,17 +249,17 @@ def process_reels_comments(default_keyword="JARVIS", default_url="https://github
                     try:
                         from discord_notifier import WEBHOOKS, patch_webhook_message
                         if dm_ok and public_ok:
-                            title = "Direct Message Delivered"
-                            desc = f"@{c_user} commented `{c_text}` and received the resource link."
+                            title = "Claude Skill Delivered" if is_claude_skill else "Direct Message Delivered"
+                            desc = f"@{c_user} commented `{c_text}` and received the Claude Skill setup." if is_claude_skill else f"@{c_user} commented `{c_text}` and received the resource link."
                             color = 0x10B981 # Green
                             status_str = "✓ Public reply posted & private DM delivered"
                         elif dm_ok and not public_ok:
-                            title = "Private DM Delivered (Public Reply Skipped)"
+                            title = "Claude Skill DM Delivered" if is_claude_skill else "Private DM Delivered"
                             desc = f"@{c_user} received the resource link via DM."
                             color = 0x10B981
                             status_str = "✓ Private DM sent (public reply restricted)"
                         elif not dm_ok and public_ok:
-                            title = "Direct Message Restricted"
+                            title = "Claude Skill Restricted" if is_claude_skill else "Direct Message Restricted"
                             desc = f"@{c_user} commented `{c_text}`, but their private DMs are restricted."
                             color = 0xF59E0B # Amber
                             status_str = "⚠️ Public reply posted, private DM blocked by user privacy"
@@ -254,7 +276,7 @@ def process_reels_comments(default_keyword="JARVIS", default_url="https://github
                             "fields": [
                                 {"name": "User", "value": f"@{c_user}", "inline": True},
                                 {"name": "Keyword", "value": reel_keyword, "inline": True},
-                                {"name": "Resource", "value": f"[{reel_title}]({reel_url})", "inline": False},
+                                {"name": "Claude Skill" if is_claude_skill else "Resource", "value": f"[{reel_title}]({reel_url})", "inline": False},
                                 {"name": "Status", "value": status_str, "inline": False}
                             ],
                             "footer": {"text": "Instagram Growth Engine"}

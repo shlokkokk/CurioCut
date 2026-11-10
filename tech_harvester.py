@@ -82,9 +82,24 @@ def fetch_live_claude_skill():
             continue
 
         clean_tool = re.sub(r'[-_]', ' ', short_name).title()
-        cta = re.sub(r'[^A-Z]', '', short_name.upper())[:6] or "CLAUDE"
-        if len(cta) < 3:
-            cta = "SKILL"
+        
+        # Ensure CTA is always a crisp, punchy, 100% pronounceable English word for TTS
+        clean_upper = re.sub(r'[^A-Z]', '', short_name.upper())
+        if "FAST" in clean_upper:
+            cta = "FAST"
+        elif "MEM" in clean_upper:
+            cta = "MEMORY"
+        elif "BROWSER" in clean_upper or "PLAY" in clean_upper:
+            cta = "BROWSE"
+        elif "CODE" in clean_upper:
+            cta = "CODE"
+        elif "DEV" in clean_upper or "BUILD" in clean_upper:
+            cta = "BUILD"
+        elif "MCP" in clean_upper:
+            cta = "CLAUDE"
+        else:
+            vocab = ["CLAUDE", "AGENT", "LOCAL", "SECRET", "PROMPT", "TURBO", "BRAIN", "EXPLOIT"]
+            cta = random.choice(vocab)
 
         print(f"  [Channel 1: Live Claude Skill] Harvested '{short_name}' from official MCP index")
         return {
@@ -281,7 +296,19 @@ def get_next_tech_story(force_mode=None):
         print(f"  Hacker News notice: {e}. Trying live Claude skills as failover...")
 
     # Final live failover: Claude skill
-    return fetch_live_claude_skill()
+    try:
+        return fetch_live_claude_skill()
+    except Exception as e:
+        print(f"  Live failover notice: {e}. Using guaranteed offline breakthrough story...")
+        return {
+            "title": "FastMCP: Build Python Claude Tools in 4 Lines",
+            "category": "claude_skill",
+            "tool_name": "FastMCP",
+            "resource_url": "https://github.com/jlowin/fastmcp",
+            "cta_keyword": "FAST",
+            "is_claude_skill": True,
+            "premise": "FastMCP allows developers to build production Claude Code tools and MCP servers in under four lines of clean Python. Complete local execution with zero subscription costs."
+        }
 
 if __name__ == "__main__":
     story = get_next_tech_story()

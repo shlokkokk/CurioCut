@@ -34,6 +34,7 @@ function draw(t) {
     GL.width = Math.round(1080 * RES); GL.height = Math.round(1920 * RES);
     const E = makeEngine(GL, { w: GL.width, h: GL.height, samples: AA });
     E.cta_keyword = script.cta_keyword || 'JARVIS';
+    E.script = script;
     const { shots, cues } = buildShots(E);
     shots.sort((a, b) => a.at - b.at);
     OP._shots = shots; OP.script = script;

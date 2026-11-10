@@ -86,6 +86,8 @@ def normalize_tech_phonetics(text):
     s = re.sub(r'\bGitHub\b', 'Git Hub', s, flags=re.IGNORECASE)
     s = re.sub(r'\bVS\s*Code\b', 'V.S. Code', s, flags=re.IGNORECASE)
     s = re.sub(r'\bv([0-9]+)\.([0-9]+)\b', r'version \1 point \2', s)
+    # Spell out any vowel-less consonant cluster acronyms cleanly (e.g., SDK -> S.D.K., MCP -> M.C.P.)
+    s = re.sub(r'\b([B-DF-HJ-NP-TV-Z]{3,6})\b', lambda m: '. '.join(m.group(1)) + '.', s)
     return s
 
 def synthesize_dialogue(project_dir, pair_name="default"):

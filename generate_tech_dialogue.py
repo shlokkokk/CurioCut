@@ -261,8 +261,9 @@ def generate_dialogue_script(story_info=None):
 
     script_data["style"] = "claude-desk"
     script_data["category"] = story_info.get("category", "breaking_tech")
-    script_data["tool_name"] = story_info.get("tool_name", "")
-    script_data["resource_url"] = story_info.get("resource_url", "")
+    script_data["tool_name"] = script_data.get("tool_name") or story_info.get("tool_name", "")
+    script_data["resource_url"] = script_data.get("resource_url") or story_info.get("resource_url", "")
+    script_data["cta_keyword"] = (script_data.get("cta_keyword") or story_info.get("cta_keyword", "FAST")).upper()
     return script_data
 
 if __name__ == "__main__":

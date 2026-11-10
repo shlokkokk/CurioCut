@@ -28,9 +28,11 @@ export function buildCaptions(script) {
   caps = [];
   scriptHeaders = [];
 
+  if (!script || !script.lines) return caps;
+
   script.lines.forEach((ln, i) => {
     const ws = lineWords(i);
-    if (!ws.length) return;
+    if (!ws || !ws.length) return;
 
     // Record header for top plaque
     const headerText = (ln.header || script.title || 'TECH INTEL').toUpperCase();
@@ -56,7 +58,7 @@ export function buildCaptions(script) {
   // Calculate chunk end times
   caps.forEach((c, k) => {
     const next = caps[k + 1];
-    const lineEnd = T.lines[c.line].end;
+    const lineEnd = T.lines && T.lines[c.line] ? T.lines[c.line].end : T.dur;
     c.e = next ? (next.s - lineEnd > 0.6 && next.line !== c.line ? lineEnd + 0.25 : next.s) : T.dur;
   });
 
