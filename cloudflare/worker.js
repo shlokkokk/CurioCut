@@ -246,6 +246,27 @@ export default {
       return new Response(statusText, { headers: { "Content-Type": "text/plain" } });
     }
 
+    // 3. Instagram Real-Time Comment-to-DM Webhook
+    if (path.includes("instagram") || path.includes("webhook")) {
+      // GET: Meta Webhook Verification
+      if (request.method === "GET") {
+        const mode = urlObj.searchParams.get("hub.mode");
+        const token = urlObj.searchParams.get("hub.verify_token");
+        const challenge = urlObj.searchParams.get("hub.challenge");
+        const expectedToken = env.INSTAGRAM_VERIFY_TOKEN || "curiocut_meta_verify_2026";
+        if (mode === "subscribe" && token === expectedToken) {
+          return new Response(challenge, { status: 200 });
+        }
+        return new Response("Forbidden", { status: 403 });
+      }
+
+      // POST: Instant Event from Meta
+      if (request.method === "POST") {
+        ctx.waitUntil(handleInstagramWebhook(request, env));
+        return new Response("EVENT_RECEIVED", { status: 200 });
+      }
+    }
+
     return new Response("CurioCut Edge Active", { headers: { "Content-Type": "text/plain" } });
   }
 };
@@ -347,5 +368,85 @@ async function verifyDiscordSignature(request, rawBody, publicKeyHex) {
     } catch {
       return false;
     }
+  }
+}
+
+async function handleInstagramWebhook(request, env) {
+  try {
+    const body = await request.json();
+    const token = env.INSTAGRAM_ACCESS_TOKEN;
+    const accountId = env.INSTAGRAM_ACCOUNT_ID || "17841434641576009";
+    const dmsWebhook = env.DISCORD_WEBHOOK_DMS_SENT || "https://discord.com/api/webhooks/1569784587742216335/V-pVPv5YdzPtgNpcNHmn9KEvgPz6flbFIdcwAwUDsbBXYm7XSrskjnxvfG48mIJFCyPQ";
+
+    if (!token) return;
+
+    for (const entry of body.entry || []) {
+      for (const change of entry.changes || []) {
+        if (change.field === "comments") {
+          const comment = change.value;
+          if (!comment) continue;
+
+          const commentId = comment.id;
+          const text = (comment.text || "").trim();
+          const user = comment.from?.username || "viewer";
+          const mediaId = comment.media?.id;
+
+          // Ignore own bot comments
+          if (comment.from?.id === accountId) continue;
+
+          // 1. Post Public Reply on Reel
+          const replyUrl = `https://graph.facebook.com/v21.0/${commentId}/replies?message=${encodeURIComponent("Check your DMs! Sent you the full repo link and setup prompt 🚀")}&access_token=${token}`;
+          await fetch(replyUrl, { method: "POST" });
+
+          // 2. Send Private DM with link
+          const dmUrl = `https://graph.facebook.com/v21.0/${accountId}/messages`;
+          const dmPayload = {
+            recipient: { comment_id: commentId },
+            message: {
+              text: `Here is the direct open-source repository link and setup guide for the tool you requested:\n\n🔗 Link: https://github.com/open-jarvis/OpenJarvis\n\nSetup prompt: Clone the repo or ask Claude Code to install it for you.\n\nFollow @curiocutt for daily underground AI exploits!`
+            }
+          };
+          await fetch(dmUrl, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(dmPayload)
+          });
+
+          // 3. Post Discord Notification with interactive button
+          const embedPayload = {
+            embeds: [{
+              title: "Direct Message Auto-Sent",
+              description: `@${user} commented \`${text}\` and received the resource link.`,
+              color: 0xEC4899,
+              fields: [
+                { name: "User", value: `@${user}`, inline: true },
+                { name: "Keyword", value: text.toUpperCase(), inline: true }
+              ],
+              footer: { text: "24/7 Cloudflare Edge Auto-Responder" }
+            }],
+            components: [{
+              type: 1,
+              components: [{
+                type: 2,
+                style: 5,
+                label: "View Reel on Instagram",
+                url: `https://www.instagram.com/reel/${comment.media?.id || ""}`
+              }]
+            }]
+          };
+
+          await fetch(dmsWebhook, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(embedPayload)
+          });
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Instagram webhook processing error:", e);
   }
 }

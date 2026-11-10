@@ -32,12 +32,16 @@ WEBHOOKS = {
     "live_progress": os.environ.get("DISCORD_WEBHOOK_LIVE_PROGRESS") or "https://discord.com/api/webhooks/1569785063535546450/7MZUMEDK1u7okE7a_a5YsstKQ-bN2GFai2Ww2nHDAG4HlBwD8Gg8FSOiQ-eixJyk0aBb"
 }
 
-def send_embed(webhook_url, embed_payload):
-    """Sends a Discord webhook embed with retry logic."""
+def send_embed(webhook_url, embed_payload, components=None):
+    """Sends a Discord webhook embed with retry logic and interactive components."""
     if not webhook_url or not webhook_url.startswith("https://discord.com/api/webhooks/"):
         return False
         
-    data = json.dumps({"embeds": [embed_payload]}).encode("utf-8")
+    payload = {"embeds": [embed_payload]}
+    if components:
+        payload["components"] = components
+
+    data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         webhook_url,
         data=data,

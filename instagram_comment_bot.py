@@ -185,7 +185,7 @@ def process_reels_comments(default_keyword="JARVIS", default_url="https://github
                     send_private_dm_reply(c_id, dm_msg)
                     print(f"    ✓ Private DM sent successfully!")
                     try:
-                        # Send rich notification to #dms-sent using webhook
+                        # Send rich notification to #dms-sent with a direct button to the Reel
                         from discord_notifier import WEBHOOKS, send_embed
                         dm_embed = {
                             "title": "Direct Message Sent",
@@ -198,7 +198,20 @@ def process_reels_comments(default_keyword="JARVIS", default_url="https://github
                             ],
                             "footer": {"text": "Instagram Growth Engine"}
                         }
-                        send_embed(WEBHOOKS["dms_sent"], dm_embed)
+                        components = []
+                        if permalink:
+                            components = [{
+                                "type": 1,
+                                "components": [
+                                    {
+                                        "type": 2,
+                                        "style": 5,
+                                        "label": "View Reel on Instagram",
+                                        "url": permalink
+                                    }
+                                ]
+                            }]
+                        send_embed(WEBHOOKS["dms_sent"], dm_embed, components=components)
                     except Exception as e_dc:
                         print(f"    Notice: Discord notification response: {e_dc}")
                 except Exception as e:
