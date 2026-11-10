@@ -82,7 +82,7 @@ def save_history(title, topic, style=None):
 
 def call_gemini_api(prompt, api_key):
     """Primary Brain: Direct HTTP call to Google Gemini Flash REST API with progressive retry."""
-    models = ["gemini-3.8-flash", "gemini-flash-latest", "gemini-3.5-flash", "gemini-2.0-flash"]
+    models = ["gemini-flash-lite-latest", "gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-flash-latest"]
     last_err = None
 
     try:
@@ -149,15 +149,14 @@ def call_groq_api(prompt, api_key):
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
     }
 
     models_to_try = [
-        "llama-3.3-70b-versatile",
-        "llama-3.1-70b-versatile",
-        "llama3-70b-8192",
-        "mixtral-8x7b-32768",
-        "llama-3.1-8b-instant"
+        "openai/gpt-oss-120b",
+        "qwen/qwen3.8-27b",
+        "openai/gpt-oss-20b"
     ]
 
     last_error = None
@@ -245,26 +244,26 @@ def generate_script(topic=None):
                 print("  All Gemini keys exhausted. Switching to Backup Groq Brain...")
                 try:
                     from discord_notifier import notify_alert
-                    notify_alert("AI Brain Failover", f"All Gemini keys returned error ({e}). Failing over to Groq Llama 3.3 70B.")
+                    notify_alert("AI Brain Failover", "Gemini busy, switched to Groq backup.")
                 except Exception:
                     pass
 
-    # 2. Backup Brain: Groq (Llama 3.3 70B)
+    # 2. Backup Brain: Groq
     if not data and groq_key:
         try:
-            print("⚡ [Backup Brain] Crafting script with Groq LPU (Llama 3.3 70B)...")
+            print("⚡ [Backup Brain] Crafting script with Groq LPU...")
             data = call_groq_api(user_prompt, groq_key)
             print("  ✓ Successfully crafted with Groq LPU!")
             try:
                 from discord_notifier import notify_alert
-                notify_alert("Groq Backup Brain Succeeded", f"Groq Llama 3.3 70B successfully crafted the viral script: **{seed_title}**.")
+                notify_alert("Groq Brain Active", f"Script generated using Groq: **{seed_title}**.")
             except Exception:
                 pass
         except Exception as e:
             print(f"  Groq note: {e}. Switching to Offline Vault...")
             try:
                 from discord_notifier import notify_alert
-                notify_alert("Groq Unavailable", f"Groq returned error ({e}). Activating Plan C: Offline Master Vault.")
+                notify_alert("Vault Fallback Active", f"Using backup story: **{seed_title}**.")
             except Exception:
                 pass
 
@@ -273,7 +272,7 @@ def generate_script(topic=None):
         print("🏛️ [Offline Vault] Loading guaranteed master story...")
         try:
             from discord_notifier import notify_alert
-            notify_alert("Offline Vault Engaged", f"All AI APIs offline. Loaded verified master story: **{seed_title}**.")
+            notify_alert("Vault Story Loaded", f"Using backup story from vault: **{seed_title}**.")
         except Exception:
             pass
         data = {
