@@ -11,6 +11,10 @@ on:
   repository_dispatch: # Allows external cron triggers (cron-job.org, Cloudflare Workers, webhooks)
     types: [daily_short, tech_short, run_pipeline]
 
+concurrency:
+  group: curiocut-gpu-pipeline
+  cancel-in-progress: true
+
 jobs:
   dispatch-cloud-gpu-engine:
     runs-on: ubuntu-latest

@@ -235,7 +235,17 @@ export default {
       return Response.json({ type: 4, data: { content: "Unknown interaction" } });
     }
 
-    // 2. Mobile Dashboard Fallback
+    // 2. Direct HTTP Endpoints
+    if (path.includes("stop") || path.includes("cancel")) {
+      const cancelRes = await cancelActiveRuns(env.GITHUB_TOKEN);
+      return new Response("Active and queued runs cancelled successfully.", { headers: { "Content-Type": "text/plain" } });
+    }
+
+    if (path.includes("status")) {
+      const statusText = await getHumanStatus(env.GITHUB_TOKEN);
+      return new Response(statusText, { headers: { "Content-Type": "text/plain" } });
+    }
+
     return new Response("CurioCut Edge Active", { headers: { "Content-Type": "text/plain" } });
   }
 };
@@ -260,17 +270,26 @@ async function triggerGitHub(token, slot, topic = null) {
 }
 
 async function cancelActiveRuns(token) {
-  const url = "https://api.github.com/repos/shlokkokk/CurioCut/actions/runs?status=in_progress";
-  const res = await fetch(url, {
-    headers: { "Authorization": `Bearer ${token}`, "User-Agent": "CurioCut-Bot" }
-  });
-  const data = await res.json();
-  for (const run of data.workflow_runs || []) {
-    await fetch(`https://api.github.com/repos/shlokkokk/CurioCut/actions/runs/${run.id}/cancel`, {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${token}`, "User-Agent": "CurioCut-Bot" }
-    });
+  const results = [];
+  for (const status of ["in_progress", "queued"]) {
+    try {
+      const url = `https://api.github.com/repos/shlokkokk/CurioCut/actions/runs?status=${status}`;
+      const res = await fetch(url, {
+        headers: { "Authorization": `Bearer ${token}`, "User-Agent": "CurioCut-Bot" }
+      });
+      const data = await res.json();
+      for (const run of data.workflow_runs || []) {
+        const cRes = await fetch(`https://api.github.com/repos/shlokkokk/CurioCut/actions/runs/${run.id}/cancel`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${token}`, "User-Agent": "CurioCut-Bot" }
+        });
+        results.push({ id: run.id, status: cRes.status });
+      }
+    } catch (e) {
+      console.error(`Error cancelling ${status} runs:`, e);
+    }
   }
+  return results;
 }
 
 async function getHumanStatus(token) {
