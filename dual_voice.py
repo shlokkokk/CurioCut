@@ -146,9 +146,12 @@ def synthesize_dialogue(project_dir, pair_name="default"):
     wav_path = data_dir / "narration.wav"
     wavfile.write(str(wav_path), SR, (full_audio * 32767).astype(np.int16))
 
-    # Export lines.json
+    # Export lines.json (matching voice.py schema)
     lines_path = data_dir / "lines.json"
-    lines_path.write_text(json.dumps(lines_meta, indent=2), encoding="utf-8")
+    lines_path.write_text(json.dumps({
+        "duration": round(total_sec, 3),
+        "lines": lines_meta
+    }, indent=2), encoding="utf-8")
 
     total_sec = len(full_audio) / SR
     print(f"  ✓ Dual-voice audio rendered: {total_sec:.1f}s ({len(lines_meta)} dialogue cuts)")

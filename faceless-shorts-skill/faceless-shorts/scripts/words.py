@@ -38,7 +38,9 @@ def align(script_words, heard, t0, t1):
 
 
 def inline_fallback(P, S):
-    L = json.loads((P / 'data/lines.json').read_text())['lines']; words = []
+    raw = json.loads((P / 'data/lines.json').read_text())
+    L = raw['lines'] if isinstance(raw, dict) and 'lines' in raw else raw
+    words = []
     for i, ln in enumerate(S['lines']):
         toks = [w for w in ln['text'].split() if norm(w)]
         wts = [len(norm(w)) + 2.5 + (2.5 if w.endswith(',') else 4.5 if re.search(r'[.?!]$', w) and k < len(toks) - 1 else 0) for k, w in enumerate(toks)]
