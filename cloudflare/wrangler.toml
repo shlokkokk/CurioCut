@@ -1,5 +1,6 @@
 name = "curiocut-corn"
 main = "worker.js"
+account_id = "a5c80c80a089714773f34924e13e3f13"
 compatibility_date = "2024-11-01"
 preview_urls = false
 
