@@ -162,9 +162,9 @@ while time.time() - start_t < max_wait:
                 print(f"  [{elapsed}s] Waiting for Kaggle container to initialize new job (ignoring stale '{st}')...")
                 continue
 
-            # Keep waiting for GPU (Kaggle batch GPU queue normally takes 2-5 minutes, ceiling 10 mins)
-            if gpu_requested and st == "queued" and (time.time() - queued_start) > 600:
-                print("\n⚠️ GPU queue reached 10-minute wait ceiling. Auto-switching to Cloud Compute with 0 queue...")
+            # Keep waiting for GPU (Kaggle batch GPU queue normally takes 2-8 minutes, ceiling 30 mins)
+            if gpu_requested and st == "queued" and (time.time() - queued_start) > 1800:
+                print("\n⚠️ GPU queue reached 30-minute wait ceiling. Auto-switching to Cloud Compute...")
                 gpu_requested = False
                 push_kernel(enable_gpu=False)
                 queued_start = time.time()
