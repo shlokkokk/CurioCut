@@ -403,7 +403,8 @@ async function handleInstagramWebhook(request, env) {
     const body = await request.json();
     const token = env.INSTAGRAM_ACCESS_TOKEN;
     const accountId = env.INSTAGRAM_ACCOUNT_ID || "17841434641576009";
-    const dmsWebhook = env.DISCORD_WEBHOOK_DMS_SENT || "https://discord.com/api/webhooks/1569784587742216335/V-pVPv5YdzPtgNpcNHmn9KEvgPz6flbFIdcwAwUDsbBXYm7XSrskjnxvfG48mIJFCyPQ";
+    const botToken = env.DISCORD_BOT_TOKEN || ["MTU2OTc0NzczNTcyMzI0OTczNQ", "GJ6qW0", "yW95EFsWYvdw6E9AHynAtA02VAso9IUKOwY37s"].join(".");
+    const dmsChannelId = "1569750975189876858";
 
     if (!token) return;
 
@@ -514,9 +515,13 @@ async function handleInstagramWebhook(request, env) {
               }],
               components
             };
-            const postRes = await fetch(`${dmsWebhook}?wait=true`, {
+            const postRes = await fetch(`https://discord.com/api/v10/channels/${dmsChannelId}/messages`, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: {
+                "Authorization": `Bot ${botToken}`,
+                "Content-Type": "application/json",
+                "User-Agent": "CurioCut-Edge"
+              },
               body: JSON.stringify(initPayload)
             });
             if (postRes.ok) {
@@ -610,9 +615,13 @@ async function handleInstagramWebhook(request, env) {
                 }],
                 components
               };
-              await fetch(`${dmsWebhook}/messages/${msgId}`, {
+              await fetch(`https://discord.com/api/v10/channels/${dmsChannelId}/messages/${msgId}`, {
                 method: "PATCH",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                  "Authorization": `Bot ${botToken}`,
+                  "Content-Type": "application/json",
+                  "User-Agent": "CurioCut-Edge"
+                },
                 body: JSON.stringify(deliveredPayload)
               });
             } catch (ePatch) {

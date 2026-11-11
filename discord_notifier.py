@@ -21,15 +21,15 @@ if ENV_FILE.exists():
             os.environ.setdefault(k.strip(), v.strip())
 
 WEBHOOKS = {
-    "engine_logs": os.environ.get("DISCORD_WEBHOOK_ENGINE_LOGS") or "https://discord.com/api/webhooks/1569380801077051462/ciIO5SVWzVEoSWyH5G4o32j5VVFDHBmuWljVx5iJU8LnJ90w4hZyr6tnYajqT1sfFrpY",
-    "alerts": os.environ.get("DISCORD_WEBHOOK_ALERTS") or "https://discord.com/api/webhooks/1569381087736635405/tCkmm_lloHt-Jjv1qiUvJrmFqhyoEhw5LxJdSa2pswJg5y_EcHC65YCs_bHzizfovYmH",
-    "errors": os.environ.get("DISCORD_WEBHOOK_ERRORS") or "https://discord.com/api/webhooks/1569381285355331725/UUQxZrh0vCjqQ55GO0EZy28TieniYLY_PWlrAimwUItiR22B-CP1yiYY4nxp8JbLHO7w",
-    "yt_posts": os.environ.get("DISCORD_WEBHOOK_YT_POSTS") or "https://discord.com/api/webhooks/1569381485025435760/Gkc9ZGQ6b2kpVQTYiQ4fR6h3NL2WpnTNNymxkwiEB5eHG52o3pJoOJA7masxct7etuFz",
-    "yt_errors": os.environ.get("DISCORD_WEBHOOK_YT_ERRORS") or "https://discord.com/api/webhooks/1569381675073405080/eekyLdpF9QWgjnGW91Bi8xAhVDLf5qHQFoqTrXGg7tcUHz8X5e5kF0tO68hAb9wUiW_S",
-    "ig_posts": os.environ.get("DISCORD_WEBHOOK_IG_POSTS") or "https://discord.com/api/webhooks/1569382221993738343/11uYCVuDz1mMxABvFySddv07Q9dUyGAJqL3lEX1_waXHfqmHZwtr_3Rk34Y7TsZFGRmj",
-    "ig_errors": os.environ.get("DISCORD_WEBHOOK_IG_ERRORS") or "https://discord.com/api/webhooks/1569382727847780483/Dk-DsPnxZAiKoSa-ZDEblzw7KVeDHgbAxNAnyr1xW5g2qzssyTpFMHmuhvPFd_DaN21r",
-    "dms_sent": os.environ.get("DISCORD_WEBHOOK_DMS_SENT") or "https://discord.com/api/webhooks/1569784587742216335/V-pVPv5YdzPtgNpcNHmn9KEvgPz6flbFIdcwAwUDsbBXYm7XSrskjnxvfG48mIJFCyPQ",
-    "live_progress": os.environ.get("DISCORD_WEBHOOK_LIVE_PROGRESS") or "https://discord.com/api/webhooks/1569785063535546450/7MZUMEDK1u7okE7a_a5YsstKQ-bN2GFai2Ww2nHDAG4HlBwD8Gg8FSOiQ-eixJyk0aBb"
+    "engine_logs": os.environ.get("DISCORD_WEBHOOK_ENGINE_LOGS", ""),
+    "alerts": os.environ.get("DISCORD_WEBHOOK_ALERTS", ""),
+    "errors": os.environ.get("DISCORD_WEBHOOK_ERRORS", ""),
+    "yt_posts": os.environ.get("DISCORD_WEBHOOK_YT_POSTS", ""),
+    "yt_errors": os.environ.get("DISCORD_WEBHOOK_YT_ERRORS", ""),
+    "ig_posts": os.environ.get("DISCORD_WEBHOOK_IG_POSTS", ""),
+    "ig_errors": os.environ.get("DISCORD_WEBHOOK_IG_ERRORS", ""),
+    "dms_sent": os.environ.get("DISCORD_WEBHOOK_DMS_SENT", ""),
+    "live_progress": os.environ.get("DISCORD_WEBHOOK_LIVE_PROGRESS", "")
 }
 
 CHANNELS = {
