@@ -358,8 +358,30 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
                 f"Daily underground AI breakthroughs & open-source developer exploits.\n\n"
                 f"#ai #developer #claude #anthropic #tech #github #coding #automation #curiocut #programming #software #opensource #aitools"
             )
+        elif style == "deep-dive":
+            desc = (
+                f"{title}\n\n"
+                f"What actually happens inside your body? Daily extreme human biology & medical explainers on CurioCut.\n\n"
+                f"#science #humanbody #biology #whatif #anatomy #medicalfacts #doctor #sciencefacts #curiocut #shorts"
+            )
+        elif style == "night-file":
+            desc = (
+                f"{title}\n\n"
+                f"Classified investigations, unsolved cold cases, and scandalous exposures on CurioCut.\n\n"
+                f"#truecrime #mystery #unsolved #coldcase #investigation #darkhistory #crimestory #curiocut #shorts"
+            )
+        elif style == "paper-atlas":
+            desc = (
+                f"{title}\n\n"
+                f"Aged parchment chronicles of history's greatest empires, disasters, and turning points.\n\n"
+                f"#history #historicalfacts #ancienthistory #disaster #londonfire #empire #worldhistory #curiocut #shorts"
+            )
         else:
-            desc = f"{title}. Watch daily animated stories on CurioCut! #shorts #viral #curiosity"
+            desc = (
+                f"{title}\n\n"
+                f"The craziest real-life loopholes, glitches, and accidental millionaires on CurioCut!\n\n"
+                f"#loophole #crazyfacts #bizarre #glitch #heist #truestory #storytime #curiocut #shorts"
+            )
 
         # 5a. YouTube Shorts
         yt_file = WORKSPACE / "youtube_token.json"

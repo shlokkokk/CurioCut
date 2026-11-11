@@ -36,7 +36,7 @@ export function buildCaptions(script) {
     });
   });
   caps.forEach((c, k) => {
-    const next = caps[k + 1], lineEnd = T.lines[c.line].end;
+    const next = caps[k + 1], lineEnd = (T.lines && T.lines[c.line]) ? T.lines[c.line].end : T.dur;
     c.e = next ? (next.s - lineEnd > 0.7 && next.line !== c.line ? lineEnd + 0.35 : next.s) : T.dur;
   });
   return caps;

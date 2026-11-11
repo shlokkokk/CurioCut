@@ -213,6 +213,8 @@ export function buildShots(E, script) {
       const m = t.match(/\$[\d,]+/) || t.match(/\b\d+\s*DOLLARS?\b/);
       return m ? m[0] : 'AUCTION BID';
     }
+    if (t.includes('ATM') || t.includes('GLITCH') || t.includes('BANK')) return 'BANK GLITCH';
+    if (t.includes('TICKET') || t.includes('LOTTERY')) return 'LOTTERY TICKET';
     if (t.includes('ERROR') || t.includes('MISTAKE') || t.includes('CATCH') || t.includes('DIGIT')) return 'CLERICAL ERROR';
     if (t.includes('OWNER') || t.includes('MAYOR') || t.includes('LANDLORD')) return 'ACCIDENTAL MAYOR';
     if (t.includes('ACRE') || t.includes('LAND') || t.includes('TOWN')) return '700 ACRES WON';

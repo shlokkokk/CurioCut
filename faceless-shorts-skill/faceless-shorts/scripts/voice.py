@@ -61,6 +61,28 @@ def silences(x, thr=0.012, min_len=0.06):
     return out
 
 
+def sanitize_tts_text(text):
+    """Sanitizes unicode quotes, em-dashes, and special characters for Kokoro."""
+    t = text.replace('—', ' - ').replace('–', ' - ')
+    t = t.replace('“', '"').replace('”', '"').replace('‘', "'").replace('’', "'")
+    t = t.replace('…', '...')
+    # Clean currency and percentages
+    t = re.sub(r'\$([0-9]+)\s*B(?:illion)?\b', r'\1 billion dollars', t, flags=re.IGNORECASE)
+    t = re.sub(r'\$([0-9]+)\s*M(?:illion)?\b', r'\1 million dollars', t, flags=re.IGNORECASE)
+    t = re.sub(r'\$([0-9]+)\s*K\b', r'\1 thousand dollars', t, flags=re.IGNORECASE)
+    t = re.sub(r'\$([0-9]+)', r'\1 dollars', t)
+    t = re.sub(r'\b100%', 'one hundred percent', t)
+    t = re.sub(r'%', ' percent', t)
+    # Science & Tech Acronyms
+    t = re.sub(r'\bAI\b', 'A.I.', t)
+    t = re.sub(r'\bAPI\b', 'A.P.I.', t)
+    t = re.sub(r'\bCO2\b', 'C.O. two', t)
+    t = re.sub(r'\bO2\b', 'O. two', t)
+    # Remove asterisks or markdown artifacts
+    t = re.sub(r'[*_#]', '', t)
+    t = re.sub(r'\s+', ' ', t).strip()
+    return t
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('project', nargs='?'); ap.add_argument('--list', action='store_true'); ap.add_argument('--download', action='store_true')
@@ -77,7 +99,7 @@ def main():
     voice = a.voice or S.get('voice', 'am_michael'); speed = a.speed or S.get('speed', 1.0)
     k = Kokoro(str(KDIR / 'kokoro-v1.0.onnx'), str(KDIR / 'voices-v1.0.bin'))
     lang = 'en-gb' if voice.startswith('b') else 'en-us'
-    say = lambda text: trim(np.asarray(k.create(text, voice=voice, speed=speed, lang=lang)[0], dtype=np.float64))
+    say = lambda text: trim(np.asarray(k.create(sanitize_tts_text(text), voice=voice, speed=speed, lang=lang)[0], dtype=np.float64))
     # group the lines into whole sentences (a line ending in . ? ! closes one; "break": true forces a close)
     groups, cur = [], []
     for i, ln in enumerate(S['lines']):

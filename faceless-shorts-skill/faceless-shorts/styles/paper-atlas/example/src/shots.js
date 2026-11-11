@@ -152,15 +152,21 @@ export function buildShots(script) {
 
   // Extract year / date / century
   const extractYearOrDate = (txt, idx) => {
-    const m = txt.match(/\b(1\d\d\d|20\d\d)\b/) ||
-              txt.match(/\b\d+(?:TH|ST|RD|ND)?\s+CENTURY\b/i) ||
-              txt.match(/\b\d+\s+B\.?C\.?\b/i) ||
-              txt.match(/\b(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)\s+\d{1,2}\b/i);
+    let m = txt.match(/\b(1\d\d\d|20\d\d)\b/) ||
+            txt.match(/\b\d+(?:TH|ST|RD|ND)?\s+CENTURY\b/i) ||
+            txt.match(/\b\d+\s+B\.?C\.?\b/i) ||
+            txt.match(/\b(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)\s+\d{1,2}\b/i);
+    if (!m && idx === 0) {
+      m = title.match(/\b(1\d\d\d|20\d\d)\b/) || title.match(/\b\d+(?:TH|ST|RD|ND)?\s+CENTURY\b/i);
+    }
     if (m) return m[0].toUpperCase();
-    return idx === 0 ? 'ANCIENT ERA' : `CHAPTER ${idx + 1}`;
+    return idx === 0 ? 'HISTORIC ERA' : `CHAPTER ${idx + 1}`;
   };
 
   const extractMetric = (txt) => {
+    if (txt.includes('GOLD') || txt.includes('TREASURE')) return 'ROYAL TREASURE';
+    if (txt.includes('FLEET') || txt.includes('ARMADA')) return 'THE ARMADA';
+    if (txt.includes('FIRE') || txt.includes('FLAME')) return 'GREAT FIRE';
     const m = txt.match(/[\d,]+\s*(?:HOUSES|CHURCHES|SOLDIERS|SHIPS|DAYS|YEARS|PEOPLE|MILES|MEN|KILLED|LOST)\b/i) ||
               txt.match(/\$[\d,]+(?:\s*(?:MILLION|BILLION))?/i);
     return m ? m[0].toUpperCase() : null;

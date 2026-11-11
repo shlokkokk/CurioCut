@@ -92,14 +92,23 @@ export function buildShots(E, script) {
 
   // Extract dates, numbers or locations from script text
   const extractDate = (txt, idx) => {
-    const m = txt.match(/\b(18\d\d|19\d\d|20\d\d)\b/) ||
-              txt.match(/\b(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)\s+\d{1,2}\b/i) ||
-              txt.match(/\b\d{1,2}:\d{2}\s*(?:AM|PM|A\.M\.|P\.M\.)\b/i);
+    let m = txt.match(/\b(18\d\d|19\d\d|20\d\d)\b/) ||
+            txt.match(/\b(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)\s+\d{1,2}\b/i) ||
+            txt.match(/\b\d{1,2}:\d{2}\s*(?:AM|PM|A\.M\.|P\.M\.)\b/i);
+    if (!m && idx === 0) {
+      m = title.match(/\b(18\d\d|19\d\d|20\d\d)\b/) || title.match(/\b\d{1,2}:\d{2}\s*(?:AM|PM)\b/i);
+    }
     if (m) return m[0].toUpperCase();
-    return idx === 0 ? 'CLASSIFIED FILE' : `TIMELINE ${idx + 1}`;
+    return idx === 0 ? 'CASE FILE' : `TIMELINE ${idx + 1}`;
   };
 
   const extractAmountOrMetric = (txt) => {
+    if (txt.includes('DNA')) return 'DNA MATCH';
+    if (txt.includes('FINGERPRINT') || txt.includes('PRINT')) return 'LATENT PRINTS';
+    if (txt.includes('CCTV') || txt.includes('CAMERA') || txt.includes('SECURITY')) return 'CCTV FOOTAGE';
+    if (txt.includes('ALIBI')) return 'SUSPECT ALIBI';
+    if (txt.includes('CONFESS')) return 'CONFESSION';
+    if (txt.includes('FLIGHT') || txt.includes('AIRPORT') || txt.includes('PLANE')) return 'FLIGHT MANIFEST';
     const m = txt.match(/\$[\d,]+(?:\s*(?:MILLION|BILLION|K))?/i) ||
               txt.match(/\b\d+\s*(?:THOUSAND|MILLION|BILLION|DOLLARS|BUCKS|YEARS|MONTHS|DAYS|MILES|VICTIMS)\b/i);
     return m ? m[0].toUpperCase() : null;

@@ -81,7 +81,15 @@ export function buildShots(E, script) {
     if (txt.includes('BRAIN') || txt.includes('SYNAPSE')) return 'BRAIN ACTIVITY';
     if (txt.includes('STOMACH') || txt.includes('ACID')) return 'STOMACH ACID';
     if (txt.includes('BLOOD') || txt.includes('CELL')) return 'BLOODSTREAM';
-    const m = txt.match(/[\d,.]+\s*(?:SECONDS?|MINUTES?|HOURS?|PERCENT|%|BPM|LITERS?)\b/i);
+    if (txt.includes('SLEEP') || txt.includes('AWAKE') || txt.includes('FATIGUE')) return 'SLEEP CYCLE';
+    if (txt.includes('DOPAMINE')) return 'DOPAMINE ↓';
+    if (txt.includes('ADRENALINE')) return 'ADRENALINE ↑';
+    if (txt.includes('SUGAR') || txt.includes('GLUCOSE')) return 'GLUCOSE ↑';
+    if (txt.includes('TEMP') || txt.includes('COLD') || txt.includes('FREEZE') || txt.includes('FEVER')) return 'CORE TEMP';
+    if (txt.includes('IMMUNE') || txt.includes('WHITE BLOOD')) return 'IMMUNE DEFENSE';
+    if (txt.includes('TOXIC') || txt.includes('POISON') || txt.includes('DANGER')) return 'TOXICITY ⚠';
+    if (txt.includes('PASS OUT') || txt.includes('FAINT') || txt.includes('SHUTDOWN')) return 'SYSTEM SHUTDOWN';
+    const m = txt.match(/[\d,.]+\s*(?:SECONDS?|MINUTES?|HOURS?|DAYS?|PERCENT|%|BPM|LITERS?)\b/i);
     if (m) return m[0].toUpperCase();
     return idx === 0 ? (title.length > 40 ? title.slice(0, 37) + '...' : title) : null;
   };

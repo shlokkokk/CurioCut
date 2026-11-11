@@ -36,7 +36,7 @@ export function buildCaptions(script) {
       });
     } else autoChunks(spoken).forEach(([a, b]) => caps.push({ line: i, s: ws[a].s - 0.03, text: spoken.slice(a, b + 1).join(' ') }));
   });
-  caps.forEach((c, k) => { const next = caps[k + 1], lineEnd = T.lines[c.line].end; c.e = next ? (next.s - lineEnd > 0.6 && next.line !== c.line ? lineEnd + 0.25 : next.s) : T.dur; });
+  caps.forEach((c, k) => { const next = caps[k + 1], lineEnd = (T.lines && T.lines[c.line]) ? T.lines[c.line].end : T.dur; c.e = next ? (next.s - lineEnd > 0.6 && next.line !== c.line ? lineEnd + 0.25 : next.s) : T.dur; });
   return caps;
 }
 export const captionList = () => caps.map((c) => ({ ...c, words: [{ txt: c.text }] }));
