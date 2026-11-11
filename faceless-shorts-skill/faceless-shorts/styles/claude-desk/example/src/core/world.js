@@ -132,12 +132,12 @@ export function buildCyberWorld(scene) {
   emitterGroup.add(beam);
 
   // 3. Dual Presenter Dais / Podiums (Separated with generous cinematic space)
-  // Claude Podium (Left side: x = -0.92)
+  // Claude Podium (Left side: x = -0.78)
   const claudePodium = new THREE.Group();
-  claudePodium.position.set(-0.92, 0, 0.35);
+  claudePodium.position.set(-0.78, 0, 0.35);
   worldGroup.add(claudePodium);
 
-  const daisGeo = new THREE.CylinderGeometry(0.95, 1.05, 0.12, 36);
+  const daisGeo = new THREE.CylinderGeometry(0.85, 0.95, 0.12, 36);
   const claudeDaisMat = new THREE.MeshStandardMaterial({
     color: MID_SLATE,
     metalness: 0.75,
@@ -149,16 +149,16 @@ export function buildCyberWorld(scene) {
   claudePodium.add(claudeDais);
 
   const claudeTrim = new THREE.Mesh(
-    new THREE.TorusGeometry(0.96, 0.025, 16, 48),
+    new THREE.TorusGeometry(0.86, 0.025, 16, 48),
     new THREE.MeshBasicMaterial({ color: CORAL_NEON })
   );
   claudeTrim.rotation.x = Math.PI / 2;
   claudeTrim.position.y = 0.12;
   claudePodium.add(claudeTrim);
 
-  // Skeptic Podium (Right side: x = +0.92)
+  // Skeptic Podium (Right side: x = +0.78)
   const skepticPodium = new THREE.Group();
-  skepticPodium.position.set(0.92, 0, 0.35);
+  skepticPodium.position.set(0.78, 0, 0.35);
   worldGroup.add(skepticPodium);
 
   const skepticDais = new THREE.Mesh(daisGeo, claudeDaisMat);
@@ -167,7 +167,7 @@ export function buildCyberWorld(scene) {
   skepticPodium.add(skepticDais);
 
   const skepticTrim = new THREE.Mesh(
-    new THREE.TorusGeometry(0.96, 0.025, 16, 48),
+    new THREE.TorusGeometry(0.86, 0.025, 16, 48),
     new THREE.MeshBasicMaterial({ color: MAGENTA_NEON })
   );
   skepticTrim.rotation.x = Math.PI / 2;

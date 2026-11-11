@@ -124,10 +124,9 @@ export function buildShots(E) {
       draw(lt, d, t, blit) {
         world.update(t, scriptContext);
 
-        // Hologram props are displayed during showcase two-shots, hook, and finale
-        const isShowcase = isFirst || isLast || (idx % 2 === 0);
+        // Dynamic 3D Topic Prop for the active narrative cut
         shotProps.forEach((p, pIdx) => {
-          if (pIdx === idx && isShowcase) {
+          if (pIdx === idx) {
             p.visible = true;
             if (p.update) p.update(t);
           } else {
@@ -136,6 +135,7 @@ export function buildShots(E) {
         });
 
         // Natural audio-synced lip sync & speech cycles
+        const isShowcase = isFirst || isLast;
         const talkVal = Math.abs(Math.sin(t * 14)) * 0.82 + 0.18;
         const blinkVal = ((t + idx * 0.85) % 3.2 < 0.14) ? 1 : 0;
 
@@ -163,37 +163,28 @@ export function buildShots(E) {
 
         if (isLast) {
           // Final CTA: Wide balanced establishing shot framing both presenters and glowing CTA card
-          const push = progress * 0.2;
-          cam.position.set(0, 1.82, 7.5 - push);
+          const push = progress * 0.15;
+          cam.position.set(0, 1.80, 7.6 - push);
           cam.lookAt(V3(0, 1.25, 0.2));
         } else if (isFirst) {
           // Opening Hook: Wide grand cyber establishing shot showing BOTH presenters fully visible
-          const push = progress * 0.3;
-          cam.position.set(0, 1.85, 7.8 - push);
-          cam.lookAt(V3(0, 1.25, 0.2));
-        } else if (idx % 2 === 0) {
-          // Showcase Two-Shot: Wide framing showing BOTH presenters 100% visible with floating 3D hologram prop
-          const drift = Math.sin(progress * 0.5) * 0.05;
-          cam.position.set(drift, 1.80, 7.5);
+          const push = progress * 0.25;
+          cam.position.set(0, 1.82, 7.8 - push);
           cam.lookAt(V3(0, 1.25, 0.2));
         } else if (isSpeakingGuide) {
-          // Medium Hero Presenter Shot on Claude: Centered squarely at x = -0.92 (Zero cutting off!)
-          // Smooth glide pan from right side toward Claude over first 0.55s
-          const glideProgress = eio(clamp(lt / 0.55));
-          const camX = lerp(0.2, -0.92, glideProgress);
-          const camY = 1.44;
-          const camZ = 4.3;
-          cam.position.set(camX, camY, camZ);
-          cam.lookAt(V3(-0.92, 1.05, 0.35));
+          // Male Presenter Hero Zoom Shot on Claude: Centered squarely at x = -0.92 (Matching female framing!)
+          // Camera smoothly glides from female presenter over to Claude over first 0.6s
+          const glideProgress = eio(clamp(lt / 0.6));
+          const camX = lerp(0.92, -0.92, glideProgress);
+          cam.position.set(camX, 1.42, 4.25);
+          cam.lookAt(V3(lerp(0.92, -0.92, glideProgress), 1.05, 0.35));
         } else {
-          // Medium Hero Shot on Skeptic: Centered squarely at x = 0.92
-          // Smooth glide pan from left side toward Skeptic over first 0.55s
-          const glideProgress = eio(clamp(lt / 0.55));
-          const camX = lerp(-0.2, 0.92, glideProgress);
-          const camY = 1.42;
-          const camZ = 4.3;
-          cam.position.set(camX, camY, camZ);
-          cam.lookAt(V3(0.92, 1.02, 0.35));
+          // Female Presenter Hero Zoom Shot on Skeptic: Centered squarely at x = 0.92 (Perfect framing!)
+          // Camera smoothly glides from Claude over to female presenter over first 0.6s
+          const glideProgress = eio(clamp(lt / 0.6));
+          const camX = lerp(-0.92, 0.92, glideProgress);
+          cam.position.set(camX, 1.40, 4.25);
+          cam.lookAt(V3(lerp(-0.92, 0.92, glideProgress), 1.02, 0.35));
         }
 
         // Render WebGL frame with cinematic bloom and subtle depth-of-field
