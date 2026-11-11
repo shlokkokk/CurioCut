@@ -208,7 +208,7 @@ export function buildShots(E, script) {
   const extractHeader = (ln, idx) => {
     if (ln.header) return ln.header.toUpperCase();
     const t = (ln.text || '').toUpperCase();
-    if (idx === 0) return title.toUpperCase().slice(0, 26);
+    if (idx === 0) return title.toUpperCase().slice(0, 38);
     if (t.includes('BID') || t.includes('AUCTION') || t.includes('$') || t.includes('DOLLAR')) {
       const m = t.match(/\$[\d,]+/) || t.match(/\b\d+\s*DOLLARS?\b/);
       return m ? m[0] : 'AUCTION BID';

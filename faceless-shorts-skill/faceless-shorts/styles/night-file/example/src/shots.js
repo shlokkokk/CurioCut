@@ -106,7 +106,7 @@ export function buildShots(E, script) {
   };
 
   const extractHeader = (txt, idx) => {
-    if (idx === 0) return title.slice(0, 24);
+    if (idx === 0) return title.length > 38 ? title.slice(0, 35) + '...' : title;
     if (idx === totalLines - 1) return 'STATUS: UNSOLVED';
     const words = txt.replace(/[^A-Z0-9 ]/g, '').split(/\s+/).filter((w) => w.length > 2);
     return words.slice(0, 3).join(' ') || `EXHIBIT ${idx + 1}`;
@@ -176,7 +176,7 @@ export function buildShots(E, script) {
           blit();
 
           // Typewriter date stamp
-          K.dateStamp(dateText, title.slice(0, 20), clamp(lt / 1.5), 80, 320);
+          K.dateStamp(dateText, title.length > 38 ? title.slice(0, 35) + '...' : title, clamp(lt / 1.5), 80, 320);
 
         } else if (sceneType === 'corridor_subject') {
           // Glowing red subject walking down the corridor under spotlight

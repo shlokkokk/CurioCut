@@ -181,6 +181,50 @@ def call_groq_api(prompt, api_key):
 
     raise RuntimeError(f"All Groq models failed. Last error: {last_error}")
 
+def enforce_question_hook(data, topic):
+    """Hardcoded guarantee: If the story/topic is a question, Cut 1 MUST speak the question directly."""
+    if not data or not topic or "lines" not in data or not data["lines"]:
+        return data
+
+    t_clean = topic.strip()
+    q_starters = (
+        "what happen", "what if", "why do", "why does", "why is", "why are", "why can",
+        "how does", "how do", "how is", "how can", "can you", "could you", "would you",
+        "is it possible", "what really happen", "what actually happen", "what would happen"
+    )
+    is_question = any(t_clean.lower().startswith(q) for q in q_starters) or t_clean.endswith("?")
+
+    if is_question:
+        lines = data["lines"]
+        first_cut = lines[0].get("text", "").strip()
+        first_cut_lower = first_cut.lower()
+
+        # Check if first cut already speaks the question
+        starts_with_q = any(first_cut_lower.startswith(q) for q in [
+            "what", "why", "how", "can", "could", "would", "is it", "have you ever", "did you ever", "ever wonder"
+        ])
+
+        if not starts_with_q:
+            # Format clean spoken question from topic
+            clean_q = t_clean.rstrip("?.!")
+            # Convert numbers to words if any
+            num_map = {
+                r"\b1\b": "one", r"\b2\b": "two", r"\b3\b": "three", r"\b4\b": "four",
+                r"\b5\b": "five", r"\b6\b": "six", r"\b7\b": "seven", r"\b8\b": "eight",
+                r"\b9\b": "nine", r"\b10\b": "ten", r"\b24\b": "twenty-four",
+                r"\b30\b": "thirty", r"\b48\b": "forty-eight", r"\b100\b": "one hundred"
+            }
+            for pattern, word in num_map.items():
+                clean_q = re.sub(pattern, word, clean_q, flags=re.IGNORECASE)
+
+            # Ensure leading capital letter and trailing question mark
+            spoken_question = clean_q[0].upper() + clean_q[1:] + "?"
+            print(f"[AI Hook Enforcer] Question topic detected. Prepending hardcoded spoken hook: \"{spoken_question}\"")
+            lines.insert(0, {"text": spoken_question})
+            data["lines"] = lines
+
+    return data
+
 def generate_script(topic=None):
     """Dual-Brain Script Generator: Tries Gemini -> Groq -> Offline Master Vault."""
     gemini_key = os.environ.get("GEMINI_API_KEY")
@@ -299,6 +343,9 @@ def generate_script(topic=None):
                 { "text": "and booked a solo flight to the Bahamas.", "gap": 0.3 }
             ]
         }
+
+    # Hardcoded Hook Guarantee for all Question topics
+    data = enforce_question_hook(data, seed_title)
 
     lines = data.get("lines", [])
     title = data.get("title", seed_title)

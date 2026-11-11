@@ -167,7 +167,7 @@ export function buildShots(script) {
   };
 
   const extractHeadline = (txt, idx) => {
-    if (idx === 0) return title.slice(0, 22);
+    if (idx === 0) return title.slice(0, 38);
     if (idx === totalLines - 1) return 'HISTORICAL RECORD';
     const words = txt.replace(/[^A-Z0-9 ]/g, '').split(/\s+/).filter((w) => w.length > 2);
     return words.slice(0, 3).join(' ') || `EPOCH ${idx + 1}`;
@@ -227,7 +227,7 @@ export function buildShots(script) {
           // Opening Map & Golden Date Ribbon
           K.map({ seed: 2, route: k });
           K.ribbon(yearText, 540, 380, eob(seg(lt, 0.1, 0.5)));
-          K.slip(title.slice(0, 22), 540, 520, eob(seg(lt, 0.3, 0.7)), 0.02, 34);
+          K.slip(title.length > 38 ? title.slice(0, 35) + '...' : title, 540, 520, eob(seg(lt, 0.3, 0.7)), 0.02, 34);
 
         } else if (sceneType === 'map_route') {
           // Ocean and territory map with animated dashed routes and ship
@@ -296,7 +296,7 @@ export function buildShots(script) {
           K.seal(540, 720, sealScale * 1.5, 'C');
 
           K.slip('HISTORICAL VERDICT', 540, 360, eob(seg(lt, 0.05, 0.35)), 0.03, 36);
-          K.slip(title.slice(0, 22), 540, 1080, eob(seg(lt, 0.35, 0.7)), -0.02, 30);
+          K.slip(title.length > 38 ? title.slice(0, 35) + '...' : title, 540, 1080, eob(seg(lt, 0.35, 0.7)), -0.02, 30);
         }
       }
     });
