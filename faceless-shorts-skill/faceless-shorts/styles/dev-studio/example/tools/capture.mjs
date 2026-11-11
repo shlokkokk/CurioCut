@@ -27,8 +27,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const args = process.argv.slice(2), flags = new Set(args.filter((a) => a.startsWith('--')));
 const [mode, ...rest] = args.filter((a) => !a.startsWith('--'));
 
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.otf': 'font/otf',
-  '.ttf': 'font/ttf', '.woff2': 'font/woff2', '.wav': 'audio/wav', '.mp3': 'audio/mpeg', '.png': 'image/png', '.jpg': 'image/jpeg' };
+const MIME = {
+  '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.otf': 'font/otf',
+  '.ttf': 'font/ttf', '.woff2': 'font/woff2', '.wav': 'audio/wav', '.mp3': 'audio/mpeg', '.png': 'image/png', '.jpg': 'image/jpeg'
+};
 function serve(port = 0) {
   return new Promise((res) => {
     const srv = http.createServer((req, r) => {
@@ -72,7 +74,7 @@ async function openPage(port) {
     if (i > 1200) throw new Error('boot timeout\n' + logs.join('\n'));
     await sleep(100);
   }
-  const close = () => { try { ws.close(); } catch {} chrome.kill('SIGKILL'); setTimeout(() => { try { fs.rmSync(prof, { recursive: true, force: true }); } catch {} }, 300); };
+  const close = () => { try { ws.close(); } catch { } chrome.kill('SIGKILL'); setTimeout(() => { try { fs.rmSync(prof, { recursive: true, force: true }); } catch { } }, 300); };
   return { ev, logs, close };
 }
 const jpg = (d) => Buffer.from(d.slice(d.indexOf(',') + 1), 'base64');
@@ -108,7 +110,7 @@ else {
       const r = spawnSync(FFMPEG, ['-v', 'error', '-y', '-framerate', '1', '-i', path.join(tmp, 'f%04d.jpg'), '-vf', `scale=216:384,tile=${cols}x${rows}:padding=4:color=black`, '-frames:v', '1', '-q:v', '3', out]);
       fs.rmSync(tmp, { recursive: true, force: true });
       if (r.status) throw new Error('ffmpeg: ' + r.stderr); console.log(`${out} (${n} frames, every ${step} s)`);
-        } else if (mode === 'video') {
+    } else if (mode === 'video') {
       const out = path.resolve(ROOT, rest[0] || 'renders/video.mp4'); fs.mkdirSync(path.dirname(out), { recursive: true });
       const mix = path.join(ROOT, 'data/mix.wav'), hasMix = fs.existsSync(mix), a0 = rest[1] ? +rest[1] : 0, a1 = rest[2] ? Math.min(+rest[2], dur) : dur, n = Math.round((a1 - a0) * FPS);
       const ff = spawn(FFMPEG, ['-v', 'error', '-y', '-f', 'image2pipe', '-framerate', String(FPS), '-i', '-',
@@ -123,7 +125,7 @@ else {
         if (!ff.stdin.write(b)) await new Promise((r) => ff.stdin.once('drain', r));
         if (i % 60 === 0 || i === n - 1) {
           const pct = Math.round((i / n) * 100);
-          console.log(`[Render] Frame ${i}/${n} (${pct}%) - elapsed: ${((Date.now() - t0)/1000).toFixed(1)}s`);
+          console.log(`[Render] Frame ${i}/${n} (${pct}%) - elapsed: ${((Date.now() - t0) / 1000).toFixed(1)}s`);
         }
       }
       ff.stdin.end(); await new Promise((r) => ff.on('close', r));

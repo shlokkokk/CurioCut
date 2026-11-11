@@ -62,45 +62,48 @@ export function techStudio() {
   }
   g.add(bokehGroup);
 
-  // 5. Solid Walnut Developer Desk
+  // 5. Solid Walnut Developer Desk (Spanning z = -0.10 to +0.60)
   const deskMat = new THREE.MeshStandardMaterial({
     color: '#3B2314', // Rich dark walnut
     roughness: 0.42,
     metalness: 0.08
   });
-  const deskTop = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.14, 1.8), deskMat);
-  deskTop.position.set(0, 0.72, 0.1);
+  const deskTop = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.08, 0.70), deskMat);
+  deskTop.position.set(0, 0.74, 0.25);
   deskTop.receiveShadow = true;
   deskTop.castShadow = true;
   g.add(deskTop);
 
   // Desk Legs
   const legMat = new THREE.MeshStandardMaterial({ color: '#0F172A', metalness: 0.7, roughness: 0.3 });
-  const legL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.72, 1.6), legMat);
-  const legR = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.72, 1.6), legMat);
-  legL.position.set(-2.15, 0.36, 0.1);
-  legR.position.set(2.15, 0.36, 0.1);
+  const legL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.74, 0.65), legMat);
+  const legR = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.74, 0.65), legMat);
+  legL.position.set(-1.95, 0.37, 0.25);
+  legR.position.set(1.95, 0.37, 0.25);
   g.add(legL);
   g.add(legR);
 
-  // 6. Desk Atmosphere: Ultrawide Laptop / Monitor + Mug
+  // 6. Desk Atmosphere: Ultrawide Laptop / Monitor + Mug (Offset to DevGuy's left so body is visible)
+  const laptopGroup = new THREE.Group();
+  laptopGroup.position.set(-1.18, 0.79, 0.18);
+  laptopGroup.rotation.y = 0.32; // Angled naturally toward developer
+
   const laptopBase = new THREE.Mesh(
-    new THREE.BoxGeometry(0.85, 0.018, 0.55),
+    new THREE.BoxGeometry(0.70, 0.016, 0.44),
     new THREE.MeshStandardMaterial({ color: '#64748B', metalness: 0.8, roughness: 0.25 })
   );
-  laptopBase.position.set(-0.7, 0.8, 0.25);
-  g.add(laptopBase);
+  laptopGroup.add(laptopBase);
 
   const screenGroup = new THREE.Group();
-  screenGroup.position.set(-0.7, 0.81, 0.0);
+  screenGroup.position.set(0, 0.01, 0.20);
   const screenLid = new THREE.Mesh(
-    new THREE.BoxGeometry(0.85, 0.52, 0.015),
+    new THREE.BoxGeometry(0.70, 0.40, 0.014),
     new THREE.MeshStandardMaterial({ color: '#334155', metalness: 0.7 })
   );
-  screenLid.position.y = 0.26;
+  screenLid.position.y = 0.20;
   screenGroup.add(screenLid);
 
-  // Glowing Screen Texture (Cyber code lines)
+  // Glowing Screen Texture (Facing DevGuy)
   const scrCanvas = document.createElement('canvas');
   scrCanvas.width = 512; scrCanvas.height = 320;
   const sctx = scrCanvas.getContext('2d');
@@ -114,10 +117,11 @@ export function techStudio() {
     sctx.fillText(`> loading model weights layer_${(y-110)/26} [100%]`, 24, y);
   }
   const scrTex = new THREE.CanvasTexture(scrCanvas);
-  const scrFace = new THREE.Mesh(new THREE.PlaneGeometry(0.81, 0.48), new THREE.MeshBasicMaterial({ map: scrTex }));
-  scrFace.position.set(0, 0.26, 0.009);
+  const scrFace = new THREE.Mesh(new THREE.PlaneGeometry(0.67, 0.37), new THREE.MeshBasicMaterial({ map: scrTex }));
+  scrFace.position.set(0, 0.20, -0.008);
   screenGroup.add(scrFace);
-  g.add(screenGroup);
+  laptopGroup.add(screenGroup);
+  g.add(laptopGroup);
 
   // Minimalist Coffee Mug
   const mug = new THREE.Mesh(
@@ -239,10 +243,10 @@ export function createDynamicTopicProp(lineOrType, scriptContext = {}, idx = 0, 
 
     const tex = new THREE.CanvasTexture(c);
     const cardMesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.6, 0.65),
+      new THREE.PlaneGeometry(1.08, 0.46),
       new THREE.MeshBasicMaterial({ map: tex, transparent: true })
     );
-    cardMesh.position.set(0, 1.45, 0);
+    cardMesh.position.set(0.0, 1.62, 0.25);
     g.add(cardMesh);
     return g;
   }
@@ -286,10 +290,10 @@ export function createDynamicTopicProp(lineOrType, scriptContext = {}, idx = 0, 
 
     const tex = new THREE.CanvasTexture(c);
     const mesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.8, 0.85),
+      new THREE.PlaneGeometry(1.08, 0.52),
       new THREE.MeshBasicMaterial({ map: tex, transparent: true })
     );
-    mesh.position.set(0, 1.5, 0);
+    mesh.position.set(0.0, 1.62, 0.25);
     g.add(mesh);
     return g;
   }

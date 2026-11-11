@@ -39,18 +39,23 @@ export function buildShots(E) {
   fillLight.position.set(0, 3, 2);
   scene.add(fillLight);
 
+  // Warm Portrait Key for DevGuy & Setup
+  const devKey = new THREE.DirectionalLight('#FFF7ED', 2.2);
+  devKey.position.set(-3, 5, 5);
+  scene.add(devKey);
+
   // Modern Night Developer Studio with City Bokeh
   const studio = techStudio();
   scene.add(studio);
 
-  // Characters (Positioned with optimal two-shot spacing for 9:16 vertical mobile framing)
+  // Characters (Positioned with natural seating behind desk & floating companion)
   const claude = new ClaudeBot();
-  claude.group.position.set(-0.75, 0, 0.25);
-  claude.group.rotation.y = 0.12;
+  claude.group.position.set(-0.70, 0, -0.22);
+  claude.group.rotation.y = 0.10;
   scene.add(claude.group);
 
   const skeptic = new SkepticBot();
-  skeptic.group.position.set(0.75, 0, 0.25);
+  skeptic.group.position.set(0.70, 0, 0.25);
   skeptic.group.rotation.y = -0.12;
   scene.add(skeptic.group);
 
@@ -114,9 +119,12 @@ export function buildShots(E) {
       draw(lt, d, t, blit) {
         if (studio.update) studio.update(t);
 
-        // Show only the dynamic prop matching this active shot
+        const hasActiveTopicProp = ['star_plaque', 'bill_card', 'badges', 'rig'].includes(ln.prop);
+
+        // Show dynamic topic prop during establishing two-shots and topic showcases
+        const showProp = isFirst || isLast || (hasActiveTopicProp && idx % 2 === 0);
         shotProps.forEach((p, pIdx) => {
-          if (pIdx === idx) {
+          if (pIdx === idx && showProp) {
             p.visible = true;
             if (p.update) p.update(t);
           } else {
@@ -139,31 +147,29 @@ export function buildShots(E) {
         // Cinematic Conversational Camera Director (Dynamic cuts to speaker + Wide establishing)
         const progress = Math.min(1, lt / Math.max(1, d));
 
-        const hasActiveTopicProp = ['star_plaque', 'bill_card', 'badges', 'rig'].includes(ln.prop);
-
         if (isLast) {
           // Final CTA: Balanced wide two-shot framing both characters and the floating Instagram Comment Box
-          cam.position.set(0, 1.82, 5.6 - progress * 0.2);
-          cam.lookAt(V3(0, 1.48, 0.25));
+          cam.position.set(0, 1.78, 5.0 - progress * 0.2);
+          cam.lookAt(V3(0, 1.40, 0.10));
         } else if (isFirst) {
           // Opening hook: Push-in from establishing two-shot with comfortable horizontal margin
-          cam.position.set(0, 1.85, 5.8 - progress * 0.35);
-          cam.lookAt(V3(0, 1.48, 0.25));
+          cam.position.set(0, 1.80, 5.2 - progress * 0.35);
+          cam.lookAt(V3(0, 1.40, 0.10));
         } else if (hasActiveTopicProp && idx % 2 === 0) {
           // Showcase Shot: Framing the floating 3D prop between DevGuy and MascotBot
           const pushIn = progress * 0.15;
-          cam.position.set(0, 1.76, 5.0 - pushIn);
-          cam.lookAt(V3(0, 1.48, 0.25));
+          cam.position.set(0, 1.72, 4.4 - pushIn);
+          cam.lookAt(V3(0, 1.40, 0.15));
         } else if (isSpeakingGuide) {
           // Medium Close-Up on DevGuy (Centered horizontally in 9:16 mobile frame, comfortable headroom)
           const drift = Math.sin(progress * 0.25) * 0.03;
-          cam.position.set(-0.75 + drift, 1.74, 4.1);
-          cam.lookAt(V3(-0.75, 1.58, 0.25));
+          cam.position.set(-0.70 + drift, 1.68, 3.4);
+          cam.lookAt(V3(-0.70, 1.50, -0.22));
         } else {
           // Medium Close-Up on MascotBot (Centered horizontally in 9:16 mobile frame, glowing visor & thruster)
           const drift = Math.sin(progress * 0.25) * 0.03;
-          cam.position.set(0.75 - drift, 1.62, 3.8);
-          cam.lookAt(V3(0.75, 1.46, 0.25));
+          cam.position.set(0.70 - drift, 1.62, 3.6);
+          cam.lookAt(V3(0.70, 1.44, 0.25));
         }
 
         // Render WebGL frame

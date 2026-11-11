@@ -1,9 +1,10 @@
 // Dev-Studio Signature 3D Characters:
-// 1. DevGuy: Stylized humanoid developer (clean Pixar/anime face with blush & catchlights, layered modern dark hair with front fringe, navy hoodie with hood ring & drawstrings, articulated arms holding smartphone).
-// 2. MascotBot: Ultra-adorable floating AI mascot (glossy ceramic egg body, seamlessly integrated curved OLED visor with glowing cyan capsule eyes, expressive flipper wings, pulsing amber antenna, cyan hover thruster).
+// 1. DevGuy: Stylized humanoid developer (tapered jawline, expressive anime/Pixar eyes with lash wing & dual catchlights, layered modern dark hair with sideburns & fringe, navy hoodie with drawstrings & collar, ergonomic high-back desk chair, arms naturally resting on desk & holding smartphone).
+// 2. MascotBot: Adorable floating companion robot (glossy ceramic egg body, seamlessly integrated curved OLED visor with glowing cyan capsule eyes & pink LED blush, cyber-ear audio pucks, animated flipper paws, pulsing amber antenna, cyan hover thruster).
 import * as THREE from 'three';
 
 const SKIN_TONE = '#FCE0CE';     // Healthy warm stylized human skin
+const SKIN_SHADOW = '#F2C2A8';   // Warm subsurface shadow
 const HOODIE_BLUE = '#1E293B';   // Deep slate navy
 const HOODIE_STRING = '#F8FAFC';
 const HAIR_DARK = '#1C1917';     // Rich deep espresso black
@@ -28,19 +29,15 @@ function renderHumanFace(face, st) {
   const { ctx, tex } = face;
   const { mood = 'neutral', talk = 0, blink = 0, lookX = 0, lookY = 0 } = st;
 
-  // Clear skin canvas with soft warm gradient
-  const grad = ctx.createRadialGradient(256, 256, 40, 256, 256, 260);
-  grad.addColorStop(0, SKIN_TONE);
-  grad.addColorStop(1, '#F5D2BD');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 512, 512);
+  // Clear canvas completely so the facial features overlay seamlessly onto the 3D skin cranium
+  ctx.clearRect(0, 0, 512, 512);
 
-  const leftX = 168 + lookX * 16;
-  const rightX = 344 + lookX * 16;
+  const leftX = 188 + lookX * 16;
+  const rightX = 324 + lookX * 16;
   const eyeY = 224 + lookY * 10;
 
   // Soft Rosy Cheeks (Blush)
-  ctx.fillStyle = 'rgba(235, 120, 110, 0.28)';
+  ctx.fillStyle = 'rgba(238, 118, 128, 0.40)';
   ctx.beginPath();
   ctx.ellipse(leftX - 8, eyeY + 54, 32, 16, 0, 0, Math.PI * 2);
   ctx.fill();
@@ -55,22 +52,22 @@ function renderHumanFace(face, st) {
   ctx.beginPath();
   if (mood === 'skeptical' || mood === 'doubt') {
     // Left raised curious, right furrowed
-    ctx.moveTo(leftX - 32, eyeY - 58);
-    ctx.quadraticCurveTo(leftX, eyeY - 74, leftX + 32, eyeY - 54);
+    ctx.moveTo(leftX - 32, eyeY - 60);
+    ctx.quadraticCurveTo(leftX, eyeY - 76, leftX + 32, eyeY - 56);
     ctx.moveTo(rightX - 32, eyeY - 44);
     ctx.quadraticCurveTo(rightX, eyeY - 38, rightX + 32, eyeY - 48);
   } else if (mood === 'shock' || mood === 'amazed') {
     // Both high arched
-    ctx.moveTo(leftX - 32, eyeY - 68);
-    ctx.quadraticCurveTo(leftX, eyeY - 82, leftX + 32, eyeY - 66);
-    ctx.moveTo(rightX - 32, eyeY - 68);
-    ctx.quadraticCurveTo(rightX, eyeY - 82, rightX + 32, eyeY - 66);
+    ctx.moveTo(leftX - 32, eyeY - 70);
+    ctx.quadraticCurveTo(leftX, eyeY - 84, leftX + 32, eyeY - 68);
+    ctx.moveTo(rightX - 32, eyeY - 70);
+    ctx.quadraticCurveTo(rightX, eyeY - 84, rightX + 32, eyeY - 68);
   } else {
     // Confident, relaxed friendly arch
-    ctx.moveTo(leftX - 32, eyeY - 48);
-    ctx.quadraticCurveTo(leftX, eyeY - 56, leftX + 32, eyeY - 46);
-    ctx.moveTo(rightX - 32, eyeY - 46);
-    ctx.quadraticCurveTo(rightX, eyeY - 56, rightX + 32, eyeY - 48);
+    ctx.moveTo(leftX - 32, eyeY - 50);
+    ctx.quadraticCurveTo(leftX, eyeY - 58, leftX + 32, eyeY - 48);
+    ctx.moveTo(rightX - 32, eyeY - 48);
+    ctx.quadraticCurveTo(rightX, eyeY - 58, rightX + 32, eyeY - 50);
   }
   ctx.stroke();
 
@@ -91,8 +88,8 @@ function renderHumanFace(face, st) {
     ctx.stroke();
   } else {
     // Upper eyelid shadow crease
-    ctx.strokeStyle = 'rgba(60, 25, 15, 0.22)';
-    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'rgba(60, 25, 15, 0.28)';
+    ctx.lineWidth = 3.5;
     ctx.beginPath();
     ctx.arc(leftX, eyeY - 8, 30, Math.PI * 1.15, Math.PI * 1.85);
     ctx.stroke();
@@ -103,32 +100,43 @@ function renderHumanFace(face, st) {
     // Eye Whites (Almond shape)
     ctx.fillStyle = '#FFFFFF';
     ctx.beginPath();
-    ctx.ellipse(leftX, eyeY, 30, 24, 0, 0, Math.PI * 2);
+    ctx.ellipse(leftX, eyeY, 34, 26, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = '#2B1810';
-    ctx.lineWidth = 3.5;
+    ctx.lineWidth = 4;
     ctx.stroke();
 
     ctx.beginPath();
-    ctx.ellipse(rightX, eyeY, 30, 24, 0, 0, Math.PI * 2);
+    ctx.ellipse(rightX, eyeY, 34, 26, 0, 0, Math.PI * 2);
     ctx.fill();
+    ctx.stroke();
+
+    // Stylized Upper Eyelash Wing
+    ctx.strokeStyle = '#180E09';
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(leftX, eyeY - 2, 33, Math.PI * 1.12, Math.PI * 1.88);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(rightX, eyeY - 2, 33, Math.PI * 1.12, Math.PI * 1.88);
     ctx.stroke();
 
     // Deep warm espresso iris
     const eyeIris = (cx, cy) => {
-      const ig = ctx.createRadialGradient(cx, cy, 2, cx, cy, 18);
-      ig.addColorStop(0, '#533526');
-      ig.addColorStop(0.7, '#24160E');
+      const ig = ctx.createRadialGradient(cx, cy, 2, cx, cy, 21);
+      ig.addColorStop(0, '#5A3827');
+      ig.addColorStop(0.7, '#26170F');
       ig.addColorStop(1, '#150C07');
       ctx.fillStyle = ig;
       ctx.beginPath();
-      ctx.arc(cx, cy, 17, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 20, 0, Math.PI * 2);
       ctx.fill();
 
       // Deep pupil
       ctx.fillStyle = '#080504';
       ctx.beginPath();
-      ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 10, 0, Math.PI * 2);
       ctx.fill();
     };
     eyeIris(leftX + lookX * 6, eyeY + lookY * 4);
@@ -138,20 +146,27 @@ function renderHumanFace(face, st) {
     ctx.fillStyle = '#FFFFFF';
     const drawCatchlight = (cx, cy) => {
       ctx.beginPath();
-      ctx.arc(cx - 5, cy - 5, 5.5, 0, Math.PI * 2);
+      ctx.arc(cx - 6, cy - 6, 6.0, 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(cx + 5, cy + 5, 2.5, 0, Math.PI * 2);
+      ctx.arc(cx + 6, cy + 6, 3.0, 0, Math.PI * 2);
       ctx.fill();
     };
     drawCatchlight(leftX + lookX * 6, eyeY + lookY * 4);
     drawCatchlight(rightX + lookX * 6, eyeY + lookY * 4);
   }
 
-  // Subtle cute nose
-  ctx.fillStyle = '#E5A585';
+  // Sculpted Nose (Subtle bridge shading + cute button tip)
+  ctx.strokeStyle = 'rgba(210, 140, 110, 0.45)';
+  ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.arc(256, 308, 4.5, 0, Math.PI * 2);
+  ctx.moveTo(254, 276);
+  ctx.lineTo(254, 308);
+  ctx.stroke();
+
+  ctx.fillStyle = '#E29E7D';
+  ctx.beginPath();
+  ctx.arc(256, 312, 5, 0, Math.PI * 2);
   ctx.fill();
 
   // Expressive mouth with subtle lips
@@ -203,25 +218,46 @@ function renderBotFace(face, st) {
   const { ctx, tex } = face;
   const { mood = 'neutral', talk = 0, blink = 0, lookX = 0, lookY = 0 } = st;
 
-  // Clear OLED screen with soft cyber glow gradient
-  const bgGrad = ctx.createLinearGradient(0, 0, 0, 340);
-  bgGrad.addColorStop(0, '#040711');
-  bgGrad.addColorStop(1, '#08101E');
-  ctx.fillStyle = bgGrad;
-  ctx.fillRect(0, 0, 512, 340);
+  // Clear with transparency so only the rounded organic visor is visible
+  ctx.clearRect(0, 0, 512, 340);
 
-  // Soft CRT horizontal scanline texture
+  // Smooth contoured elliptical OLED screen that fits inside the bezel
+  const bgGrad = ctx.createRadialGradient(256, 170, 40, 256, 170, 230);
+  bgGrad.addColorStop(0, '#0a1426');
+  bgGrad.addColorStop(0.85, '#040711');
+  bgGrad.addColorStop(1, '#02040a');
+  ctx.fillStyle = bgGrad;
+  ctx.beginPath();
+  ctx.ellipse(256, 170, 230, 155, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Curved Glass Sheen Across Top-Right
+  const sheen = ctx.createLinearGradient(0, 0, 512, 340);
+  sheen.addColorStop(0, 'rgba(255, 255, 255, 0.18)');
+  sheen.addColorStop(0.32, 'rgba(255, 255, 255, 0.03)');
+  sheen.addColorStop(0.55, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = sheen;
+  ctx.beginPath();
+  ctx.ellipse(256, 170, 230, 155, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Soft CRT horizontal scanline texture clipped to visor ellipse
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(256, 170, 230, 155, 0, 0, Math.PI * 2);
+  ctx.clip();
   ctx.fillStyle = 'rgba(0, 240, 255, 0.025)';
   for (let y = 0; y < 340; y += 4) {
     ctx.fillRect(0, y, 512, 2);
   }
+  ctx.restore();
 
   const leftX = 160 + lookX * 18;
   const rightX = 352 + lookX * 18;
   const eyeY = 160 + lookY * 12;
 
   // Soft Pink LED Blush
-  ctx.fillStyle = 'rgba(244, 114, 182, 0.35)';
+  ctx.fillStyle = 'rgba(244, 114, 182, 0.45)';
   ctx.beginPath();
   ctx.arc(leftX - 16, eyeY + 48, 18, 0, Math.PI * 2);
   ctx.fill();
@@ -309,125 +345,207 @@ export class DevGuy {
     this.bodyGroup = new THREE.Group();
     this.group.add(this.bodyGroup);
 
-    // 1. Torso: Tapered Ergonomic Navy Hoodie
-    const torsoGeo = new THREE.CylinderGeometry(0.38, 0.42, 0.95, 24);
-    torsoGeo.scale(1.15, 1.0, 0.72); // Realistic human chest depth
+    // 0. Ergonomic Studio Office Chair (Behind character at -Z)
+    const chairGroup = new THREE.Group();
+    const chromeMat = new THREE.MeshStandardMaterial({ color: '#475569', metalness: 0.85, roughness: 0.2 });
+    const meshMat = new THREE.MeshStandardMaterial({ color: '#0F172A', roughness: 0.8, metalness: 0.1 });
+
+    // Caster Base + Hydraulic Cylinder
+    const baseHub = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.08, 16), chromeMat);
+    baseHub.position.set(0, 0.06, -0.06);
+    chairGroup.add(baseHub);
+    for (let i = 0; i < 5; i++) {
+      const ang = (i * Math.PI * 2) / 5;
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.36, 8), chromeMat);
+      leg.rotation.z = Math.PI / 2;
+      leg.rotation.y = ang;
+      leg.position.set(Math.cos(ang) * 0.18, 0.06, -0.06 + Math.sin(ang) * 0.18);
+      chairGroup.add(leg);
+    }
+    const cylinder = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.38, 16), chromeMat);
+    cylinder.position.set(0, 0.25, -0.06);
+    chairGroup.add(cylinder);
+
+    // Sculpted Seat Cushion
+    const seatGeo = new THREE.BoxGeometry(0.56, 0.09, 0.52);
+    const seatCushion = new THREE.Mesh(seatGeo, meshMat);
+    seatCushion.position.set(0, 0.44, -0.02);
+    chairGroup.add(seatCushion);
+
+    // High-back Ergonomic Spine Support & Mesh Backrest (Behind DevGuy at -Z, framing his silhouette)
+    const backGeo = new THREE.BoxGeometry(0.50, 0.74, 0.06);
+    const backMesh = new THREE.Mesh(backGeo, meshMat);
+    backMesh.position.set(0, 0.88, -0.26);
+    backMesh.rotation.x = 0.10;
+    chairGroup.add(backMesh);
+
+    // Adjustable Headrest behind neck
+    const headrest = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.14, 0.07), meshMat);
+    headrest.position.set(0, 1.34, -0.32);
+    chairGroup.add(headrest);
+
+    // Chair Armrests
+    const chairArmGeo = new THREE.BoxGeometry(0.07, 0.035, 0.32);
+    const chairArmL = new THREE.Mesh(chairArmGeo, meshMat);
+    const chairArmR = new THREE.Mesh(chairArmGeo, meshMat);
+    chairArmL.position.set(-0.31, 0.65, -0.02);
+    chairArmR.position.set(0.31, 0.65, -0.02);
+    chairGroup.add(chairArmL);
+    chairGroup.add(chairArmR);
+
+    this.group.add(chairGroup);
+
+    // 1. Torso: Tapered Humanoid Navy Hoodie Seated Naturally on Chair Facing Camera (+Z)
+    const torsoGeo = new THREE.CylinderGeometry(0.30, 0.36, 0.82, 24);
+    torsoGeo.scale(1.15, 1.0, 0.76); // Natural human chest depth
     const hoodieMat = new THREE.MeshStandardMaterial({
       color: HOODIE_BLUE,
-      roughness: 0.65,
-      metalness: 0.05
+      roughness: 0.68,
+      metalness: 0.04
     });
     this.torso = new THREE.Mesh(torsoGeo, hoodieMat);
     this.torso.position.y = 0.82;
     this.torso.castShadow = true;
     this.bodyGroup.add(this.torso);
 
-    // Puffy Hoodie Collar / Folded Hood Ring around neck
-    const collarGeo = new THREE.TorusGeometry(0.22, 0.075, 16, 24);
-    collarGeo.scale(1.1, 0.7, 1.0);
+    // Folded Hood Ring around neck
+    const collarGeo = new THREE.TorusGeometry(0.20, 0.07, 16, 24);
+    collarGeo.scale(1.1, 0.75, 1.0);
     const collarMesh = new THREE.Mesh(collarGeo, hoodieMat);
     collarMesh.rotation.x = Math.PI / 2;
-    collarMesh.position.set(0, 1.30, -0.04);
+    collarMesh.position.set(0, 1.22, 0.02);
     this.bodyGroup.add(collarMesh);
 
-    // White Hoodie Drawstrings
-    const stringGeo = new THREE.CylinderGeometry(0.012, 0.012, 0.34, 8);
+    // Draped Hood Volume on Upper Back (-Z)
+    const hoodDrape = new THREE.Mesh(
+      new THREE.SphereGeometry(0.22, 16, 16),
+      hoodieMat
+    );
+    hoodDrape.scale.set(1.05, 0.6, 0.7);
+    hoodDrape.position.set(0, 1.12, -0.16);
+    this.bodyGroup.add(hoodDrape);
+
+    // White Braided Hoodie Drawstrings on Front (+Z)
+    const stringGeo = new THREE.CylinderGeometry(0.010, 0.010, 0.32, 8);
     const stringMat = new THREE.MeshStandardMaterial({ color: HOODIE_STRING, roughness: 0.5 });
     const strL = new THREE.Mesh(stringGeo, stringMat);
     const strR = new THREE.Mesh(stringGeo, stringMat);
-    strL.position.set(-0.11, 1.05, 0.26);
-    strR.position.set(0.11, 1.05, 0.26);
+    strL.position.set(-0.10, 1.02, 0.22);
+    strR.position.set(0.10, 1.02, 0.22);
     this.bodyGroup.add(strL);
     this.bodyGroup.add(strR);
 
-    // 2. Sculpted Humanoid Head & Neck
+    // 2. Sculpted Humanoid Head & Neck Facing Camera (+Z)
     this.headGroup = new THREE.Group();
-    this.headGroup.position.set(0, 1.68, 0);
+    this.headGroup.position.set(0, 1.54, 0);
     this.bodyGroup.add(this.headGroup);
 
-    // Defined Neck
-    const neckGeo = new THREE.CylinderGeometry(0.14, 0.16, 0.22, 20);
+    // Human Neck
+    const neckGeo = new THREE.CylinderGeometry(0.12, 0.14, 0.22, 20);
     const skinMat = new THREE.MeshStandardMaterial({ color: SKIN_TONE, roughness: 0.55 });
     const neckMesh = new THREE.Mesh(neckGeo, skinMat);
     neckMesh.position.set(0, -0.16, 0);
     this.headGroup.add(neckMesh);
 
-    // Humanoid Head with Face Plate
-    const headGeo = new THREE.BoxGeometry(0.54, 0.58, 0.52);
-    const faceMat = new THREE.MeshBasicMaterial({ map: this.face.tex });
-    // [right, left, top, bottom, front, back] -> front (+Z) has the expressive face canvas!
-    const headMats = [skinMat, skinMat, skinMat, skinMat, faceMat, skinMat];
-    this.headMesh = new THREE.Mesh(headGeo, headMats);
-    this.headMesh.castShadow = true;
-    this.headGroup.add(this.headMesh);
+    // Humanoid Head Sculpt: Cranium (Sculpted with humanoid proportion)
+    const craniumGeo = new THREE.SphereGeometry(0.25, 32, 24);
+    craniumGeo.scale(0.88, 1.16, 0.94);
+    const craniumMesh = new THREE.Mesh(craniumGeo, skinMat);
+    craniumMesh.castShadow = true;
+    this.headGroup.add(craniumMesh);
 
-    // Cute Stylized Human Ears
-    const earGeo = new THREE.CylinderGeometry(0.055, 0.055, 0.035, 16);
+    // Tapered Jaw / Chin
+    const jawGeo = new THREE.CylinderGeometry(0.16, 0.11, 0.22, 24);
+    jawGeo.scale(1.0, 1.0, 0.82);
+    const jawMesh = new THREE.Mesh(jawGeo, skinMat);
+    jawMesh.position.set(0, -0.11, 0.04);
+    this.headGroup.add(jawMesh);
+
+    // Seamless Face Decal Mesh (Flush curved surface mapped to the dynamic 2D face)
+    const faceGeo = new THREE.SphereGeometry(
+      0.252, 32, 24,
+      Math.PI * 0.175, Math.PI * 0.65,
+      Math.PI * 0.20, Math.PI * 0.52
+    );
+    faceGeo.scale(0.882, 1.162, 0.942);
+    const faceMat = new THREE.MeshBasicMaterial({
+      map: this.face.tex,
+      transparent: true,
+      depthWrite: false
+    });
+    this.faceMesh = new THREE.Mesh(faceGeo, faceMat);
+    this.faceMesh.position.set(0, 0, 0);
+    this.headGroup.add(this.faceMesh);
+
+    // Cute Stylized Human Ears on Sides
+    const earGeo = new THREE.TorusGeometry(0.045, 0.016, 12, 16);
     const earL = new THREE.Mesh(earGeo, skinMat);
     const earR = new THREE.Mesh(earGeo, skinMat);
-    earL.position.set(-0.29, 0.02, 0.02);
-    earL.rotation.z = Math.PI / 2;
-    earR.position.set(0.29, 0.02, 0.02);
-    earR.rotation.z = Math.PI / 2;
+    earL.position.set(-0.22, -0.01, -0.02);
+    earL.rotation.y = Math.PI / 2;
+    earR.position.set(0.22, -0.01, -0.02);
+    earR.rotation.y = -Math.PI / 2;
     this.headGroup.add(earL);
     this.headGroup.add(earR);
 
-    // Modern Styled Hair with Natural Side-Swept Fringe
+    // Modern Layered Haircut (Styled neatly above eyebrows)
     const hairMat = new THREE.MeshStandardMaterial({ color: HAIR_DARK, roughness: 0.8 });
-    const hairTop = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.18, 0.56), hairMat);
-    hairTop.position.set(0, 0.31, -0.02);
-    this.headGroup.add(hairTop);
+    const hairCap = new THREE.Mesh(
+      new THREE.SphereGeometry(0.262, 32, 24, 0, Math.PI * 2, 0, Math.PI * 0.38),
+      hairMat
+    );
+    hairCap.scale.set(0.92, 1.18, 0.98);
+    hairCap.position.set(0, 0.08, -0.02);
+    this.headGroup.add(hairCap);
 
-    const hairBack = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.48, 0.12), hairMat);
-    hairBack.position.set(0, 0.08, -0.22);
-    this.headGroup.add(hairBack);
+    // Natural Sculpted Hair Sideburns
+    const sideburnGeo = new THREE.BoxGeometry(0.035, 0.14, 0.08);
+    const sideburnL = new THREE.Mesh(sideburnGeo, hairMat);
+    const sideburnR = new THREE.Mesh(sideburnGeo, hairMat);
+    sideburnL.position.set(-0.22, 0.04, 0.03);
+    sideburnR.position.set(0.22, 0.04, 0.03);
+    this.headGroup.add(sideburnL);
+    this.headGroup.add(sideburnR);
 
-    const hairSideL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.36, 0.44), hairMat);
-    const hairSideR = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.36, 0.44), hairMat);
-    hairSideL.position.set(-0.28, 0.12, -0.06);
-    hairSideR.position.set(0.28, 0.12, -0.06);
-    this.headGroup.add(hairSideL);
-    this.headGroup.add(hairSideR);
-
-    // Sleek Natural Side-Swept Fringe Over Forehead
-    const fringeGeo = new THREE.BoxGeometry(0.50, 0.10, 0.06);
+    // Natural Sculpted Hair Fringe Torus along Hairline
     const fringeMat = new THREE.MeshStandardMaterial({ color: HAIR_HILIGHT, roughness: 0.75 });
-    const hairFringe = new THREE.Mesh(fringeGeo, fringeMat);
-    hairFringe.position.set(0.01, 0.25, 0.27);
-    hairFringe.rotation.z = -0.06;
-    this.headGroup.add(hairFringe);
+    const fringeTorus = new THREE.Mesh(
+      new THREE.TorusGeometry(0.21, 0.036, 12, 24, Math.PI * 0.75),
+      fringeMat
+    );
+    fringeTorus.rotation.set(0.32, 0, -Math.PI * 0.38);
+    fringeTorus.position.set(0.01, 0.16, 0.08);
+    this.headGroup.add(fringeTorus);
 
-    // 3. Human Arms & Hands
-    const armMat = new THREE.MeshStandardMaterial({ color: HOODIE_BLUE, roughness: 0.65 });
-    const armGeo = new THREE.CylinderGeometry(0.085, 0.075, 0.52, 16);
+    // 3. Natural Arms & Hands (Extending forward +Z toward desk)
+    const armMat = new THREE.MeshStandardMaterial({ color: HOODIE_BLUE, roughness: 0.68 });
+    const armGeo = new THREE.CylinderGeometry(0.075, 0.065, 0.46, 16);
 
-    // Left Arm (Resting naturally on desk)
+    // Left Arm (Forearm extending forward onto desk typing near laptop)
     this.armL = new THREE.Mesh(armGeo, armMat);
-    this.armL.position.set(-0.50, 0.86, 0.12);
-    this.armL.rotation.set(0.55, 0, -0.22);
+    this.armL.position.set(-0.38, 0.82, 0.16);
+    this.armL.rotation.set(0.70, 0, -0.22);
     this.armL.castShadow = true;
     this.bodyGroup.add(this.armL);
 
-    // Right Arm (Holding phone up)
+    // Hand on desk
+    const handL = new THREE.Mesh(new THREE.SphereGeometry(0.055, 12, 12), skinMat);
+    handL.scale.set(1.0, 0.6, 1.4);
+    handL.position.set(0, -0.24, 0.05);
+    this.armL.add(handL);
+
+    // Right Arm (Holding phone upright naturally facing camera)
     this.armR = new THREE.Mesh(armGeo, armMat);
-    this.armR.position.set(0.48, 0.88, 0.16);
-    this.armR.rotation.set(0.72, 0, 0.25);
+    this.armR.position.set(0.36, 0.86, 0.18);
+    this.armR.rotation.set(0.78, 0, 0.25);
     this.armR.castShadow = true;
     this.bodyGroup.add(this.armR);
 
     // Stylized Smartphone in Hand
     this.phone = this._makePhone();
-    this.phone.position.set(0.02, -0.26, 0.14);
-    this.phone.rotation.x = -0.35;
+    this.phone.position.set(0.02, -0.24, 0.08);
+    this.phone.rotation.x = -0.45;
     this.armR.add(this.phone);
-
-    // Grounded Seated Base
-    this.seatBase = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.36, 0.40, 0.35, 24),
-      new THREE.MeshStandardMaterial({ color: '#0F172A', roughness: 0.7 })
-    );
-    this.seatBase.position.y = 0.18;
-    this.group.add(this.seatBase);
 
     this.st = { mood: 'neutral', talk: 0, blink: 0 };
     renderHumanFace(this.face, this.st);
@@ -437,13 +555,13 @@ export class DevGuy {
     const g = new THREE.Group();
     // Glass smartphone chassis
     const body = new THREE.Mesh(
-      new THREE.BoxGeometry(0.16, 0.32, 0.016),
-      new THREE.MeshStandardMaterial({ color: '#0F172A', metalness: 0.8, roughness: 0.2 })
+      new THREE.BoxGeometry(0.14, 0.28, 0.015),
+      new THREE.MeshStandardMaterial({ color: '#0F172A', metalness: 0.85, roughness: 0.2 })
     );
     g.add(body);
-    // Glowing OLED Screen
+    // Glowing OLED Screen (facing camera +Z)
     const screen = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.14, 0.29),
+      new THREE.PlaneGeometry(0.12, 0.25),
       new THREE.MeshBasicMaterial({ color: '#38BDF8' })
     );
     screen.position.z = 0.009;
@@ -460,14 +578,14 @@ export class DevGuy {
     renderHumanFace(this.face, this.st);
 
     // Natural human breathing sway
-    const breath = Math.sin(t * 1.8) * 0.012;
+    const breath = Math.sin(t * 1.8) * 0.010;
     this.bodyGroup.position.y = breath;
-    this.headGroup.rotation.y = (this.st.lookX || 0) * 0.22;
-    this.headGroup.rotation.x = (this.st.lookY || 0) * 0.12;
+    this.headGroup.rotation.y = (this.st.lookX || 0) * 0.20;
+    this.headGroup.rotation.x = (this.st.lookY || 0) * 0.10;
 
     // Speech gesture
     if (this.st.talk > 0.1) {
-      this.armR.rotation.x = 0.72 + Math.sin(t * 5.2) * 0.06;
+      this.armR.rotation.x = 0.78 + Math.sin(t * 5.2) * 0.05;
     }
   }
 }
@@ -483,32 +601,63 @@ export class MascotBot {
 
     // 1. Ceramic Glossy White Body (Chubby adorable egg proportions)
     const bodyGeo = new THREE.SphereGeometry(0.44, 36, 32);
-    bodyGeo.scale(0.90, 1.12, 0.90);
+    bodyGeo.scale(0.92, 1.12, 0.92);
     const bodyMat = new THREE.MeshStandardMaterial({
       color: BOT_WHITE,
       roughness: 0.08,
-      metalness: 0.06
+      metalness: 0.04
     });
     this.bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
     this.bodyMesh.position.y = 1.35;
     this.bodyMesh.castShadow = true;
     this.botBody.add(this.bodyMesh);
 
-    // 2. Glossy Curved Front OLED Visor (Placed proud at z=0.44 to prevent any body mesh intersection)
-    const visorGeo = new THREE.PlaneGeometry(0.56, 0.36, 24, 16);
-    const pos = visorGeo.attributes.position;
-    for (let i = 0; i < pos.count; i++) {
-      const vx = pos.getX(i);
-      pos.setZ(i, -Math.pow(vx, 2) * 0.32);
-    }
-    visorGeo.computeVertexNormals();
+    // 2. Seamless Inset Curved OLED Visor (Curved spherical shell flush with egg surface)
+    // Sized to fit precisely inside the dark metallic bezel ring
+    const visorGeo = new THREE.SphereGeometry(
+      0.442, 36, 24,
+      Math.PI * 0.25, Math.PI * 0.50,
+      Math.PI * 0.31, Math.PI * 0.38
+    );
+    visorGeo.scale(0.922, 1.122, 0.922);
 
-    const visorMat = new THREE.MeshBasicMaterial({ map: this.face.tex, transparent: true });
+    const visorMat = new THREE.MeshBasicMaterial({
+      map: this.face.tex,
+      transparent: true,
+      depthWrite: false
+    });
     this.visor = new THREE.Mesh(visorGeo, visorMat);
-    this.visor.position.set(0, 1.40, 0.44);
+    this.visor.position.y = 1.35;
     this.botBody.add(this.visor);
 
-    // 3. Cute Top Antenna with Glowing Warm Amber Light
+    // Sleek Dark Gunmetal Bezel Trim around Visor Contour on +Z
+    const bezelMat = new THREE.MeshStandardMaterial({
+      color: '#0F172A',
+      metalness: 0.85,
+      roughness: 0.18
+    });
+    const bezelRing = new THREE.Mesh(new THREE.TorusGeometry(0.23, 0.016, 16, 32), bezelMat);
+    bezelRing.scale.set(1.22, 0.92, 1.0);
+    bezelRing.position.set(0, 1.35, 0.38);
+    this.botBody.add(bezelRing);
+
+    // 3. Cyber Headphone Audio Pucks on Sides (Ultra-cute companion styling)
+    const puckMat = new THREE.MeshStandardMaterial({ color: '#1E293B', metalness: 0.7, roughness: 0.3 });
+    const ringMat = new THREE.MeshBasicMaterial({ color: CYAN_GLOW });
+
+    [-0.41, 0.41].forEach((px) => {
+      const puck = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.035, 24), puckMat);
+      puck.rotation.z = Math.PI / 2;
+      puck.position.set(px, 1.38, 0);
+      this.botBody.add(puck);
+
+      const lightRing = new THREE.Mesh(new THREE.TorusGeometry(0.065, 0.010, 16, 24), ringMat);
+      lightRing.rotation.y = Math.PI / 2;
+      lightRing.position.set(px > 0 ? px + 0.018 : px - 0.018, 1.38, 0);
+      this.botBody.add(lightRing);
+    });
+
+    // 4. Cute Top Antenna with Glowing Warm Amber Light
     const stemGeo = new THREE.CylinderGeometry(0.014, 0.016, 0.22, 12);
     const stemMat = new THREE.MeshStandardMaterial({ color: '#64748B', metalness: 0.6, roughness: 0.25 });
     this.stem = new THREE.Mesh(stemGeo, stemMat);
@@ -521,25 +670,24 @@ export class MascotBot {
     this.beacon.position.set(0, 2.06, 0);
     this.botBody.add(this.beacon);
 
-    // 4. Adorable Floating Flipper Wings
+    // 5. Adorable Floating Flipper Paws
     const finGeo = new THREE.SphereGeometry(0.12, 16, 16);
-    finGeo.scale(0.32, 1.7, 0.75);
+    finGeo.scale(0.35, 1.5, 0.75);
     const finMat = new THREE.MeshStandardMaterial({ color: BOT_WHITE, roughness: 0.1 });
     this.finL = new THREE.Mesh(finGeo, finMat);
     this.finR = new THREE.Mesh(finGeo, finMat);
-    this.finL.position.set(-0.46, 1.32, 0.02);
-    this.finR.position.set(0.46, 1.32, 0.02);
-    this.finL.rotation.z = 0.25;
-    this.finR.rotation.z = -0.25;
+    this.finL.position.set(-0.45, 1.28, 0.02);
+    this.finR.position.set(0.45, 1.28, 0.02);
+    this.finL.rotation.z = 0.22;
+    this.finR.rotation.z = -0.22;
     this.botBody.add(this.finL);
     this.botBody.add(this.finR);
 
-    // 5. Cyan Holographic Hover Thruster Ring
-    const ringGeo = new THREE.TorusGeometry(0.24, 0.024, 16, 32);
-    const ringMat = new THREE.MeshBasicMaterial({ color: CYAN_GLOW });
-    this.ring = new THREE.Mesh(ringGeo, ringMat);
+    // 6. Cyan Holographic Hover Thruster Ring
+    const thrusterRing = new THREE.TorusGeometry(0.22, 0.022, 16, 32);
+    this.ring = new THREE.Mesh(thrusterRing, ringMat);
     this.ring.rotation.x = Math.PI / 2;
-    this.ring.position.set(0, 0.82, 0);
+    this.ring.position.set(0, 0.85, 0);
     this.botBody.add(this.ring);
 
     this.st = { mood: 'neutral', talk: 0, blink: 0 };
@@ -560,10 +708,10 @@ export class MascotBot {
     this.botBody.position.y = bob;
     this.botBody.rotation.z = tilt;
 
-    // Fluttering flipper wings (like an excited puppy/penguin)
+    // Fluttering flipper paws (like an excited puppy/penguin)
     const flap = Math.sin(t * 3.8) * 0.14;
-    this.finL.rotation.z = 0.25 + flap;
-    this.finR.rotation.z = -0.25 - flap;
+    this.finL.rotation.z = 0.22 + flap;
+    this.finR.rotation.z = -0.22 - flap;
 
     // Glowing amber antenna pulse
     if (this.beacon) {
