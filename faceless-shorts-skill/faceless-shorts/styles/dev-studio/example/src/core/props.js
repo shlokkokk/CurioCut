@@ -275,10 +275,10 @@ export function createDynamicTopicProp(lineOrType, scriptContext = {}, idx = 0, 
 
     const tex = new THREE.CanvasTexture(c);
     const cardMesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.08, 0.46),
+      new THREE.PlaneGeometry(0.82, 0.36),
       new THREE.MeshBasicMaterial({ map: tex, transparent: true })
     );
-    cardMesh.position.set(0.0, 1.62, 0.25);
+    cardMesh.position.set(0.0, 1.20, 0.20);
     g.add(cardMesh);
     return g;
   }
@@ -322,10 +322,10 @@ export function createDynamicTopicProp(lineOrType, scriptContext = {}, idx = 0, 
 
     const tex = new THREE.CanvasTexture(c);
     const mesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.08, 0.52),
+      new THREE.PlaneGeometry(0.82, 0.38),
       new THREE.MeshBasicMaterial({ map: tex, transparent: true })
     );
-    mesh.position.set(0.0, 1.62, 0.25);
+    mesh.position.set(0.0, 1.20, 0.20);
     g.add(mesh);
     return g;
   }
@@ -333,7 +333,7 @@ export function createDynamicTopicProp(lineOrType, scriptContext = {}, idx = 0, 
   if (propType === 'feature_badges' || propType === 'badges' || propType === 'features') {
     // Floating Glossy Feature Badges ([Image], [Video], [Local])
     const features = ['Image', 'Video', 'Uncensored', 'Local 0$'];
-    const colOffsets = [-0.9, -0.3, 0.3, 0.9];
+    const colOffsets = [-0.30, -0.10, 0.10, 0.30];
     features.forEach((feat, i) => {
       const c = document.createElement('canvas');
       c.width = 256; c.height = 140;
@@ -352,10 +352,10 @@ export function createDynamicTopicProp(lineOrType, scriptContext = {}, idx = 0, 
 
       const tex = new THREE.CanvasTexture(c);
       const bMesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.75, 0.42),
+        new THREE.PlaneGeometry(0.34, 0.20),
         new THREE.MeshBasicMaterial({ map: tex, transparent: true })
       );
-      bMesh.position.set(colOffsets[i], 1.6 + (i % 2 === 0 ? 0.2 : -0.1), 0);
+      bMesh.position.set(colOffsets[i], 1.22 + (i % 2 === 0 ? 0.08 : -0.04), 0.20);
       g.add(bMesh);
     });
     return g;
@@ -363,10 +363,10 @@ export function createDynamicTopicProp(lineOrType, scriptContext = {}, idx = 0, 
 
   if (propType === 'pc_rig' || propType === 'local' || propType === 'hardware') {
     // 3D Glass Desktop Gaming/Local PC Tower with rotating illuminated RGB fans
-    const towerGeo = new THREE.BoxGeometry(0.8, 1.2, 0.8);
+    const towerGeo = new THREE.BoxGeometry(0.48, 0.72, 0.48);
     const towerMat = new THREE.MeshStandardMaterial({ color: '#0F172A', metalness: 0.8, roughness: 0.2 });
     const tower = new THREE.Mesh(towerGeo, towerMat);
-    tower.position.y = 1.35;
+    tower.position.set(0, 1.15, 0.20);
     g.add(tower);
 
     // Glass Front/Side Panel
@@ -377,16 +377,16 @@ export function createDynamicTopicProp(lineOrType, scriptContext = {}, idx = 0, 
       roughness: 0.05,
       metalness: 0.1
     });
-    const glass = new THREE.Mesh(new THREE.PlaneGeometry(0.76, 1.14), glassMat);
-    glass.position.set(0, 1.35, 0.41);
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 0.70), glassMat);
+    glass.position.set(0, 1.15, 0.45);
     g.add(glass);
 
     // 2 Illuminated Glowing Cooling Fans
     const fanMat = new THREE.MeshBasicMaterial({ color: CYAN_GLOW });
-    const fan1 = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.03, 16, 24), fanMat);
-    const fan2 = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.03, 16, 24), fanMat);
-    fan1.position.set(0, 1.65, 0.32);
-    fan2.position.set(0, 1.05, 0.32);
+    const fan1 = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.02, 16, 24), fanMat);
+    const fan2 = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.02, 16, 24), fanMat);
+    fan1.position.set(0, 1.30, 0.40);
+    fan2.position.set(0, 1.00, 0.40);
     g.add(fan1);
     g.add(fan2);
 
@@ -413,27 +413,30 @@ export function createDynamicTopicProp(lineOrType, scriptContext = {}, idx = 0, 
 
     const tex = new THREE.CanvasTexture(c);
     const mesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.9, 0.52),
+      new THREE.PlaneGeometry(0.84, 0.28),
       new THREE.MeshBasicMaterial({ map: tex, transparent: true })
     );
-    mesh.position.set(0, 1.45, 0);
+    mesh.position.set(0, 1.20, 0.20);
     g.add(mesh);
     return g;
   }
 
-  // Default clean floating card fallback
+  // Default clean floating card fallback - compact, hovering cleanly at chest level between characters
   const c = document.createElement('canvas');
   c.width = 512; c.height = 200;
   const ctx = c.getContext('2d');
   ctx.fillStyle = '#0F172A';
   ctx.roundRect(10, 10, 492, 180, 24);
   ctx.fill();
+  ctx.strokeStyle = '#38BDF8';
+  ctx.lineWidth = 5;
+  ctx.stroke();
   ctx.fillStyle = '#FFFFFF';
   ctx.font = 'bold 42px Inter, sans-serif';
   ctx.fillText(toolName || 'Open Source', 40, 110);
   const tex = new THREE.CanvasTexture(c);
-  const dMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.65), new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
-  dMesh.position.set(0, 1.45, 0);
+  const dMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.80, 0.32), new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
+  dMesh.position.set(0, 1.20, 0.20);
   g.add(dMesh);
   return g;
 }

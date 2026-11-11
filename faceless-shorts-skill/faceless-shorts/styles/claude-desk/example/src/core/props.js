@@ -166,11 +166,11 @@ export function buildPriceSlicer(line, scriptContext) {
 /** 3. DYNAMIC PROP: Cyber Holographic IDE & Matrix Workspace */
 export function buildHoloIDE(line, scriptContext) {
   const g = new THREE.Group();
-  g.position.set(0, 1.4, 0.1);
+  g.position.set(0, 1.20, 0.2);
 
   const toolName = scriptContext.tool_name || 'Autonomous Tool';
 
-  // Master Floating Glass Screen
+  // Master Floating Glass Screen - Compact & centered to avoid character overlap
   const c = document.createElement('canvas');
   c.width = 600; c.height = 360;
   const ctx = c.getContext('2d');
@@ -207,14 +207,14 @@ export function buildHoloIDE(line, scriptContext) {
 
   const tex = new THREE.CanvasTexture(c);
   const screen = new THREE.Mesh(
-    new THREE.PlaneGeometry(2.2, 1.32),
+    new THREE.PlaneGeometry(0.84, 0.50),
     new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.94 })
   );
   g.add(screen);
 
   // Orbiting Glowing Network Cubes
   const cubes = [];
-  const cubeGeo = new THREE.BoxGeometry(0.12, 0.12, 0.12);
+  const cubeGeo = new THREE.BoxGeometry(0.08, 0.08, 0.08);
   const cubeMat = new THREE.MeshBasicMaterial({ color: CYAN_GLOW });
   for (let i = 0; i < 8; i++) {
     const cb = new THREE.Mesh(cubeGeo, cubeMat);
@@ -223,11 +223,11 @@ export function buildHoloIDE(line, scriptContext) {
   }
 
   g.update = (t) => {
-    screen.position.y = Math.sin(t * 2.2) * 0.05;
+    screen.position.y = Math.sin(t * 2.2) * 0.04;
     cubes.forEach((cb, idx) => {
       const ang = t * 1.5 + (idx / cubes.length) * Math.PI * 2;
-      const rad = 1.35 + Math.sin(t * 2 + idx) * 0.15;
-      cb.position.set(Math.cos(ang) * rad, Math.sin(ang * 0.7) * 0.5, Math.sin(ang) * 0.6);
+      const rad = 0.52 + Math.sin(t * 2 + idx) * 0.08;
+      cb.position.set(Math.cos(ang) * rad, Math.sin(ang * 0.7) * 0.25, Math.sin(ang) * 0.35);
       cb.rotation.x = t * 2;
       cb.rotation.y = t * 3;
     });
@@ -296,14 +296,14 @@ export function buildNeuralCore(line, scriptContext) {
 /** 5. DYNAMIC PROP: Hyperspeed Chrono-Tachometer & 4-Second Speedometer */
 export function buildSpeedGauge(line, scriptContext) {
   const g = new THREE.Group();
-  g.position.set(0, 1.4, 0.2);
+  g.position.set(0, 1.20, 0.2);
 
   const c = document.createElement('canvas');
   c.width = 512; c.height = 300;
   const ctx = c.getContext('2d');
 
   const tex = new THREE.CanvasTexture(c);
-  const card = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 1.18), new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
+  const card = new THREE.Mesh(new THREE.PlaneGeometry(0.82, 0.48), new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
   g.add(card);
 
   g.update = (t) => {
@@ -355,19 +355,19 @@ export function buildAudioMonolith(line, scriptContext) {
 
   // Equalizer Tower Pedestal
   const ped = new THREE.Mesh(
-    new THREE.BoxGeometry(2.4, 0.14, 0.8),
+    new THREE.BoxGeometry(0.84, 0.12, 0.4),
     new THREE.MeshStandardMaterial({ color: '#1E293B', roughness: 0.4 })
   );
-  ped.position.y = 0.07;
+  ped.position.y = 0.06;
   g.add(ped);
 
   // Physical 3D Equalizer Pillars
   const pillars = [];
-  const pilGeo = new THREE.BoxGeometry(0.08, 1.0, 0.08);
-  for (let i = 0; i < 20; i++) {
+  const pilGeo = new THREE.BoxGeometry(0.03, 0.6, 0.03);
+  for (let i = 0; i < 16; i++) {
     const col = i % 2 === 0 ? CYAN_GLOW : NEON_PURPLE;
     const m = new THREE.Mesh(pilGeo, new THREE.MeshBasicMaterial({ color: col }));
-    m.position.set(-1.0 + i * 0.105, 0.6, 0);
+    m.position.set(-0.35 + i * 0.046, 0.4, 0);
     g.add(m);
     pillars.push(m);
   }
@@ -387,17 +387,17 @@ export function buildAudioMonolith(line, scriptContext) {
   ctx.fillText('"3 tasks require your review this morning."', 24, 94);
   const tex = new THREE.CanvasTexture(c);
 
-  const card = new THREE.Mesh(new THREE.PlaneGeometry(1.85, 0.52), new THREE.MeshBasicMaterial({ map: tex }));
-  card.position.set(0, 1.85, 0.2);
+  const card = new THREE.Mesh(new THREE.PlaneGeometry(0.82, 0.28), new THREE.MeshBasicMaterial({ map: tex }));
+  card.position.set(0, 1.25, 0.2);
   g.add(card);
 
   g.update = (t) => {
     pillars.forEach((p, idx) => {
-      const h = Math.abs(Math.sin(t * 8 + idx * 0.5)) * 1.2 + 0.15;
+      const h = Math.abs(Math.sin(t * 8 + idx * 0.5)) * 0.8 + 0.12;
       p.scale.y = h;
-      p.position.y = 0.14 + h / 2;
+      p.position.y = 0.12 + h / 2;
     });
-    card.position.y = 1.85 + Math.sin(t * 2.5) * 0.05;
+    card.position.y = 1.25 + Math.sin(t * 2.5) * 0.04;
   };
 
   return g;
@@ -408,15 +408,15 @@ export function buildLocalCitadel(line, scriptContext) {
   const g = new THREE.Group();
   g.position.set(0, 0.1, 0.2);
 
-  // Modern Sleek Laptop Base
+  // Modern Sleek Laptop Base - Compact & centered
   const lapMat = new THREE.MeshStandardMaterial({ color: '#334155', metalness: 0.8, roughness: 0.2 });
-  const base = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.06, 1.1), lapMat);
+  const base = new THREE.Mesh(new THREE.BoxGeometry(0.80, 0.05, 0.55), lapMat);
   base.position.y = 0.45;
   g.add(base);
 
   // Laptop Screen tilted open
-  const screen = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.0, 0.04), lapMat);
-  screen.position.set(0, 0.95, -0.45);
+  const screen = new THREE.Mesh(new THREE.BoxGeometry(0.80, 0.52, 0.03), lapMat);
+  screen.position.set(0, 0.72, -0.22);
   screen.rotation.x = -0.18;
   g.add(screen);
 
@@ -437,21 +437,21 @@ export function buildLocalCitadel(line, scriptContext) {
   ctx.fillText('Data stays on your machine forever', 256, 230);
   const tex = new THREE.CanvasTexture(c);
 
-  const display = new THREE.Mesh(new THREE.PlaneGeometry(1.48, 0.9), new THREE.MeshBasicMaterial({ map: tex }));
-  display.position.set(0, 0.95, -0.428);
+  const display = new THREE.Mesh(new THREE.PlaneGeometry(0.76, 0.48), new THREE.MeshBasicMaterial({ map: tex }));
+  display.position.set(0, 0.72, -0.21);
   display.rotation.x = -0.18;
   g.add(display);
 
   // Floating Cyber Security Shield
   const shieldMat = new THREE.MeshBasicMaterial({ color: '#10B981', wireframe: true });
-  const shield = new THREE.Mesh(new THREE.IcosahedronGeometry(0.38, 2), shieldMat);
-  shield.position.set(0, 1.85, 0);
+  const shield = new THREE.Mesh(new THREE.IcosahedronGeometry(0.22, 2), shieldMat);
+  shield.position.set(0, 1.25, 0);
   g.add(shield);
 
   g.update = (t) => {
     shield.rotation.y = t * 1.5;
     shield.rotation.x = t * 0.9;
-    shield.position.y = 1.85 + Math.sin(t * 3) * 0.07;
+    shield.position.y = 1.25 + Math.sin(t * 3) * 0.05;
   };
 
   return g;
@@ -460,9 +460,9 @@ export function buildLocalCitadel(line, scriptContext) {
 /** 8. DYNAMIC PROP: Viral Instagram Comment Box & Flying DM Airplane */
 export function buildViralCommentBox(keyword = 'FAST') {
   const g = new THREE.Group();
-  g.position.set(0, 1.55, 0.2);
+  g.position.set(0, 1.20, 0.2);
 
-  // Frosted Glass Instagram Comment Pill
+  // Frosted Glass Instagram Comment Pill - Compact & chest-level
   const c = document.createElement('canvas');
   c.width = 620; c.height = 144;
   const ctx = c.getContext('2d');
@@ -486,39 +486,39 @@ export function buildViralCommentBox(keyword = 'FAST') {
 
   const tex = new THREE.CanvasTexture(c);
   const card = new THREE.Mesh(
-    new THREE.PlaneGeometry(2.35, 0.55),
+    new THREE.PlaneGeometry(0.84, 0.24),
     new THREE.MeshBasicMaterial({ map: tex, transparent: true })
   );
   g.add(card);
 
   // 3D Flying Origami Paper Airplane
-  const planeGeo = new THREE.ConeGeometry(0.18, 0.55, 3);
+  const planeGeo = new THREE.ConeGeometry(0.10, 0.32, 3);
   const planeMat = new THREE.MeshStandardMaterial({ color: '#FFFFFF', roughness: 0.2 });
   const plane = new THREE.Mesh(planeGeo, planeMat);
   plane.rotation.z = Math.PI / 2;
   g.add(plane);
 
   // 3D Bursting Heart & Confetti Particles
-  const partCount = 45;
+  const partCount = 35;
   const pPos = new Float32Array(partCount * 3);
   for (let i = 0; i < partCount * 3; i += 3) {
-    pPos[i] = (Math.random() - 0.5) * 3.0;
-    pPos[i + 1] = (Math.random() - 0.5) * 1.8;
-    pPos[i + 2] = (Math.random() - 0.5) * 1.2;
+    pPos[i] = (Math.random() - 0.5) * 1.5;
+    pPos[i + 1] = (Math.random() - 0.5) * 1.0;
+    pPos[i + 2] = (Math.random() - 0.5) * 0.8;
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
-  const mat = new THREE.PointsMaterial({ color: '#E1306C', size: 0.11 });
+  const mat = new THREE.PointsMaterial({ color: '#E1306C', size: 0.08 });
   const confetti = new THREE.Points(geo, mat);
   g.add(confetti);
 
   g.update = (t) => {
-    card.position.y = Math.sin(t * 3.2) * 0.05;
+    card.position.y = Math.sin(t * 3.2) * 0.04;
     confetti.rotation.y = t * 0.9;
 
     // Orbiting paper airplane delivering link straight to camera
     const ang = t * 2.8;
-    plane.position.set(Math.cos(ang) * 1.4, 0.35 + Math.sin(ang * 2) * 0.25, Math.sin(ang) * 0.8);
+    plane.position.set(Math.cos(ang) * 0.50, 0.15 + Math.sin(ang * 2) * 0.12, Math.sin(ang) * 0.35);
     plane.rotation.y = -ang - Math.PI / 2;
   };
 

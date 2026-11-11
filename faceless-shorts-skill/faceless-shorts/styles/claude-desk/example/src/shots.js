@@ -114,9 +114,11 @@ export function buildShots(E) {
       draw(lt, d, t, blit) {
         studio.update(t);
 
-        // Show only the dynamic prop matching this active shot
+        const isShowcase = isFirst || isLast || (idx % 2 === 0);
+
+        // Show dynamic prop ONLY during showcase two-shots and establishing shots
         shotProps.forEach((p, pIdx) => {
-          if (pIdx === idx) {
+          if (pIdx === idx && isShowcase) {
             p.visible = true;
             if (p.update) p.update(t);
           } else {
@@ -140,23 +142,28 @@ export function buildShots(E) {
         const progress = Math.min(1, lt / Math.max(1, d));
 
         if (isLast) {
-          // Final CTA: Centered two-shot framing both characters and the floating Instagram Comment Box
-          cam.position.set(0, 1.62, 5.0 - progress * 0.15);
-          cam.lookAt(V3(0, 1.05, 0.2));
+          // Final CTA: Balanced wide two-shot framing both characters and the floating Instagram Comment Box
+          cam.position.set(0, 1.65, 4.85 - progress * 0.15);
+          cam.lookAt(V3(0, 1.10, 0.25));
         } else if (isFirst) {
-          // Opening hook: Dramatic push-in from establishing two-shot
-          cam.position.set(0, 1.62, 5.2 - progress * 0.3);
-          cam.lookAt(V3(0, 1.05, 0.2));
+          // Opening hook: Push-in from establishing two-shot
+          cam.position.set(0, 1.68, 5.0 - progress * 0.25);
+          cam.lookAt(V3(0, 1.10, 0.25));
+        } else if (idx % 2 === 0) {
+          // Showcase Two-Shot: Pull back to wide/medium framing showing BOTH characters, desk, and floating 3D prop
+          const pushIn = progress * 0.15;
+          cam.position.set(0, 1.62, 4.60 - pushIn);
+          cam.lookAt(V3(0, 1.12, 0.25));
         } else if (isSpeakingGuide) {
-          // Medium Close-Up on Claude (Centered in 9:16 mobile frame, 0% clipping)
-          const drift = Math.sin(progress * 0.2) * 0.04;
-          cam.position.set(-0.65 + drift, 1.38, 3.25);
-          cam.lookAt(V3(-0.65, 1.05, 0.4));
+          // Conversational Medium Shot on Claude (Comfortable headroom, chest up, visible hands & reactions)
+          const drift = Math.sin(progress * 0.25) * 0.03;
+          cam.position.set(-0.48 + drift, 1.45, 4.15);
+          cam.lookAt(V3(-0.55, 1.08, 0.38));
         } else {
-          // Medium Close-Up on Skeptic (Centered in 9:16 mobile frame, 0% clipping)
-          const drift = Math.sin(progress * 0.2) * 0.04;
-          cam.position.set(0.65 - drift, 1.35, 3.25);
-          cam.lookAt(V3(0.65, 1.02, 0.4));
+          // Conversational Medium Shot on Skeptic (Comfortable headroom, chest up, visible hands & reactions)
+          const drift = Math.sin(progress * 0.25) * 0.03;
+          cam.position.set(0.48 - drift, 1.42, 4.15);
+          cam.lookAt(V3(0.55, 1.05, 0.38));
         }
 
         // Render WebGL frame

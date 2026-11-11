@@ -108,7 +108,13 @@ if res.returncode == 0:
 else:
     print(f"\nWorker exited with error code {res.returncode}", flush=True)
     try:
-        from discord_notifier import notify_error
+        from discord_notifier import notify_error, update_live_progress
+        update_live_progress(
+            step_title="Cloud Worker Failed",
+            percent=0,
+            details=f"Pipeline aborted on cloud runner (exit code {res.returncode}). Check logs for details.",
+            is_error=True
+        )
         notify_error("Cloud Runner", f"Worker stopped with code {res.returncode}")
     except Exception:
         pass
