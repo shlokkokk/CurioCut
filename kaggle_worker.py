@@ -72,7 +72,12 @@ if yt_token and not (WORKSPACE / "youtube_token.json").exists():
 
 # Step 4: Run autonomous 3D short generation & upload
 slot = os.environ.get("CURIO_SLOT", "auto").lower()
-style_arg = "claude-desk" if ("claude" in slot or "tech" in slot) else "auto"
+if "dev" in slot or "studio" in slot or "mascot" in slot:
+    style_arg = "dev-studio"
+elif "claude" in slot or "tech" in slot:
+    style_arg = "claude-desk"
+else:
+    style_arg = "auto"
 print(f"\n[4/4] Starting 3D short generation (Slot: {slot} | Style: {style_arg})...", flush=True)
 
 try:

@@ -80,8 +80,10 @@ export default {
     const cronStr = (event && event.cron) || "";
 
     let slotType = "classic";
-    if (hourUTC === 15 || cronStr.includes("15")) {
+    if (hourUTC === 12 || cronStr.includes("12")) {
       slotType = "claude-desk";
+    } else if (hourUTC === 15 || cronStr.includes("15")) {
+      slotType = "dev-studio";
     }
 
     const url = "https://api.github.com/repos/shlokkokk/CurioCut/dispatches";
@@ -235,11 +237,11 @@ export default {
           await triggerGitHub(env.GITHUB_TOKEN, "classic");
           replyText = "Started generating Slot 1 Classic Story (1:00 PM). Live frame rendering will appear in <#1569750972975288441>.";
         } else if (customId === "trigger_slot_2") {
-          await triggerGitHub(env.GITHUB_TOKEN, "classic");
-          replyText = "Started generating Slot 2 Classic Story (7:00 PM). Live frame rendering will appear in <#1569750972975288441>.";
-        } else if (customId === "trigger_tech" || customId === "trigger_slot_3") {
           await triggerGitHub(env.GITHUB_TOKEN, "claude-desk");
-          replyText = "Started generating Slot 3 (9:30 PM 3D Claude-Desk Tech Exploit). Live frame rendering will appear in <#1569750972975288441>.";
+          replyText = "Started generating Slot 2 3D Claude-Desk Tech Exploit (7:00 PM). Live frame rendering will appear in <#1569750972975288441>.";
+        } else if (customId === "trigger_tech" || customId === "trigger_slot_3") {
+          await triggerGitHub(env.GITHUB_TOKEN, "dev-studio");
+          replyText = "Started generating Slot 3 (9:30 PM Dev & Mascot Studio Exploit). Live frame rendering will appear in <#1569750972975288441>.";
         } else if (customId === "skip_next_trigger") {
           await setSlotSkipped(12);
           replyText = "Next scheduled slot skipped for today. It will run normally tomorrow.";

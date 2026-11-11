@@ -115,7 +115,7 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
 
     # Determine script
     from generate_script import generate_script
-    if style == "claude-desk":
+    if style in ["claude-desk", "dev-studio"]:
         from tech_harvester import get_next_tech_story
         from generate_tech_dialogue import generate_dialogue_script
         if topic and topic != "auto":
@@ -123,9 +123,9 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
         else:
             print("[1/5] Harvesting breaking tech/AI exploit (GitHub Trending / Hacker News / Master Vault)...")
             story_data = get_next_tech_story()
-        print(f"[1/5] Generating 2-character dialogue script for '{story_data.get('title')}'...")
+        print(f"[1/5] Generating 2-character dialogue script for '{story_data.get('title')}' ({style})...")
         try:
-            script_data = generate_dialogue_script(story_data)
+            script_data = generate_dialogue_script(story_data, style=style)
         except Exception as e:
             print(f"Notice: Dynamic tech dialogue exception: {e}. Using synchronized style script.")
             script_data = None
@@ -193,8 +193,8 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
         percent=35,
         details="Generating neural speech with Kokoro TTS..."
     )
-    if style == "claude-desk":
-        print("[3/5] Generating dual-character voiceover (Guide: am_michael + Skeptic: af_heart)...")
+    if style in ["claude-desk", "dev-studio"]:
+        print("[3/5] Generating dual-character voiceover (Guide + Skeptic/Mascot)...")
         from dual_voice import synthesize_dialogue
         synthesize_dialogue(str(project_dir))
     else:
@@ -269,7 +269,7 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
             percent=90,
             details=f"Publishing {file_size_mb:.1f} MB vertical short to YouTube Shorts & Instagram Reels..."
         )
-        if style == "claude-desk":
+        if style in ["claude-desk", "dev-studio"]:
             cta = script_data.get("cta_keyword", "TOOL")
             desc = (
                 f"💬 Follow & comment '{cta}' for the direct link in your DMs!\n\n"
