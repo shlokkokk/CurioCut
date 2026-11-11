@@ -151,9 +151,17 @@ if vf.exists():
 # music
 mus = script.get('music', 'bed')
 if mus and mus != 'none':
-    m = music_bed() if mus == 'bed' else music_tension() if mus == 'tension' else None
-    if m is None:
-        a = load_audio(P / mus)[:N]; m = np.zeros(N); m[:len(a)] = a.mean(1); m /= np.abs(m).max() + 1e-9
+    if mus == 'bed':
+        m = music_bed()
+    elif mus in ['tension', 'suspense', 'dark', 'investigation', 'mystery']:
+        m = music_tension()
+    elif (P / mus).exists() and (P / mus).is_file():
+        try:
+            a = load_audio(P / mus)[:N]; m = np.zeros(N); m[:len(a)] = a.mean(1); m /= np.abs(m).max() + 1e-9
+        except Exception:
+            m = music_tension() if mus in ['tension', 'suspense'] else music_bed()
+    else:
+        m = music_tension() if any(k in str(mus).lower() for k in ['tension', 'suspense', 'dark', 'crime']) else music_bed()
     m = np.stack([m, m], 1) * db(-24 if voice is not None else -20)
     if voice is not None:                                                        # duck under the voice
         lev = np.abs(voice.mean(1)); lev = signal.lfilter([1 - 0.9995], [1, -0.9995], lev); lev /= lev.max() + 1e-9
