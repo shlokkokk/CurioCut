@@ -1,558 +1,488 @@
-// CurioCut Dynamic 3D Procedural Studio & Topic-Driven Props Engine
-// 100% procedural Three.js models generated dynamically from topic semantics.
+// CurioCut Topic-Driven 3D Holographic Props Engine for Claude-Desk
+// 100% procedural Three.js holographic models generated dynamically from topic semantics.
+// All props hover majestically in clear air at the Center Hologram Stage (x=0, y=1.75, z=0.0)
+// with zero character clipping or intersection.
 import * as THREE from 'three';
 
-const CYAN_GLOW = '#00F0FF';
-const HAZARD_YELLOW = '#F5B041';
-const HAZARD_BLACK = '#1C1D24';
-const GOLD = '#F5C518';
+const CYAN_NEON = '#00F0FF';
 const EMERALD_GREEN = '#10B981';
-const NEON_PURPLE = '#A855F7';
+const AMBER_GOLD = '#F5B041';
+const CORAL_ACCENT = '#FF6B4A';
+const MAGENTA_NEON = '#FF2A85';
 
-/** 1. High-End Warm Architectural Tech Studio Environment */
-export function techStudio() {
+/** 1. Dynamic Floating Glass Code Terminal (For code, agents, tools, git, CLI) */
+export function buildCodeTerminal(line, scriptContext) {
   const g = new THREE.Group();
+  g.position.set(0, 1.75, 0.0);
 
-  // Polished Studio Floor with high specular sheen
-  const floorMat = new THREE.MeshStandardMaterial({
-    color: '#E8E1D7',
-    roughness: 0.28,
-    metalness: 0.08
-  });
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(36, 36), floorMat);
-  floor.rotation.x = -Math.PI / 2;
-  floor.position.y = -0.01;
-  floor.receiveShadow = true;
-  g.add(floor);
+  const c = document.createElement('canvas');
+  c.width = 768;
+  c.height = 432;
+  const ctx = c.getContext('2d');
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
 
-  // Warm Studio Back Wall with soft vertical architectural seams
-  const wallMat = new THREE.MeshStandardMaterial({
-    color: '#C6AA8B',
-    roughness: 0.65,
-    metalness: 0.02
-  });
-  const wall = new THREE.Mesh(new THREE.PlaneGeometry(36, 18), wallMat);
-  wall.position.set(0, 8.5, -4.8);
-  wall.receiveShadow = true;
-  g.add(wall);
-
-  // Vertical Architectural Panel Seams
-  for (let x = -15; x <= 15; x += 3.75) {
-    const seam = new THREE.Mesh(
-      new THREE.BoxGeometry(0.05, 18, 0.06),
-      new THREE.MeshStandardMaterial({ color: '#A08365', roughness: 0.8 })
-    );
-    seam.position.set(x, 8.5, -4.76);
-    g.add(seam);
-  }
-
-  // Floating Cyber Dust & Energy Sparks
-  const particleCount = 85;
-  const posArray = new Float32Array(particleCount * 3);
-  for (let i = 0; i < particleCount * 3; i += 3) {
-    posArray[i] = (Math.random() - 0.5) * 14;
-    posArray[i + 1] = Math.random() * 6.5 + 0.3;
-    posArray[i + 2] = (Math.random() - 0.5) * 6.5;
-  }
-  const partGeo = new THREE.BufferGeometry();
-  partGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-  const partMat = new THREE.PointsMaterial({
-    color: '#F5D061',
-    size: 0.085,
+  // Futuristic curved glass holographic terminal
+  const panelGeo = new THREE.PlaneGeometry(1.4, 0.78);
+  const panelMat = new THREE.MeshBasicMaterial({
+    map: tex,
     transparent: true,
-    opacity: 0.8
+    opacity: 0.95,
+    side: THREE.DoubleSide
   });
-  const particles = new THREE.Points(partGeo, partMat);
-  g.add(particles);
+  const panel = new THREE.Mesh(panelGeo, panelMat);
+  g.add(panel);
 
-  g.update = (t) => {
-    const pos = partGeo.attributes.position.array;
-    for (let i = 1; i < particleCount * 3; i += 3) {
-      pos[i] += 0.007;
-      if (pos[i] > 6.8) pos[i] = 0.3;
-    }
-    partGeo.attributes.position.needsUpdate = true;
-  };
-
-  return g;
-}
-
-/** 2. DYNAMIC PROP: Price Slicer & Cost Obliterator ($1B / $20 -> $0 / FREE) */
-export function buildPriceSlicer(line, scriptContext) {
-  const g = new THREE.Group();
-  g.position.set(0, 0, 0.2);
-
-  const goldMat = new THREE.MeshStandardMaterial({
-    color: GOLD,
-    metalness: 0.88,
-    roughness: 0.16
-  });
-
-  const header = (line.header || '').toUpperCase();
-  const text = (line.text || '').toUpperCase();
-  const initialPrice = header.includes('$1B') || text.includes('BILLION') ? '$1,000,000,000' :
-                       text.includes('TWENTY') || header.includes('$20') ? '$20 / MONTH' :
-                       '$999 / YEAR';
-
-  const makeBlockHalf = (label, sign) => {
-    const grp = new THREE.Group();
-    const box = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.8, 0.45), goldMat);
-    box.position.y = 0.4;
-    box.castShadow = true;
-    grp.add(box);
-
-    const c = document.createElement('canvas');
-    c.width = 300; c.height = 140;
-    const ctx = c.getContext('2d');
-    ctx.fillStyle = '#FFFFFF';
-    ctx.roundRect(8, 8, 284, 124, 14);
-    ctx.fill();
-    ctx.fillStyle = '#E11D48';
-    ctx.font = '900 34px Inter, sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(label, 150, 70);
-    const tex = new THREE.CanvasTexture(c);
-
-    const labelMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.76, 0.36), new THREE.MeshBasicMaterial({ map: tex }));
-    labelMesh.position.set(0, 0.44, 0.231);
-    grp.add(labelMesh);
-    return grp;
-  };
-
-  const leftHalf = makeBlockHalf(initialPrice, -1);
-  const rightHalf = makeBlockHalf('CUT TO $0', 1);
-  g.add(leftHalf);
-  g.add(rightHalf);
-
-  // Floating $0.00 Emerald Pill Inside Cut
-  const c0 = document.createElement('canvas');
-  c0.width = 256; c0.height = 128;
-  const ctx0 = c0.getContext('2d');
-  ctx0.fillStyle = EMERALD_GREEN;
-  ctx0.roundRect(8, 8, 240, 112, 20);
-  ctx0.fill();
-  ctx0.fillStyle = '#FFFFFF';
-  ctx0.font = '900 58px Inter, sans-serif';
-  ctx0.textAlign = 'center'; ctx0.textBaseline = 'middle';
-  ctx0.fillText('$0.00', 128, 64);
-  const t0 = new THREE.CanvasTexture(c0);
-  const pill0 = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 0.42), new THREE.MeshBasicMaterial({ map: t0, transparent: true }));
-  pill0.position.set(0, 0.95, 0.15);
-  g.add(pill0);
-
-  // Scattered Gold Coins on Ground
-  const coinMat = new THREE.MeshStandardMaterial({ color: '#FFD700', metalness: 0.92, roughness: 0.12 });
-  for (let i = 0; i < 24; i++) {
-    const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.03, 16), coinMat);
-    coin.position.set((Math.random() - 0.5) * 2.2, 0.015, (Math.random() - 0.5) * 1.4 + 0.3);
-    coin.rotation.y = Math.random() * Math.PI;
-    coin.castShadow = true;
-    g.add(coin);
-  }
-
-  g.update = (t) => {
-    const sliceAnim = Math.min(1, Math.max(0, (t % 3.6) * 1.7));
-    leftHalf.position.x = -0.46 - sliceAnim * 0.42;
-    leftHalf.rotation.z = sliceAnim * 0.22;
-    rightHalf.position.x = 0.46 + sliceAnim * 0.42;
-    rightHalf.rotation.z = -sliceAnim * 0.22;
-    pill0.position.y = 0.95 + Math.sin(t * 4) * 0.08;
-    pill0.scale.setScalar(0.85 + sliceAnim * 0.3);
-  };
-
-  return g;
-}
-
-/** 3. DYNAMIC PROP: Cyber Holographic IDE & Matrix Workspace */
-export function buildHoloIDE(line, scriptContext) {
-  const g = new THREE.Group();
-  g.position.set(0, 1.20, 0.2);
-
-  const toolName = scriptContext.tool_name || 'Autonomous Tool';
-
-  // Master Floating Glass Screen - Compact & centered to avoid character overlap
-  const c = document.createElement('canvas');
-  c.width = 600; c.height = 360;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = 'rgba(10, 14, 28, 0.95)';
-  ctx.roundRect(8, 8, 584, 344, 20);
-  ctx.fill();
-
-  // Window title bar dots
-  ctx.fillStyle = '#EF4444'; ctx.beginPath(); ctx.arc(36, 36, 10, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#F59E0B'; ctx.beginPath(); ctx.arc(66, 36, 10, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#10B981'; ctx.beginPath(); ctx.arc(96, 36, 10, 0, Math.PI * 2); ctx.fill();
-
-  ctx.fillStyle = '#94A3B8';
-  ctx.font = 'bold 20px monospace';
-  ctx.fillText(`terminal — claude-code / ${toolName}`, 130, 42);
-
-  // Syntax Highlighted Code
-  ctx.fillStyle = '#38BDF8';
-  ctx.font = 'bold 22px Courier New, monospace';
-  ctx.fillText(`> claude code --skill install`, 32, 94);
-
-  ctx.fillStyle = '#4ADE80';
-  ctx.fillText(`✓ Found skill: ${toolName}`, 32, 136);
-
-  ctx.fillStyle = '#FCD34D';
-  ctx.font = '19px Courier New, monospace';
-  ctx.fillText(`  [+] Cloning local repository...`, 32, 178);
-  ctx.fillText(`  [+] Zero API keys required`, 32, 214);
-  ctx.fillText(`  [+] Neural core running offline`, 32, 250);
-
-  ctx.fillStyle = '#A855F7';
-  ctx.font = 'bold 22px Courier New, monospace';
-  ctx.fillText(`READY: Autonomous loop active.`, 32, 302);
-
-  const tex = new THREE.CanvasTexture(c);
-  const screen = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.84, 0.50),
-    new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.94 })
+  // Hologram outer glowing border frame
+  const border = new THREE.LineSegments(
+    new THREE.EdgesGeometry(panelGeo),
+    new THREE.LineBasicMaterial({ color: CYAN_NEON, linewidth: 2 })
   );
-  g.add(screen);
+  panel.add(border);
 
-  // Orbiting Glowing Network Cubes
-  const cubes = [];
-  const cubeGeo = new THREE.BoxGeometry(0.08, 0.08, 0.08);
-  const cubeMat = new THREE.MeshBasicMaterial({ color: CYAN_GLOW });
-  for (let i = 0; i < 8; i++) {
-    const cb = new THREE.Mesh(cubeGeo, cubeMat);
-    g.add(cb);
-    cubes.push(cb);
-  }
+  const headerText = (line.header || 'CLAUDE CODE').toUpperCase();
+  const rawText = line.text || 'Autonomous Agent Execution';
 
   g.update = (t) => {
-    screen.position.y = Math.sin(t * 2.2) * 0.04;
-    cubes.forEach((cb, idx) => {
-      const ang = t * 1.5 + (idx / cubes.length) * Math.PI * 2;
-      const rad = 0.52 + Math.sin(t * 2 + idx) * 0.08;
-      cb.position.set(Math.cos(ang) * rad, Math.sin(ang * 0.7) * 0.25, Math.sin(ang) * 0.35);
-      cb.rotation.x = t * 2;
-      cb.rotation.y = t * 3;
-    });
-  };
+    ctx.clearRect(0, 0, 768, 432);
 
-  return g;
-}
-
-/** 4. DYNAMIC PROP: Quantum Neural Core with Gyroscopic Rings */
-export function buildNeuralCore(line, scriptContext) {
-  const g = new THREE.Group();
-  g.position.set(0, 1.25, 0.2);
-
-  // Central Glowing Synapse Core
-  const core = new THREE.Mesh(
-    new THREE.SphereGeometry(0.38, 32, 32),
-    new THREE.MeshBasicMaterial({ color: '#FFFFFF' })
-  );
-  g.add(core);
-
-  // Gyroscopic Holographic Rings
-  const ringMat1 = new THREE.MeshBasicMaterial({ color: CYAN_GLOW });
-  const ringMat2 = new THREE.MeshBasicMaterial({ color: NEON_PURPLE });
-  const ring1 = new THREE.Mesh(new THREE.TorusGeometry(0.68, 0.026, 16, 64), ringMat1);
-  const ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.85, 0.026, 16, 64), ringMat2);
-  g.add(ring1);
-  g.add(ring2);
-
-  // Dynamic Floating Badges (e.g. STANFORD / GITHUB / 100% BENCHMARK)
-  const makeBadge = (txt, bg) => {
-    const c = document.createElement('canvas');
-    c.width = 256; c.height = 80;
-    const ctx = c.getContext('2d');
-    ctx.fillStyle = bg;
-    ctx.roundRect(4, 4, 248, 72, 14);
+    // Dark glass body with cyber glow
+    ctx.fillStyle = 'rgba(10, 16, 28, 0.92)';
+    ctx.roundRect(8, 8, 752, 416, 18);
     ctx.fill();
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = '900 28px Inter, sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(txt, 128, 40);
-    const tex = new THREE.CanvasTexture(c);
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 0.24), new THREE.MeshBasicMaterial({ map: tex }));
-    return m;
-  };
 
-  const badgeL = makeBadge('LOCAL MODEL', '#10B981');
-  const badgeR = makeBadge('BEATS CHATGPT', '#2563EB');
-  badgeL.position.set(-0.95, 0.5, 0);
-  badgeR.position.set(0.95, 0.5, 0);
-  g.add(badgeL);
-  g.add(badgeR);
+    // Top window bar
+    ctx.fillStyle = 'rgba(0, 240, 255, 0.2)';
+    ctx.fillRect(12, 12, 744, 48);
 
-  g.update = (t) => {
-    ring1.rotation.x = t * 2.4;
-    ring1.rotation.y = t * 1.8;
-    ring2.rotation.y = -t * 2.1;
-    ring2.rotation.z = t * 2.7;
-    core.scale.setScalar(1 + Math.sin(t * 6) * 0.12);
-    badgeL.position.y = 0.5 + Math.sin(t * 3) * 0.08;
-    badgeR.position.y = 0.5 + Math.sin(t * 3 + Math.PI) * 0.08;
-  };
+    // Terminal window dots
+    ctx.fillStyle = '#EF4444';
+    ctx.beginPath(); ctx.arc(36, 36, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#F59E0B';
+    ctx.beginPath(); ctx.arc(60, 36, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#10B981';
+    ctx.beginPath(); ctx.arc(84, 36, 8, 0, Math.PI * 2); ctx.fill();
 
-  return g;
-}
+    ctx.fillStyle = '#00F0FF';
+    ctx.font = 'bold 22px monospace';
+    ctx.fillText(`◈ ${headerText.slice(0, 28)} ◈`, 120, 44);
 
-/** 5. DYNAMIC PROP: Hyperspeed Chrono-Tachometer & 4-Second Speedometer */
-export function buildSpeedGauge(line, scriptContext) {
-  const g = new THREE.Group();
-  g.position.set(0, 1.20, 0.2);
+    // Syntax-highlighted code execution
+    ctx.font = 'bold 20px monospace';
+    ctx.fillStyle = '#94A3B8';
+    ctx.fillText('$ claude --dangerously-skip-permissions', 32, 105);
 
-  const c = document.createElement('canvas');
-  c.width = 512; c.height = 300;
-  const ctx = c.getContext('2d');
-
-  const tex = new THREE.CanvasTexture(c);
-  const card = new THREE.Mesh(new THREE.PlaneGeometry(0.82, 0.48), new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
-  g.add(card);
-
-  g.update = (t) => {
-    ctx.clearRect(0, 0, 512, 300);
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
-    ctx.roundRect(8, 8, 496, 284, 22);
-    ctx.fill();
+    ctx.fillStyle = '#10B981';
+    ctx.fillText('✔ Initializing autonomous agent swarm...', 32, 145);
 
     ctx.fillStyle = '#38BDF8';
+    ctx.fillText('> git clone repository --verified', 32, 185);
+
+    ctx.fillStyle = '#F59E0B';
+    ctx.fillText('> auto-fixing dependencies & compiling...', 32, 225);
+
+    // Live blinking cursor and progress
+    const blink = Math.sin(t * 8) > 0;
+    ctx.fillStyle = '#00F0FF';
+    ctx.fillText(`[AGENT ACTIVE] ${blink ? '█' : ' '}`, 32, 280);
+
+    // Action summary pill at bottom
+    ctx.fillStyle = 'rgba(16, 185, 129, 0.25)';
+    ctx.roundRect(32, 320, 704, 76, 12);
+    ctx.fill();
+    ctx.strokeStyle = '#10B981';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = '#FFFFFF';
     ctx.font = 'bold 24px Inter, sans-serif';
-    ctx.fillText('SPEED BENCHMARK', 32, 52);
+    ctx.fillText(rawText.slice(0, 44).toUpperCase(), 48, 368);
+
+    tex.needsUpdate = true;
+    panel.position.y = Math.sin(t * 2.8) * 0.04;
+    panel.rotation.y = Math.sin(t * 1.4) * 0.06;
+  };
+
+  return g;
+}
+
+/** 2. Dynamic 3D Speedometer Tachometer (For speed, latency, instant, 4-sec benchmarks) */
+export function buildSpeedGauge(line, scriptContext) {
+  const g = new THREE.Group();
+  g.position.set(0, 1.75, 0.0);
+
+  const c = document.createElement('canvas');
+  c.width = 640;
+  c.height = 400;
+  const ctx = c.getContext('2d');
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+
+  const cardGeo = new THREE.PlaneGeometry(1.3, 0.82);
+  const cardMat = new THREE.MeshBasicMaterial({
+    map: tex,
+    transparent: true,
+    opacity: 0.95,
+    side: THREE.DoubleSide
+  });
+  const card = new THREE.Mesh(cardGeo, cardMat);
+  g.add(card);
+
+  const border = new THREE.LineSegments(
+    new THREE.EdgesGeometry(cardGeo),
+    new THREE.LineBasicMaterial({ color: EMERALD_GREEN })
+  );
+  card.add(border);
+
+  const headerText = (line.header || 'SPEED BENCHMARK').toUpperCase();
+
+  g.update = (t) => {
+    ctx.clearRect(0, 0, 640, 400);
+
+    ctx.fillStyle = 'rgba(11, 19, 32, 0.94)';
+    ctx.roundRect(10, 10, 620, 380, 22);
+    ctx.fill();
+
+    // Top Header Badge
+    ctx.fillStyle = '#38BDF8';
+    ctx.font = '900 24px Inter, sans-serif';
+    ctx.fillText(`⚡ ${headerText.slice(0, 26)}`, 36, 52);
 
     // Tachometer Arc
-    const cx = 256, cy = 200, r = 110;
-    ctx.strokeStyle = '#334155';
-    ctx.lineWidth = 22;
+    const cx = 320, cy = 250, r = 125;
+    ctx.strokeStyle = '#1E293B';
+    ctx.lineWidth = 26;
+    ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.arc(cx, cy, r, Math.PI, 0);
     ctx.stroke();
 
-    // Revving Speed Value
-    const rev = (Math.sin(t * 4) * 0.5 + 0.5);
-    ctx.strokeStyle = '#10B981';
+    // Revving animated green arc
+    const rev = Math.min(1, Math.max(0.2, (Math.sin(t * 5) * 0.5 + 0.5)));
+    const grad = ctx.createLinearGradient(cx - r, cy, cx + r, cy);
+    grad.addColorStop(0, '#00F0FF');
+    grad.addColorStop(0.7, '#10B981');
+    grad.addColorStop(1, '#F59E0B');
+    ctx.strokeStyle = grad;
     ctx.beginPath();
     ctx.arc(cx, cy, r, Math.PI, Math.PI + rev * Math.PI);
     ctx.stroke();
 
+    // Digital readout in center
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = '900 64px Inter, sans-serif';
+    ctx.font = '900 78px Inter, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('4 SEC', cx, cy - 20);
+    ctx.fillText('4 SEC', cx, cy - 22);
 
     ctx.fillStyle = '#94A3B8';
-    ctx.font = 'bold 20px Inter, sans-serif';
-    ctx.fillText('FROM SCREENSHOT TO FULL CODE', cx, cy + 28);
+    ctx.font = 'bold 22px Inter, sans-serif';
+    ctx.fillText('PROMPT TO COMPLETE APP', cx, cy + 32);
     ctx.textAlign = 'left';
 
     tex.needsUpdate = true;
-    card.position.y = Math.sin(t * 3) * 0.04;
+    card.position.y = Math.sin(t * 3.0) * 0.04;
+    card.rotation.y = Math.sin(t * 1.5) * 0.05;
   };
 
   return g;
 }
 
-/** 6. DYNAMIC PROP: Audio Equalizer Monolith & Spoken Briefing */
-export function buildAudioMonolith(line, scriptContext) {
+/** 3. Dynamic 3D Price / Cost Obliterator ($20/mo -> 100% FREE) */
+export function buildPriceSlicer(line, scriptContext) {
   const g = new THREE.Group();
-  g.position.set(0, 0.1, 0.2);
+  g.position.set(0, 1.75, 0.0);
 
-  // Equalizer Tower Pedestal
-  const ped = new THREE.Mesh(
-    new THREE.BoxGeometry(0.84, 0.12, 0.4),
-    new THREE.MeshStandardMaterial({ color: '#1E293B', roughness: 0.4 })
-  );
-  ped.position.y = 0.06;
-  g.add(ped);
-
-  // Physical 3D Equalizer Pillars
-  const pillars = [];
-  const pilGeo = new THREE.BoxGeometry(0.03, 0.6, 0.03);
-  for (let i = 0; i < 16; i++) {
-    const col = i % 2 === 0 ? CYAN_GLOW : NEON_PURPLE;
-    const m = new THREE.Mesh(pilGeo, new THREE.MeshBasicMaterial({ color: col }));
-    m.position.set(-0.35 + i * 0.046, 0.4, 0);
-    g.add(m);
-    pillars.push(m);
-  }
-
-  // Floating Speech Card
   const c = document.createElement('canvas');
-  c.width = 512; c.height = 140;
+  c.width = 640;
+  c.height = 380;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
-  ctx.roundRect(6, 6, 500, 128, 16);
-  ctx.fill();
-  ctx.fillStyle = '#38BDF8';
-  ctx.font = 'bold 22px Inter, sans-serif';
-  ctx.fillText('SPOKEN DAILY BRIEFING', 24, 46);
-  ctx.fillStyle = '#FFFFFF';
-  ctx.font = 'italic 20px Inter, sans-serif';
-  ctx.fillText('"3 tasks require your review this morning."', 24, 94);
   const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
 
-  const card = new THREE.Mesh(new THREE.PlaneGeometry(0.82, 0.28), new THREE.MeshBasicMaterial({ map: tex }));
-  card.position.set(0, 1.25, 0.2);
+  const cardGeo = new THREE.PlaneGeometry(1.35, 0.8);
+  const cardMat = new THREE.MeshBasicMaterial({
+    map: tex,
+    transparent: true,
+    opacity: 0.95,
+    side: THREE.DoubleSide
+  });
+  const card = new THREE.Mesh(cardGeo, cardMat);
   g.add(card);
 
+  const border = new THREE.LineSegments(
+    new THREE.EdgesGeometry(cardGeo),
+    new THREE.LineBasicMaterial({ color: AMBER_GOLD })
+  );
+  card.add(border);
+
   g.update = (t) => {
-    pillars.forEach((p, idx) => {
-      const h = Math.abs(Math.sin(t * 8 + idx * 0.5)) * 0.8 + 0.12;
-      p.scale.y = h;
-      p.position.y = 0.12 + h / 2;
-    });
-    card.position.y = 1.25 + Math.sin(t * 2.5) * 0.04;
+    ctx.clearRect(0, 0, 640, 380);
+
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+    ctx.roundRect(10, 10, 620, 360, 20);
+    ctx.fill();
+
+    // Crossed out paid price
+    ctx.fillStyle = '#94A3B8';
+    ctx.font = '900 46px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('$20 / MONTH', 320, 110);
+
+    // Red slash line
+    ctx.strokeStyle = '#EF4444';
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.moveTo(160, 125);
+    ctx.lineTo(480, 85);
+    ctx.stroke();
+
+    // 100% Free Glowing Banner
+    ctx.fillStyle = 'rgba(16, 185, 129, 0.25)';
+    ctx.roundRect(40, 170, 560, 150, 16);
+    ctx.fill();
+    ctx.strokeStyle = '#10B981';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    ctx.fillStyle = '#10B981';
+    ctx.font = '900 72px Inter, sans-serif';
+    ctx.fillText('100% FREE', 320, 248);
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 22px Inter, sans-serif';
+    ctx.fillText('SELF-HOSTED ◈ ZERO SUBSCRIPTION', 320, 296);
+    ctx.textAlign = 'left';
+
+    tex.needsUpdate = true;
+    card.position.y = Math.sin(t * 3.0) * 0.04;
+    card.rotation.y = Math.sin(t * 1.6) * 0.06;
   };
 
   return g;
 }
 
-/** 7. DYNAMIC PROP: Air-Gapped Privacy Citadel & Offline Laptop */
-export function buildLocalCitadel(line, scriptContext) {
+/** 4. Dynamic 3D Neural Network Core & Model Architecture */
+export function buildNeuralCore(line, scriptContext) {
   const g = new THREE.Group();
-  g.position.set(0, 0.1, 0.2);
+  g.position.set(0, 1.75, 0.0);
 
-  // Modern Sleek Laptop Base - Compact & centered
-  const lapMat = new THREE.MeshStandardMaterial({ color: '#334155', metalness: 0.8, roughness: 0.2 });
-  const base = new THREE.Mesh(new THREE.BoxGeometry(0.80, 0.05, 0.55), lapMat);
-  base.position.y = 0.45;
-  g.add(base);
+  // Rotating quantum core sphere
+  const coreGeo = new THREE.SphereGeometry(0.35, 24, 24);
+  const coreMat = new THREE.MeshStandardMaterial({
+    color: '#00F0FF',
+    emissive: '#007ACC',
+    emissiveIntensity: 0.8,
+    roughness: 0.2,
+    metalness: 0.9
+  });
+  const core = new THREE.Mesh(coreGeo, coreMat);
+  g.add(core);
 
-  // Laptop Screen tilted open
-  const screen = new THREE.Mesh(new THREE.BoxGeometry(0.80, 0.52, 0.03), lapMat);
-  screen.position.set(0, 0.72, -0.22);
-  screen.rotation.x = -0.18;
-  g.add(screen);
+  // Orbiting synaptic rings
+  const ringGeo = new THREE.TorusGeometry(0.55, 0.02, 16, 48);
+  const ring1 = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: CYAN_NEON }));
+  const ring2 = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: AMBER_GOLD }));
+  g.add(ring1);
+  g.add(ring2);
 
-  // Display Texture (100% Offline / No WiFi)
+  // Floating benchmark HUD badge above core
   const c = document.createElement('canvas');
-  c.width = 512; c.height = 320;
+  c.width = 512;
+  c.height = 160;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#0F172A';
-  ctx.fillRect(0, 0, 512, 320);
-  ctx.fillStyle = '#10B981';
-  ctx.font = 'bold 32px Inter, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('🔒 100% OFFLINE', 256, 110);
-  ctx.fillStyle = '#FFFFFF';
-  ctx.font = '24px Inter, sans-serif';
-  ctx.fillText('ZERO CLOUD SUBSCRIPTIONS', 256, 170);
-  ctx.fillStyle = '#64748B';
-  ctx.fillText('Data stays on your machine forever', 256, 230);
-  const tex = new THREE.CanvasTexture(c);
-
-  const display = new THREE.Mesh(new THREE.PlaneGeometry(0.76, 0.48), new THREE.MeshBasicMaterial({ map: tex }));
-  display.position.set(0, 0.72, -0.21);
-  display.rotation.x = -0.18;
-  g.add(display);
-
-  // Floating Cyber Security Shield
-  const shieldMat = new THREE.MeshBasicMaterial({ color: '#10B981', wireframe: true });
-  const shield = new THREE.Mesh(new THREE.IcosahedronGeometry(0.22, 2), shieldMat);
-  shield.position.set(0, 1.25, 0);
-  g.add(shield);
-
-  g.update = (t) => {
-    shield.rotation.y = t * 1.5;
-    shield.rotation.x = t * 0.9;
-    shield.position.y = 1.25 + Math.sin(t * 3) * 0.05;
-  };
-
-  return g;
-}
-
-/** 8. DYNAMIC PROP: Viral Instagram Comment Box & Flying DM Airplane */
-export function buildViralCommentBox(keyword = 'FAST') {
-  const g = new THREE.Group();
-  g.position.set(0, 1.20, 0.2);
-
-  // Frosted Glass Instagram Comment Pill - Compact & chest-level
-  const c = document.createElement('canvas');
-  c.width = 620; c.height = 144;
-  const ctx = c.getContext('2d');
-
-  ctx.fillStyle = '#FFFFFF';
-  ctx.roundRect(8, 8, 604, 128, 26);
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+  ctx.roundRect(8, 8, 496, 144, 16);
   ctx.fill();
+  ctx.strokeStyle = '#00F0FF';
+  ctx.lineWidth = 3;
+  ctx.stroke();
 
-  ctx.fillStyle = '#E1306C';
-  ctx.font = '900 36px Inter, sans-serif';
-  ctx.fillText('💬 Comment', 34, 78);
+  ctx.fillStyle = '#00F0FF';
+  ctx.font = 'bold 22px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('◈ AUTONOMOUS MODEL ARCHITECTURE ◈', 256, 48);
 
-  ctx.fillStyle = '#0F172A';
-  ctx.font = '900 44px Inter, sans-serif';
-  ctx.fillText(`"${keyword}"`, 265, 78);
-
-  ctx.fillStyle = '#2563EB';
-  ctx.font = 'bold 32px Inter, sans-serif';
-  ctx.textAlign = 'right';
-  ctx.fillText('Send 🚀', 580, 78);
+  ctx.fillStyle = '#10B981';
+  ctx.font = '900 48px Inter, sans-serif';
+  ctx.fillText('OUTPERFORMS GPT-4o', 256, 114);
 
   const tex = new THREE.CanvasTexture(c);
-  const card = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.84, 0.24),
+  const hud = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.2, 0.38),
     new THREE.MeshBasicMaterial({ map: tex, transparent: true })
   );
-  g.add(card);
-
-  // 3D Flying Origami Paper Airplane
-  const planeGeo = new THREE.ConeGeometry(0.10, 0.32, 3);
-  const planeMat = new THREE.MeshStandardMaterial({ color: '#FFFFFF', roughness: 0.2 });
-  const plane = new THREE.Mesh(planeGeo, planeMat);
-  plane.rotation.z = Math.PI / 2;
-  g.add(plane);
-
-  // 3D Bursting Heart & Confetti Particles
-  const partCount = 35;
-  const pPos = new Float32Array(partCount * 3);
-  for (let i = 0; i < partCount * 3; i += 3) {
-    pPos[i] = (Math.random() - 0.5) * 1.5;
-    pPos[i + 1] = (Math.random() - 0.5) * 1.0;
-    pPos[i + 2] = (Math.random() - 0.5) * 0.8;
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
-  const mat = new THREE.PointsMaterial({ color: '#E1306C', size: 0.08 });
-  const confetti = new THREE.Points(geo, mat);
-  g.add(confetti);
+  hud.position.set(0, 0.65, 0);
+  g.add(hud);
 
   g.update = (t) => {
-    card.position.y = Math.sin(t * 3.2) * 0.04;
-    confetti.rotation.y = t * 0.9;
-
-    // Orbiting paper airplane delivering link straight to camera
-    const ang = t * 2.8;
-    plane.position.set(Math.cos(ang) * 0.50, 0.15 + Math.sin(ang * 2) * 0.12, Math.sin(ang) * 0.35);
-    plane.rotation.y = -ang - Math.PI / 2;
+    ring1.rotation.x = t * 2.2;
+    ring1.rotation.y = t * 1.6;
+    ring2.rotation.y = -t * 1.8;
+    ring2.rotation.z = t * 2.4;
+    core.scale.setScalar(1 + Math.sin(t * 5) * 0.08);
+    hud.position.y = 0.65 + Math.sin(t * 3) * 0.03;
+    g.position.y = 1.75 + Math.sin(t * 2.5) * 0.03;
   };
 
   return g;
 }
 
-/** 9. DYNAMIC PROP FACTORY: Creates custom 3D prop per line topic & keywords */
+/** 5. Dynamic 3D Quantum Server Rack & Cloud Infrastructure */
+export function buildServerRack(line, scriptContext) {
+  const g = new THREE.Group();
+  g.position.set(0, 1.75, 0.0);
+
+  // Floating sleek server module
+  const rackGeo = new THREE.BoxGeometry(1.2, 0.6, 0.4);
+  const rackMat = new THREE.MeshStandardMaterial({
+    color: '#0F172A',
+    roughness: 0.25,
+    metalness: 0.85
+  });
+  const rack = new THREE.Mesh(rackGeo, rackMat);
+  g.add(rack);
+
+  // Glowing LED rack lines
+  for (let y = -0.2; y <= 0.2; y += 0.1) {
+    const led = new THREE.Mesh(
+      new THREE.BoxGeometry(1.05, 0.03, 0.04),
+      new THREE.MeshBasicMaterial({ color: CYAN_NEON })
+    );
+    led.position.set(0, y, 0.21);
+    rack.add(led);
+  }
+
+  // Floating HUD badge above rack
+  const c = document.createElement('canvas');
+  c.width = 512;
+  c.height = 140;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+  ctx.roundRect(6, 6, 500, 128, 14);
+  ctx.fill();
+  ctx.strokeStyle = '#10B981';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  ctx.fillStyle = '#10B981';
+  ctx.font = '900 36px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('1-CLICK CONTAINER DEPLOY', 256, 58);
+
+  ctx.fillStyle = '#94A3B8';
+  ctx.font = 'bold 20px Inter, sans-serif';
+  ctx.fillText('LIGHTWEIGHT ◈ ZERO OVERHEAD', 256, 102);
+
+  const tex = new THREE.CanvasTexture(c);
+  const hud = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.2, 0.33),
+    new THREE.MeshBasicMaterial({ map: tex, transparent: true })
+  );
+  hud.position.set(0, 0.55, 0);
+  g.add(hud);
+
+  g.update = (t) => {
+    rack.position.y = Math.sin(t * 2.8) * 0.04;
+    rack.rotation.y = Math.sin(t * 1.4) * 0.06;
+    hud.position.y = 0.55 + Math.sin(t * 2.8) * 0.04;
+  };
+
+  return g;
+}
+
+/** 6. Dynamic Final CTA Hologram Card */
+export function buildCtaHoloCard(line, scriptContext) {
+  const g = new THREE.Group();
+  g.position.set(0, 1.75, 0.0);
+
+  const keyword = scriptContext.cta_keyword || 'FAST';
+
+  const c = document.createElement('canvas');
+  c.width = 640;
+  c.height = 360;
+  const ctx = c.getContext('2d');
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+
+  const cardGeo = new THREE.PlaneGeometry(1.35, 0.76);
+  const cardMat = new THREE.MeshBasicMaterial({
+    map: tex,
+    transparent: true,
+    opacity: 0.95,
+    side: THREE.DoubleSide
+  });
+  const card = new THREE.Mesh(cardGeo, cardMat);
+  g.add(card);
+
+  const border = new THREE.LineSegments(
+    new THREE.EdgesGeometry(cardGeo),
+    new THREE.LineBasicMaterial({ color: MAGENTA_NEON })
+  );
+  card.add(border);
+
+  g.update = (t) => {
+    ctx.clearRect(0, 0, 640, 360);
+
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+    ctx.roundRect(10, 10, 620, 340, 22);
+    ctx.fill();
+
+    ctx.fillStyle = '#FF2A85';
+    ctx.font = '900 28px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('◈ INSTANT ACCESS LINK ◈', 320, 64);
+
+    // Glowing Keyword Pill
+    ctx.fillStyle = '#00F0FF';
+    ctx.roundRect(80, 100, 480, 120, 20);
+    ctx.fill();
+
+    ctx.fillStyle = '#0A0F1D';
+    ctx.font = '900 64px Inter, sans-serif';
+    ctx.fillText(`"${keyword}"`, 320, 185);
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 24px Inter, sans-serif';
+    ctx.fillText(`COMMENT "${keyword}" BELOW FOR LINK`, 320, 275);
+
+    ctx.fillStyle = '#10B981';
+    ctx.font = 'bold 20px Inter, sans-serif';
+    ctx.fillText('⚡ SENT AUTOMATICALLY VIA DM', 320, 312);
+
+    tex.needsUpdate = true;
+    card.position.y = Math.sin(t * 3.2) * 0.04;
+    card.scale.setScalar(1 + Math.sin(t * 4.5) * 0.02);
+  };
+
+  return g;
+}
+
+/** Master Dynamic Topic Prop Selector */
 export function createDynamicTopicProp(line, scriptContext, index, isLast) {
   if (isLast) {
-    const kw = scriptContext.cta_keyword || 'FAST';
-    return buildViralCommentBox(kw);
+    return buildCtaHoloCard(line, scriptContext);
   }
 
-  const h = ((line.header || '') + ' ' + (line.text || '') + ' ' + (line.prop || '')).toUpperCase();
+  const h = (line.header || '').toUpperCase();
+  const txt = (line.text || '').toUpperCase();
+  const comb = h + ' ' + txt;
 
-  if (h.includes('PRICE') || h.includes('COST') || h.includes('$') || h.includes('BILLION') || h.includes('PAY') || h.includes('SUBSCRIPTION') || h.includes('SWORD')) {
-    return buildPriceSlicer(line, scriptContext);
-  }
-  if (h.includes('CODE') || h.includes('REPO') || h.includes('GITHUB') || h.includes('INSTALL') || h.includes('TERMINAL') || h.includes('DEV') || h.includes('TOOL')) {
-    return buildHoloIDE(line, scriptContext);
-  }
-  if (h.includes('SPEED') || h.includes('FAST') || h.includes('SECOND') || h.includes('MINUTE') || h.includes('INSTANT') || h.includes('BENCHMARK')) {
+  if (comb.includes('SPEED') || comb.includes('FAST') || comb.includes('SECOND') || comb.includes('MINUTE') || comb.includes('INSTANT') || comb.includes('BENCHMARK')) {
     return buildSpeedGauge(line, scriptContext);
   }
-  if (h.includes('AUDIO') || h.includes('VOICE') || h.includes('BRIEF') || h.includes('SPEAK') || h.includes('PODCAST') || h.includes('LISTEN') || h.includes('WAVE')) {
-    return buildAudioMonolith(line, scriptContext);
+
+  if (comb.includes('FREE') || comb.includes('PRICE') || comb.includes('COST') || comb.includes('$') || comb.includes('PAY') || comb.includes('DOLLAR')) {
+    return buildPriceSlicer(line, scriptContext);
   }
-  if (h.includes('LOCAL') || h.includes('LAPTOP') || h.includes('OFFLINE') || h.includes('PRIVATE') || h.includes('WIFI') || h.includes('COMPUTER') || h.includes('CITADEL')) {
-    return buildLocalCitadel(line, scriptContext);
+
+  if (comb.includes('SERVER') || comb.includes('CLOUD') || comb.includes('DASHBOARD') || comb.includes('DOCKER') || comb.includes('HOST') || comb.includes('PANEL')) {
+    return buildServerRack(line, scriptContext);
   }
-  if (h.includes('MODEL') || h.includes('AI') || h.includes('SMART') || h.includes('BRAIN') || h.includes('STANFORD') || h.includes('CHATGPT') || h.includes('REASON') || h.includes('ORB')) {
+
+  if (comb.includes('MODEL') || comb.includes('NEURAL') || comb.includes('AI') || comb.includes('WEIGHT') || comb.includes('REASON') || comb.includes('INTELLIGENCE')) {
     return buildNeuralCore(line, scriptContext);
   }
 
-  // Fallback to alternating high-tech core or IDE
-  return index % 2 === 0 ? buildNeuralCore(line, scriptContext) : buildHoloIDE(line, scriptContext);
+  // Default to interactive code / agent terminal
+  return buildCodeTerminal(line, scriptContext);
 }
