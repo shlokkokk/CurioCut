@@ -1,9 +1,4 @@
-"""CurioCut Production Discord Notifier.
-Dispatches clean, structured, non-corny embedded notifications to dedicated Discord channels:
-- System: Engine Logs, Alerts, Errors
-- YouTube: Posts, Errors
-- Instagram: Posts, Errors
-"""
+# Discord notification helpers for bot posts, alerts, and live progress
 import os
 import sys
 import json

@@ -1,5 +1,4 @@
-"""One-time YouTube OAuth authentication script with exact URL printing and reliable callback.
-"""
+# YouTube OAuth flow to generate youtube_token.json
 import os
 import sys
 import wsgiref.simple_server

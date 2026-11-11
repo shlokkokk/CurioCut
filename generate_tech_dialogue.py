@@ -1,9 +1,4 @@
-"""Dual-Character Viral Tech Dialogue Generator for CurioCut.
-Generates high-retention 2-character dialogue (Tech Guide / Red Claude + Skeptical Viewer / Pink Avatar).
-Inspired by the @SKILLWARS.AI format with physical 3D scene props and header chapter plaques.
-
-Powered by Dual Google Gemini 3.8 Flash keys + Groq 70B fallback.
-"""
+# Generates two-person dialogue (Guide + Skeptic) for claude-desk style
 import os
 import sys
 import json

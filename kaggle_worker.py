@@ -1,10 +1,4 @@
-"""CurioCut Autonomous Cloud Worker (Executed on Kaggle GPU / High-Compute Cloud).
-Hardened for zero-hang, non-interactive execution:
-- Strict non-interactive package management (DEBIAN_FRONTEND=noninteractive)
-- Subprocess timeout guards & unbuffered progress streaming
-- Direct Google Chrome Headless 3D WebGL Acceleration
-- Direct Publishing to YouTube Shorts & Instagram Reels
-"""
+# Cloud runner for rendering and uploading on Kaggle GPU
 import os
 import sys
 import shutil

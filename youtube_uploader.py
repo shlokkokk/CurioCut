@@ -1,7 +1,4 @@
-"""YouTube Shorts Uploader Module.
-Uploads an MP4 video to YouTube using the authenticated credentials in youtube_token.json.
-Automatically optimizes the title, description, and tags for YouTube Shorts.
-"""
+# Uploads mp4 video to YouTube Shorts using OAuth token
 import os
 import sys
 import json

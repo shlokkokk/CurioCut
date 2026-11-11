@@ -1,15 +1,4 @@
-"""CurioCut 100% Live Autonomous Intelligence Harvester.
-Zero hardcoded lists. Real-time dynamic scraping across 4 live channels:
-
-1. Channel 1: Live Claude Skills & MCP Servers (1,970+ live tools parsed on the fly from official repos)
-2. Channel 2: Live GitHub Trending AI / Dev Repositories (real-time GitHub search API)
-3. Channel 3: Live HuggingFace Trending Models & Spaces (real-time HF API)
-4. Channel 4: Live Hacker News Top Tech & Show HN (real-time Firebase API)
-
-Automatically balances 50/50:
-- Morning / Lunch Post (1:00 PM IST): Live Breaking AI / Tech Tool
-- Evening Prime Post (7:00 PM IST): Live Claude Skill & MCP Superpower
-"""
+# Fetches trending developer tools, MCP servers, and GitHub repos
 import os
 import sys
 import json

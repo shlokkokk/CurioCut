@@ -1,13 +1,4 @@
-"""Master Autonomous Short Generator for CurioCut.
-Orchestrates the entire pipeline end-to-end:
-1. Dynamic rotation across curated 3D/2D animation styles
-2. Perfect synchronization between story voiceover, word captions, and 3D camera cuts
-3. Kokoro AI Voiceover (voice.py)
-4. Whisper Millisecond Caption Timing (words.py)
-5. Procedural Sound FX & Music Synthesis (mix.py)
-6. Headless Chrome DevTools 3D/2D Capture & FFmpeg Video Assembly
-7. Automated YouTube Shorts & Instagram Reels Publishing
-"""
+# Build, render, and upload daily short
 import os
 import sys
 import json

@@ -1,10 +1,5 @@
 
-"""CurioCut Autonomous Kaggle Cloud Dispatcher.
-Dispatches video generation and publishing to Kaggle's cloud runners:
-- Primary: NVIDIA Tesla T4 GPU (16 GB VRAM)
-- Automatic Failover: 4-Core Cloud Compute (Instant Queue)
-- $0.00 Cost & 100% Autonomous
-"""
+# Dispatches video generation jobs to Kaggle cloud runner
 import os
 import sys
 import time
@@ -21,7 +16,7 @@ if ENV_FILE.exists():
             k, v = line.split("=", 1)
             os.environ.setdefault(k.strip(), v.strip())
 
-KAGGLE_TOKEN = os.environ.get("KAGGLE_API_TOKEN") or "KGAT_1cd56e44eb994bebf47f79563bbc96f0"
+KAGGLE_TOKEN = os.environ.get("KAGGLE_API_TOKEN", "")
 KAGGLE_USER = os.environ.get("KAGGLE_USERNAME") or "shlokkshahh"
 KERNEL_SLUG = "curiocut-gpu-engine"
 

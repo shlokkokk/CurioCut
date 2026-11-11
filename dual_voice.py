@@ -1,7 +1,4 @@
-"""Multi-Speaker Synthesis Engine for CurioCut 2-Character Shorts.
-Alternates Kokoro TTS voices between Guide (calm human male) and Skeptic (soft expressive female).
-Outputs data/narration.wav + data/lines.json with exact millisecond timings and speaker tags.
-"""
+# Multi-speaker TTS using Kokoro voices for dialogue shorts
 import os
 import sys
 import json

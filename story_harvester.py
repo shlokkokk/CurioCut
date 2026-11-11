@@ -1,17 +1,4 @@
-"""Autonomous Multi-Source Story Harvester for CurioCut.
-Engineered for 100% uptime with multi-tier redundancy and edge-case protection:
-
-DATA SOURCES (Tiered Hierarchy):
-1. Tier 1A: Reddit Public JSON (r/BestofRedditorUpdates, r/TrueOffMyChest, r/todayilearned, r/wallstreetbets)
-2. Tier 1B: Wikimedia Public Knowledge API (Unusual events, historic heists, bizarre court cases)
-3. Tier 1C: Groq Autonomous Creative Synthesizer (Generates fresh scenarios on-demand)
-4. Tier 2 (Guaranteed Fallback): Curated Evergreen Vault (50+ high-retention master stories)
-
-EDGE CASE SAFEGUARDS:
-- Auto-sanitizer: Cleans policy-violating words to preserve YouTube/Instagram monetization
-- Deduplication ledger: Guarantees zero duplicate stories within 60 days
-- Rate-limit immunity: Bypasses Reddit 429s automatically by falling to Tier 1B / 1C
-"""
+# Fetches story topics across Reddit, Wikipedia, and offline fallbacks
 import os
 import sys
 import json

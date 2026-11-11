@@ -1,7 +1,4 @@
-/**
- * Cloudflare Worker: 100% Cloud Autonomous CurioCut Edge Cron Dispatcher & Discord Bot Controller
- * Runs on Cloudflare's Global Edge Network (100,000 free requests/day, 0% delay).
- */
+// Cloudflare worker for scheduled cron triggers, Discord interactions, and Instagram comment webhooks
 
 const SKIP_CACHE_URL = "https://curiocut.internal/skip-state";
 

@@ -1,13 +1,4 @@
-"""Instagram Reels Autonomous Uploader for CurioCut.
-Publishes vertical MP4 videos to Instagram Reels using the official Meta Graph API v21.0.
-
-Requirements (in .env or environment):
-  INSTAGRAM_ACCOUNT_ID: The Instagram Business/Creator Account ID (e.g. 178414...)
-  INSTAGRAM_ACCESS_TOKEN: Meta Graph API User or Page Access Token with instagram_content_publish
-
-Usage:
-  python instagram_uploader.py path/to/video.mp4 "Captivating Reel Caption #viral #shorts"
-"""
+# Uploads vertical mp4 to Instagram Reels via Meta Graph API
 import os
 import sys
 import time

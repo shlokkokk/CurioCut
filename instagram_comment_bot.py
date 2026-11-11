@@ -1,11 +1,4 @@
-"""Autonomous Instagram Comment-to-DM Engine for CurioCut.
-Listens to comments on Instagram Reels and automatically:
-1. Detects comments matching the Call-to-Action keyword (e.g. 'JARVIS', 'CLONE', 'AGENT').
-2. Replies publicly to the comment ("Check your DMs! Sent you the full repo link and setup prompt 🚀") to trigger the algorithmic engagement multiplier.
-3. Sends a private Direct Message (DM) to the commenter via Meta Graph API with the direct resource link.
-
-100% Free. $0.00 cost. Zero ManyChat subscriptions. Uses permanent Meta Page Access Token.
-"""
+# Instagram comment auto-responder and DM dispatcher
 import os
 import sys
 import json
