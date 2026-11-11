@@ -134,9 +134,17 @@ export default {
         const getOpt = (name) => options.find(o => o.name === name)?.value;
 
         if (cmdName === "trigger") {
-          const slot = getOpt("slot") || "classic";
-          const slotName = slot === "claude-desk" ? "Slot 3 (9:30 PM Tech)" : (slot === "slot_2" ? "Slot 2 (7:00 PM Classic)" : "Slot 1 (1:00 PM Classic)");
-          await triggerGitHub(env.GITHUB_TOKEN, slot === "claude-desk" ? "claude-desk" : "classic");
+          const slot = (getOpt("slot") || "classic").toLowerCase();
+          let targetStyle = "classic";
+          let slotName = "Slot 1 (1:00 PM Classic Story)";
+          if (slot.includes("claude") || slot.includes("2")) {
+            targetStyle = "claude-desk";
+            slotName = "Slot 2 (7:00 PM 3D Claude-Desk)";
+          } else if (slot.includes("dev") || slot.includes("studio") || slot.includes("3") || slot.includes("tech")) {
+            targetStyle = "dev-studio";
+            slotName = "Slot 3 (9:30 PM 3D Dev & Mascot Studio)";
+          }
+          await triggerGitHub(env.GITHUB_TOKEN, targetStyle);
           return Response.json({
             type: 4,
             data: { content: `Triggered ${slotName}. Live frame rendering will appear in <#1569750972975288441>.`, flags: 64 }
@@ -161,7 +169,7 @@ export default {
 
         if (cmdName === "create") {
           const topic = getOpt("topic") || "Automated Story";
-          const style = getOpt("style") || "claude-desk";
+          const style = getOpt("style") || "dev-studio";
           await triggerGitHub(env.GITHUB_TOKEN, style, topic);
           return Response.json({
             type: 4,
@@ -173,7 +181,7 @@ export default {
       // Discord Modal Submit (Type 5)
       if (body.type === 5) {
         const topic = body.data?.components?.[0]?.components?.[0]?.value || "Random Topic";
-        const style = body.data?.components?.[1]?.components?.[0]?.value || "claude-desk";
+        const style = body.data?.components?.[1]?.components?.[0]?.value || "dev-studio";
 
         await triggerGitHub(env.GITHUB_TOKEN, style, topic);
 
@@ -208,7 +216,7 @@ export default {
                       style: 1,
                       min_length: 5,
                       max_length: 200,
-                      placeholder: "e.g. The casino glitch that paid out millions",
+                      placeholder: "e.g. Free local AI studio that replaces $49/mo tools",
                       required: true
                     }
                   ]
@@ -219,9 +227,9 @@ export default {
                     {
                       type: 4,
                       custom_id: "input_style",
-                      label: "Style (claude-desk, tall-tale, deep-dive)",
+                      label: "Style (dev-studio, claude-desk, tall-tale)",
                       style: 1,
-                      value: "claude-desk",
+                      value: "dev-studio",
                       required: false
                     }
                   ]
@@ -238,10 +246,10 @@ export default {
           replyText = "Started generating Slot 1 Classic Story (1:00 PM). Live frame rendering will appear in <#1569750972975288441>.";
         } else if (customId === "trigger_slot_2") {
           await triggerGitHub(env.GITHUB_TOKEN, "claude-desk");
-          replyText = "Started generating Slot 2 3D Claude-Desk Tech Exploit (7:00 PM). Live frame rendering will appear in <#1569750972975288441>.";
+          replyText = "Started generating Slot 2 3D Claude-Desk Dual Bot (7:00 PM). Live frame rendering will appear in <#1569750972975288441>.";
         } else if (customId === "trigger_tech" || customId === "trigger_slot_3") {
           await triggerGitHub(env.GITHUB_TOKEN, "dev-studio");
-          replyText = "Started generating Slot 3 (9:30 PM Dev & Mascot Studio Exploit). Live frame rendering will appear in <#1569750972975288441>.";
+          replyText = "Started generating Slot 3 3D Dev & Mascot Studio Exploit (9:30 PM). Live frame rendering will appear in <#1569750972975288441>.";
         } else if (customId === "skip_next_trigger") {
           await setSlotSkipped(12);
           replyText = "Next scheduled slot skipped for today. It will run normally tomorrow.";
