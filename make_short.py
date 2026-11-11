@@ -41,15 +41,16 @@ except ImportError:
 node_candidate = BIN_DIR / ("node.exe" if os.name == 'nt' else "node")
 NODE_EXE = str(node_candidate) if node_candidate.exists() else "node"
 
-CLASSIC_STYLES = [
-    "tall-tale",     # 3D con/loophole story (e.g. The Girl Who Was Mailed to Grandma)
-    "deep-dive",     # Zack D. Films 3D anatomy/science (e.g. What Happens If You Hold Your Breath)
-    "night-file",    # Dark mystery / true crime (e.g. D.B. Cooper Hijacking)
-    "inside-out",    # 2D x-ray explainer (e.g. What If You Swallow Gum)
-    "paper-atlas",   # Cut paper history (e.g. The Great Fire of London)
-    "stick-story"    # Survival steps & life hacks (e.g. What If The Power Went Out)
+# 3 Flagship 100% Dynamic 3D Animation Engines for the 3 daily slots:
+# Slot 1: tall-tale (Full 3D Cartoon Town, 3D bean toons, 3D storefronts & mayor office)
+# Slot 2: claude-desk (Full 3D Tech Studio, ClaudeBot & SkepticBot, neon rim lights, 3D holo props)
+# Slot 3: dev-studio (Full 3D Dev Studio, Human Dev & Thruster Robot Mascot, 3D tech lab)
+ROTATION_STYLES = [
+    "tall-tale",
+    "claude-desk",
+    "dev-studio"
 ]
-ROTATION_STYLES = CLASSIC_STYLES
+CLASSIC_STYLES = ROTATION_STYLES
 
 def run_cmd(cmd, cwd=None, env=None, on_line=None):
     """Helper to run command with properly configured PATH and stream output live."""

@@ -76,8 +76,10 @@ if "dev" in slot or "studio" in slot or "mascot" in slot:
     style_arg = "dev-studio"
 elif "claude" in slot or "tech" in slot:
     style_arg = "claude-desk"
+elif "tall" in slot or "tale" in slot or "story" in slot or "history" in slot or "slot1" in slot:
+    style_arg = "tall-tale"
 else:
-    style_arg = "auto"
+    style_arg = "tall-tale"
 print(f"\n[4/4] Starting 3D short generation (Slot: {slot} | Style: {style_arg})...", flush=True)
 
 try:
