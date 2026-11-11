@@ -378,4 +378,20 @@ if __name__ == '__main__':
     parser.add_argument("--draft", action="store_true", help="Fast draft rendering mode")
     
     args = parser.parse_args()
-    build_short(topic=args.topic, style=args.style, upload=args.upload, privacy=args.privacy, draft=args.draft)
+    try:
+        build_short(topic=args.topic, style=args.style, upload=args.upload, privacy=args.privacy, draft=args.draft)
+    except Exception as e:
+        err_msg = str(e)
+        print(f"\n[FATAL ERROR] Video generation failed: {err_msg}")
+        update_live_progress(
+            step_title="Generation Error",
+            percent=0,
+            details=f"Pipeline aborted:\n`{err_msg[:400]}`",
+            is_error=True
+        )
+        notify_engine(
+            title="Video Pipeline Aborted",
+            description=f"Error encountered during short generation:\n```{err_msg[:800]}```",
+            color=0xEF4444
+        )
+        raise

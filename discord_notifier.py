@@ -299,13 +299,13 @@ def get_discord_bot_token():
 _last_progress_edit = 0
 _progress_msg_id = None
 
-def update_live_progress(step_title, percent, details=None, is_done=False, links=None):
+def update_live_progress(step_title, percent, details=None, is_done=False, is_error=False, links=None):
     """Updates the single live progress bar message in #live-progress in real-time."""
     global _last_progress_edit, _progress_msg_id
 
-    # Rate-limit guard: maximum 1 edit every 3.5 seconds unless marked as complete
+    # Rate-limit guard: maximum 1 edit every 3.5 seconds unless marked as complete or error
     now = time.time()
-    if not is_done and (now - _last_progress_edit) < 3.5:
+    if not is_done and not is_error and (now - _last_progress_edit) < 3.5:
         return
 
     bot_token = get_discord_bot_token()
@@ -324,9 +324,10 @@ def update_live_progress(step_title, percent, details=None, is_done=False, links
         for k, v in links.items():
             fields.append({"name": k, "value": v, "inline": True})
 
-    color = 0x10B981 if is_done else 0x38BDF8
+    color = 0xEF4444 if is_error else (0x10B981 if is_done else 0x38BDF8)
+    title_text = "Video Pipeline Failed" if is_error else ("Video Pipeline Live Progress" if not is_done else "Video Pipeline Complete")
     embed = {
-        "title": "Video Pipeline Live Progress",
+        "title": title_text,
         "color": color,
         "fields": fields,
         "timestamp": datetime.now(timezone.utc).isoformat(),

@@ -43,24 +43,56 @@ export function techStudio() {
     g.add(vBar);
   }
 
-  // 4. Glowing City Bokeh Lights (Skyline orbs through glass)
-  const bokehColors = ['#FCD34D', '#F59E0B', '#38BDF8', '#818CF8', '#FB7185', '#34D399'];
-  const bokehGroup = new THREE.Group();
-  for (let i = 0; i < 48; i++) {
-    const col = bokehColors[Math.floor(Math.random() * bokehColors.length)];
-    const r = 0.12 + Math.random() * 0.28;
-    const orb = new THREE.Mesh(
-      new THREE.SphereGeometry(r, 16, 16),
-      new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.45 + Math.random() * 0.35 })
-    );
-    orb.position.set(
-      (Math.random() - 0.5) * 32,
-      2.5 + Math.random() * 9.5,
-      -6.2 + Math.random() * 0.3
-    );
-    bokehGroup.add(orb);
-  }
-  g.add(bokehGroup);
+  // 4. Distant Metropolitan Skyline & Architectural Window Lights (Beyond glass)
+  const skylineGroup = new THREE.Group();
+  const bldgMat = new THREE.MeshStandardMaterial({
+    color: '#080C14',
+    roughness: 0.9,
+    metalness: 0.1
+  });
+  const winColors = ['#FDE68A', '#FEF3C7', '#F59E0B', '#38BDF8', '#94A3B8'];
+
+  // Distant building silhouettes
+  const buildings = [
+    { x: -14, w: 5.5, h: 14, z: -7.5 },
+    { x: -8.5, w: 4.8, h: 11, z: -7.2 },
+    { x: -4, w: 4.0, h: 16, z: -8.0 },
+    { x: 1.5, w: 5.2, h: 13, z: -7.4 },
+    { x: 7.2, w: 4.6, h: 17, z: -8.2 },
+    { x: 12.5, w: 5.8, h: 12, z: -7.6 },
+    { x: 18, w: 6.0, h: 15, z: -8.5 }
+  ];
+
+  buildings.forEach(b => {
+    const tower = new THREE.Mesh(new THREE.BoxGeometry(b.w, b.h, 2.0), bldgMat);
+    tower.position.set(b.x, b.h / 2, b.z);
+    skylineGroup.add(tower);
+
+    // Architectural micro-window grid on building face
+    const cols = Math.floor(b.w / 0.45);
+    const rows = Math.floor(b.h / 0.55);
+    for (let r = 2; r < rows - 1; r++) {
+      for (let c = 0; c < cols; c++) {
+        // Randomly lit office windows (35% lit rate)
+        if (Math.random() < 0.35) {
+          const wx = b.x - b.w / 2 + 0.3 + c * 0.45;
+          const wy = 0.5 + r * 0.55;
+          const col = winColors[Math.floor(Math.random() * winColors.length)];
+          const winMesh = new THREE.Mesh(
+            new THREE.PlaneGeometry(0.12, 0.16),
+            new THREE.MeshBasicMaterial({
+              color: col,
+              transparent: true,
+              opacity: 0.25 + Math.random() * 0.55
+            })
+          );
+          winMesh.position.set(wx, wy, b.z + 1.01);
+          skylineGroup.add(winMesh);
+        }
+      }
+    }
+  });
+  g.add(skylineGroup);
 
   // 5. Solid Walnut Developer Desk (Spanning z = -0.10 to +0.60)
   const deskMat = new THREE.MeshStandardMaterial({

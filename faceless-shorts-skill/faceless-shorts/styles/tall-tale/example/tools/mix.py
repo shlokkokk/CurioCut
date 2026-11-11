@@ -82,11 +82,13 @@ def zip_(**_):
     d = 0.32; n = bp(noise(d), 400, 3000); k = np.linspace(0, 1, len(n))
     return (n / (np.abs(n).max() + 1e-9) * 0.35 + sweep(300, 1100, d) * 0.12) * np.sin(np.pi * k) ** 1.2
 def alarm(d=2.0, **_):
+    d = max(0.1, float(d))
     x = np.zeros(int(d * SR)); one = np.sin(2 * np.pi * 150 * tt(0.22)) * env(int(0.22 * SR), 0.02, 5)
     for st in np.arange(0, d - 0.25, 0.5): i = int(st * SR); x[i:i + len(one)] += one
     return lp(x, 900) * 0.55
 
 def inhale(d=1.0, **_):
+    d = max(0.1, float(d))
     n = bp(noise(d), 300, 2600); k = np.linspace(0, 1, len(n)); e = np.sin(np.pi * np.minimum(1, k * 1.15)) ** 1.5 * (0.6 + 0.4 * k)
     return n / (np.abs(n).max() + 1e-9) * e * 0.5
 def heartbeat(**_):
@@ -96,11 +98,13 @@ def heartbeat(**_):
 def ding(**_):
     t = tt(1.4); x = sum(np.sin(2 * np.pi * f * t) * g for f, g in [(1318, 1), (2637, 0.35), (3951, 0.12)]) * env(len(t), 0.002, 4); return x * 0.5
 def chirp(d=1.0, **_):
+    d = max(0.1, float(d))
     x = np.zeros(int(d * SR))
     for k, st in enumerate(np.arange(0, d - 0.12, 0.17)):
         i = int(st * SR); c = sweep(3200 + (k % 3) * 300, 4400, 0.08) * env(int(0.08 * SR), 0.004, 6); x[i:i + len(c)] += c[:len(x) - i] * (0.6 + 0.4 * rng.random())
     return x * 0.4
 def chug(d=2.0, **_):
+    d = max(0.1, float(d))
     x = np.zeros(int(d * SR)); one = bp(noise(0.14), 200, 1600) * env(int(0.14 * SR), 0.005, 6)
     for k, st in enumerate(np.arange(0, d - 0.15, 0.22)): i = int(st * SR); x[i:i + len(one)] += one * (1 if k % 2 == 0 else 0.6)
     return x * 0.7
@@ -193,7 +197,15 @@ if mus and mus != 'none':
 for c in cj['cues']:
     fn = FX.get(c['type'])
     if not fn: print('unknown cue type, skipped:', c['type']); continue
-    x = fn(**({'d': c['dur']} if c.get('dur') else {}))
+    kwargs = {}
+    if 'dur' in c and c['dur'] is not None:
+        try: kwargs['d'] = max(0.1, float(c['dur']))
+        except Exception: pass
+    try:
+        x = fn(**kwargs)
+    except Exception as e:
+        print(f"cue generation error for {c.get('type')}: {e}")
+        continue
     x = lp(x, 5000) * db(LEVEL[c['type']]) * c.get('gain', 1.0) / (np.abs(x).max() + 1e-9) * 0.9
     i = int(c['t'] * SR); n = min(len(x), N - i)
     if n > 0 and i >= 0: pan = c.get('pan', 0.0); mix[i:i + n, 0] += x[:n] * (1 - max(0, pan)); mix[i:i + n, 1] += x[:n] * (1 + min(0, pan))

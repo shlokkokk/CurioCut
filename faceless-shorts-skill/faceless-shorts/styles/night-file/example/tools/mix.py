@@ -82,11 +82,13 @@ def zip_(**_):
     d = 0.32; n = bp(noise(d), 400, 3000); k = np.linspace(0, 1, len(n))
     return (n / (np.abs(n).max() + 1e-9) * 0.35 + sweep(300, 1100, d) * 0.12) * np.sin(np.pi * k) ** 1.2
 def alarm(d=2.0, **_):
+    d = max(0.1, float(d))
     x = np.zeros(int(d * SR)); one = np.sin(2 * np.pi * 150 * tt(0.22)) * env(int(0.22 * SR), 0.02, 5)
     for st in np.arange(0, d - 0.25, 0.5): i = int(st * SR); x[i:i + len(one)] += one
     return lp(x, 900) * 0.55
 
 def inhale(d=1.0, **_):
+    d = max(0.1, float(d))
     n = bp(noise(d), 300, 2600); k = np.linspace(0, 1, len(n)); e = np.sin(np.pi * np.minimum(1, k * 1.15)) ** 1.5 * (0.6 + 0.4 * k)
     return n / (np.abs(n).max() + 1e-9) * e * 0.5
 def heartbeat(**_):
@@ -161,7 +163,15 @@ if mus and mus != 'none':
 for c in cj['cues']:
     fn = FX.get(c['type'])
     if not fn: print('unknown cue type, skipped:', c['type']); continue
-    x = fn(**({'d': c['dur']} if c.get('dur') else {}))
+    kwargs = {}
+    if 'dur' in c and c['dur'] is not None:
+        try: kwargs['d'] = max(0.1, float(c['dur']))
+        except Exception: pass
+    try:
+        x = fn(**kwargs)
+    except Exception as e:
+        print(f"cue generation error for {c.get('type')}: {e}")
+        continue
     x = lp(x, 5000) * db(LEVEL[c['type']]) * c.get('gain', 1.0) / (np.abs(x).max() + 1e-9) * 0.9
     i = int(c['t'] * SR); n = min(len(x), N - i)
     if n > 0 and i >= 0: pan = c.get('pan', 0.0); mix[i:i + n, 0] += x[:n] * (1 - max(0, pan)); mix[i:i + n, 1] += x[:n] * (1 + min(0, pan))
