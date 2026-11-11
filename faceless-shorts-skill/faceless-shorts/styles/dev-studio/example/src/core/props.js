@@ -168,8 +168,8 @@ export function createDynamicTopicProp(lineOrType, scriptContext = {}, idx = 0, 
     }
   }
 
-  if (propType === 'subscription_card' || propType === 'bill' || propType === 'saas') {
-    // Floating SaaS Bill Card: "$49.00 / month - Renewed today"
+  if (propType === 'subscription_card' || propType === 'bill' || propType === 'saas' || propType === 'alert_card' || propType === 'bill_card') {
+    // Dynamic Pain / Alert Card (Pricing, Rate Limits, Overload, or Cloud Paywall)
     const c = document.createElement('canvas');
     c.width = 512; c.height = 200;
     const ctx = c.getContext('2d');
@@ -180,16 +180,62 @@ export function createDynamicTopicProp(lineOrType, scriptContext = {}, idx = 0, 
     ctx.lineWidth = 4;
     ctx.stroke();
 
-    // App name & price
-    ctx.fillStyle = '#F8FAFC';
-    ctx.font = 'bold 36px Inter, sans-serif';
-    ctx.fillText(toolName || 'Subscription', 40, 72);
-    ctx.fillStyle = '#F59E0B'; // Amber alert
-    ctx.font = '900 44px Inter, sans-serif';
-    ctx.fillText('$49.00 / month', 40, 130);
+    // Determine dynamic alert headline & details from line text/header
+    let topLabel = 'ALERT DETECTED';
+    let mainMetric = '$49.00 / month';
+    let subtext = 'Renewed automatically';
+    let metricColor = '#F59E0B'; // Amber default
+
+    const combined = lineText.toLowerCase();
+
+    // 1. Specific Dollar Amounts
+    const priceMatch = combined.match(/\$(\d+)/) || combined.match(/(\d+)\s*dollars?/);
+    if (priceMatch) {
+      const amt = priceMatch[1];
+      topLabel = `${toolName.toUpperCase()} SUBSCRIPTION`;
+      mainMetric = `$${amt}.00 / month`;
+      subtext = 'Recurring monthly fee';
+      metricColor = '#EF4444'; // Red
+    } else if (combined.includes('rate limit') || combined.includes('quota') || combined.includes('429')) {
+      topLabel = 'API USAGE NOTICE';
+      mainMetric = 'RATE LIMIT HIT';
+      subtext = 'Quota depleted · 429 Error';
+      metricColor = '#EF4444';
+    } else if (combined.includes('busy') || combined.includes('overload') || combined.includes('503') || combined.includes('down')) {
+      topLabel = 'CLOUD SERVER ALERT';
+      mainMetric = 'MODEL OVERLOADED';
+      subtext = 'Service unavailable · 503';
+      metricColor = '#F59E0B';
+    } else if (combined.includes('censor') || combined.includes('blocked') || combined.includes('ban')) {
+      topLabel = 'PROMPT RESTRICTION';
+      mainMetric = 'CONTENT BLOCKED';
+      subtext = 'Cloud safety filter triggered';
+      metricColor = '#EF4444';
+    } else if (combined.includes('queue') || combined.includes('waiting')) {
+      topLabel = 'GPU QUEUE ESTIMATE';
+      mainMetric = 'QUEUE #458';
+      subtext = 'Estimated wait: 42 minutes';
+      metricColor = '#F59E0B';
+    } else {
+      topLabel = `${toolName.toUpperCase()} CHARGE`;
+      mainMetric = '$29.00 / month';
+      subtext = 'Monthly recurring paywall';
+    }
+
+    // Header badge
     ctx.fillStyle = '#94A3B8';
-    ctx.font = '24px Inter, sans-serif';
-    ctx.fillText('Renewed today', 40, 168);
+    ctx.font = 'bold 24px Inter, sans-serif';
+    ctx.fillText(topLabel.slice(0, 28), 40, 64);
+
+    // Main metric
+    ctx.fillStyle = metricColor;
+    ctx.font = '900 44px Inter, sans-serif';
+    ctx.fillText(mainMetric, 40, 124);
+
+    // Context subtext
+    ctx.fillStyle = '#64748B';
+    ctx.font = '22px Inter, sans-serif';
+    ctx.fillText(subtext, 40, 164);
 
     const tex = new THREE.CanvasTexture(c);
     const cardMesh = new THREE.Mesh(
@@ -201,8 +247,8 @@ export function createDynamicTopicProp(lineOrType, scriptContext = {}, idx = 0, 
     return g;
   }
 
-  if (propType === 'github_stars' || propType === 'repo' || propType === 'stars') {
-    // Floating 3D GitHub Star Plaque: "★ 32.2k Stars"
+  if (propType === 'github_stars' || propType === 'repo' || propType === 'stars' || propType === 'star_plaque') {
+    // Dynamic 3D GitHub Star Plaque with real-time extracted star metrics
     const c = document.createElement('canvas');
     c.width = 512; c.height = 240;
     const ctx = c.getContext('2d');
@@ -214,21 +260,29 @@ export function createDynamicTopicProp(lineOrType, scriptContext = {}, idx = 0, 
     ctx.stroke();
 
     ctx.fillStyle = '#38BDF8';
-    ctx.font = 'bold 30px Inter, sans-serif';
-    ctx.fillText('OPEN SOURCE REPOSITORY', 40, 60);
+    ctx.font = 'bold 28px Inter, sans-serif';
+    ctx.fillText('OPEN SOURCE REPOSITORY', 40, 58);
 
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = '900 46px Inter, sans-serif';
-    ctx.fillText(toolName || 'AI Studio', 40, 120);
+    ctx.font = '900 42px Inter, sans-serif';
+    ctx.fillText((toolName || 'AI Studio').slice(0, 20), 40, 118);
+
+    // Extract dynamic star count or fallback gracefully
+    let starLabel = '★ 32.2k stars';
+    const starMatch = lineText.match(/(\d+[\.,]?\d*k?)\s*stars?/) || lineText.match(/(\d+)\s*thousand/);
+    if (starMatch) {
+      const num = starMatch[1];
+      starLabel = `★ ${num}${num.includes('k') ? '' : 'k'} stars`;
+    }
 
     // Star Pill
     ctx.fillStyle = '#FEF08A';
     ctx.beginPath();
-    ctx.roundRect(40, 150, 240, 60, 30);
+    ctx.roundRect(40, 146, 260, 60, 30);
     ctx.fill();
     ctx.fillStyle = '#854D0E';
-    ctx.font = '900 36px Inter, sans-serif';
-    ctx.fillText('★ 32.2k stars', 62, 194);
+    ctx.font = '900 34px Inter, sans-serif';
+    ctx.fillText(starLabel, 60, 189);
 
     const tex = new THREE.CanvasTexture(c);
     const mesh = new THREE.Mesh(
