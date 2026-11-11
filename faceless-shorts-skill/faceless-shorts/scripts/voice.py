@@ -83,7 +83,7 @@ def main():
     for i, ln in enumerate(S['lines']):
         cur.append(i)
         if re.search(r'[.?!]["\')]*$', ln['text'].strip()) or ln.get('break') or i == len(S['lines']) - 1: groups.append(cur); cur = []
-    out = [np.zeros(int(S.get('lead', 0.4) * SR))]; t = len(out[0]) / SR; lines = [None] * len(S['lines'])
+    out = [np.zeros(int(max(0.01, float(S.get('lead', 0.4))) * SR))]; t = len(out[0]) / SR; lines = [None] * len(S['lines'])
     for g in groups:
         x = say(' '.join(S['lines'][i]['text'] for i in g))
         cuts = [0.0]
@@ -99,9 +99,9 @@ def main():
             a = 0.0 if j == 0 else cuts[j][1]; b = n if j == len(g) - 1 else cuts[j + 1][0]
             lines[i] = {'i': i, 'text': S['lines'][i]['text'], 'start': round(t + a, 3), 'end': round(t + b, 3)}
             print(f'{i:2d} {lines[i]["start"]:6.2f}-{lines[i]["end"]:6.2f}  {S["lines"][i]["text"]}', flush=True)
-        gap = np.zeros(int(float(S['lines'][g[-1]].get('gap', S.get('gap', 0.3))) * SR))
+        gap = np.zeros(int(max(0.01, float(S['lines'][g[-1]].get('gap', S.get('gap', 0.3)))) * SR))
         out += [x, gap]; t += (len(x) + len(gap)) / SR
-    outro = np.zeros(int(float(S.get('outro', 0.9)) * SR)); out.append(outro)
+    outro = np.zeros(int(max(0.01, float(S.get('outro', 0.9))) * SR)); out.append(outro)
     y = np.concatenate(out); y = y / (np.abs(y).max() + 1e-9) * 0.9
     (P / 'data').mkdir(exist_ok=True)
     wavfile.write(P / 'data/narration.wav', SR, (y * 32767).astype(np.int16))

@@ -154,13 +154,14 @@ def synthesize_dialogue(project_dir, pair_name="default"):
         audio_chunks.append(cleaned_audio)
 
         # Natural conversational pause between lines
-        gap = line.get("gap", 0.18 if spk == "guide" else 0.22)
+        gap = max(0.01, float(line.get("gap", 0.18 if spk == "guide" else 0.22)))
         pause_samples = np.zeros(int(gap * SR))
         audio_chunks.append(pause_samples)
         current_time = end_time + gap
 
     # Trailing outro silence
-    audio_chunks.append(np.zeros(int(S.get('outro', 0.8) * SR)))
+    outro_dur = max(0.05, float(S.get('outro', 0.8)))
+    audio_chunks.append(np.zeros(int(outro_dur * SR)))
     full_audio = np.concatenate(audio_chunks)
 
     # Export narration.wav

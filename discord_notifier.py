@@ -41,20 +41,25 @@ CHANNELS = {
 
 def make_button(label, url, style=5):
     """Creates a Discord Link Button component (Style 5 = Link Button)."""
+    if not url or not str(url).startswith("http"):
+        return None
     return {
         "type": 2,
         "style": style,
-        "label": label,
-        "url": url
+        "label": str(label)[:80],
+        "url": str(url).strip()
     }
 
 def make_action_row(buttons):
-    """Wraps buttons into a Discord Action Row (type 1)."""
+    """Wraps valid buttons into a Discord Action Row (type 1)."""
     if not buttons:
+        return []
+    valid = [b for b in buttons if isinstance(b, dict) and b.get("url")]
+    if not valid:
         return []
     return [{
         "type": 1,
-        "components": buttons[:5]
+        "components": valid[:5]
     }]
 
 def send_embed(webhook_or_channel, embed_payload, components=None):
@@ -63,13 +68,11 @@ def send_embed(webhook_or_channel, embed_payload, components=None):
     falling back seamlessly to standard webhooks if needed.
     """
     bot_token = get_discord_bot_token()
-    channel_id = None
-    if webhook_or_channel in CHANNELS:
-        channel_id = CHANNELS[webhook_or_channel]
-    elif isinstance(webhook_or_channel, str) and webhook_or_channel.startswith("https://discord.com/api/webhooks/"):
+    channel_id = CHANNELS.get(webhook_or_channel)
+    if not channel_id and isinstance(webhook_or_channel, str):
         for k, wh in WEBHOOKS.items():
-            if webhook_or_channel == wh and k in CHANNELS:
-                channel_id = CHANNELS[k]
+            if webhook_or_channel == wh or webhook_or_channel == k:
+                channel_id = CHANNELS.get(k)
                 break
 
     # If we have bot token & channel ID, use Bot API (renders buttons natively)
@@ -173,7 +176,7 @@ def notify_engine(title, description, fields=None, color=0x38BDF8, button_label=
     if not components and button_label and button_url:
         components = make_action_row([make_button(button_label, button_url)])
 
-    return send_embed(WEBHOOKS["engine_logs"], embed, components=components)
+    return send_embed("engine_logs", embed, components=components)
 
 def notify_alert(title, details, severity="warning", button_label=None, button_url=None):
     """Sends warnings to #alerts with actionable links."""
@@ -187,7 +190,7 @@ def notify_alert(title, details, severity="warning", button_label=None, button_u
     components = None
     if button_label and button_url:
         components = make_action_row([make_button(button_label, button_url)])
-    return send_embed(WEBHOOKS["alerts"], embed, components=components)
+    return send_embed("alerts", embed, components=components)
 
 def notify_error(context, error_msg, stack_trace=None, button_label=None, button_url=None):
     """Sends diagnostic errors to #errors with direct access button."""
@@ -206,7 +209,7 @@ def notify_error(context, error_msg, stack_trace=None, button_label=None, button
     repo_url = button_url or "https://github.com/shlokkokk/CurioCut/actions"
     repo_label = button_label or "View Cloud Workflow"
     components = make_action_row([make_button(repo_label, repo_url)])
-    return send_embed(WEBHOOKS["errors"], embed, components=components)
+    return send_embed("errors", embed, components=components)
 
 def notify_youtube_post(title, video_url, video_id, duration_sec=None, size_mb=None, privacy="public", style="tall-tale"):
     """Sends rich post confirmation with interactive button to #youtube-posts."""
@@ -224,14 +227,14 @@ def notify_youtube_post(title, video_url, video_id, duration_sec=None, size_mb=N
     embed = {
         "title": f"YouTube Shorts: {title}",
         "url": video_url,
-        "description": "Short is officially published and live on YouTube.",
+        "description": f"Short is officially published and live on YouTube!\n\n[▶ Watch on YouTube Shorts]({video_url})",
         "color": 0xFF0000, # YouTube Red
         "fields": fields,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "footer": {"text": "YouTube Autonomous Publisher"}
     }
     buttons = [make_button("Watch on YouTube Shorts", video_url)]
-    return send_embed(WEBHOOKS["yt_posts"], embed, components=make_action_row(buttons))
+    return send_embed("yt_posts", embed, components=make_action_row(buttons))
 
 def notify_youtube_error(error_msg, context="Upload"):
     """Sends error to #youtube-errors with link to Studio."""
@@ -244,7 +247,7 @@ def notify_youtube_error(error_msg, context="Upload"):
         "footer": {"text": "YouTube Error Dispatcher"}
     }
     components = make_action_row([make_button("Check YouTube Studio", "https://studio.youtube.com")])
-    return send_embed(WEBHOOKS["yt_errors"], embed, components=components)
+    return send_embed("yt_errors", embed, components=components)
 
 def notify_instagram_post(caption, permalink, media_id=None, keyword=None, resource_url=None, title=None):
     """Sends rich post confirmation with interactive buttons to #instagram-posts."""
@@ -259,10 +262,11 @@ def notify_instagram_post(caption, permalink, media_id=None, keyword=None, resou
         fields.append({"name": "Resource Delivered", "value": f"[{title or 'Direct Link'}]({resource_url})", "inline": False})
     fields.append({"name": "Auto-Responder", "value": "Active 24/7 (Cloudflare Edge)", "inline": False})
         
+    desc_text = f"**Hook:** {clean_hook}\n\n[▶ Watch Reel on Instagram]({permalink})"
     embed = {
         "title": f"Instagram Reel: {title or 'New Reel Published'}",
         "url": permalink,
-        "description": f"**Hook:** {clean_hook}",
+        "description": desc_text,
         "color": 0xE1306C, # Instagram Pink / Gradient
         "fields": fields,
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -271,7 +275,7 @@ def notify_instagram_post(caption, permalink, media_id=None, keyword=None, resou
     buttons = [make_button("Watch Reel on Instagram", permalink)]
     if resource_url and resource_url.startswith("http"):
         buttons.append(make_button("Direct Resource Repo", resource_url))
-    return send_embed(WEBHOOKS["ig_posts"], embed, components=make_action_row(buttons))
+    return send_embed("ig_posts", embed, components=make_action_row(buttons))
 
 def notify_instagram_error(error_msg, context="Upload"):
     """Sends error to #instagram-errors with link to Meta App."""
@@ -284,7 +288,7 @@ def notify_instagram_error(error_msg, context="Upload"):
         "footer": {"text": "Instagram Error Dispatcher"}
     }
     components = make_action_row([make_button("Check Meta App Status", "https://developers.facebook.com/apps/1569685211846913/dashboard/")])
-    return send_embed(WEBHOOKS["ig_errors"], embed, components=components)
+    return send_embed("ig_errors", embed, components=components)
 
 def get_discord_bot_token():
     tok = os.environ.get("DISCORD_BOT_TOKEN")
