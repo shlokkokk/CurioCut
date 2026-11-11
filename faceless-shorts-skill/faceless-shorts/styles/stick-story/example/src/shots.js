@@ -1,148 +1,524 @@
-// WHAT IF THE POWER WENT OUT FOR 3 DAYS? : the shot list (Stick Story example).
-// One picture per clause. A shot: { id, at, cam: [cx, cy], zoom, note, draw(lt, d, t) }. cut(i) = just before line i,
-// Wd('word', i) = when the word is said. Sound: cue(t, type, { gain, dur }).
+// Dynamic Stick Story Narrative Director & Autonomous 2D Cinematic Stage
+// 100% Dynamic: builds story-driven illustrated scenes, character acting, and kinetic props for any script.
 import { ctx, W, H, clamp, lerp, seg, eo, eio, eob, rnd, rr, circle, ell, line } from './core/lib.js';
-import { L, Wd, T } from './core/timing.js';
+import { L, Le, Wd, T } from './core/timing.js';
 import * as K from './core/kit.js';
-const { P, GROUND } = K;
 
-// small set pieces for this story
-function tv(x, y, on) { rr(x - 170, y - 230, 340, 210, 16); ctx.fillStyle = P.ink; ctx.fill(); rr(x - 150, y - 212, 300, 174, 8); ctx.fillStyle = on ? '#7FB8E6' : '#2E3445'; ctx.fill(); rr(x - 120, y - 20, 240, 30, 8); ctx.fillStyle = '#6B4A34'; ctx.fill(); ctx.fillStyle = '#6B4A34'; ctx.fillRect(x - 110, y + 10, 20, 120); ctx.fillRect(x + 90, y + 10, 20, 120); }
-function plug(x, y, inWall) { line([[x - 300, y + 40], [x - 120, y + 60], [x - 10, y + 10]], P.ink, 10); rr(x - 20, y - 22, inWall ? 40 : 56, 44, 8); ctx.fillStyle = '#E8E3D8'; ctx.fill(); ctx.strokeStyle = P.ink; ctx.lineWidth = 5; ctx.stroke(); if (!inWall) { line([[x + 36, y - 10], [x + 56, y - 10]], '#B8A36A', 7); line([[x + 36, y + 10], [x + 56, y + 10]], '#B8A36A', 7); } }
-function socket(x, y) { rr(x - 50, y - 70, 100, 140, 14); ctx.fillStyle = '#F7F1E6'; ctx.fill(); ctx.strokeStyle = '#C9BFA9'; ctx.lineWidth = 5; ctx.stroke(); for (const dy of [-28, 28]) { circle(x, dy + y, 20, '#C9BFA9'); ctx.fillStyle = P.ink; ctx.fillRect(x - 8, y + dy - 8, 5, 14); ctx.fillRect(x + 3, y + dy - 8, 5, 14); } }
-function candle(x, y, s, t) { ctx.save(); ctx.translate(x, y); ctx.scale(s, s); rr(-26, -140, 52, 150, 10); ctx.fillStyle = '#F4EEDC'; ctx.fill(); line([[0, -140], [0, -158]], P.ink, 5); const f = 1 + Math.sin(t * 20) * 0.08; ell(0, -190, 20 * f, 38 * f, '#F2B23E'); ell(0, -182, 10, 20, '#FFF3C4'); ctx.restore(); }
-function curtain(x, y, h, wave) { ctx.beginPath(); ctx.moveTo(x, y); for (let k = 0; k <= 10; k++) ctx.lineTo(x + 200 + Math.sin(k + wave) * 18, y + h * k / 10); ctx.lineTo(x, y + h); ctx.closePath(); ctx.fillStyle = '#C96B5B'; ctx.fill(); }
-function bolt(x, y, s) { ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.beginPath(); ctx.moveTo(10, -120); ctx.lineTo(-50, 10); ctx.lineTo(0, 10); ctx.lineTo(-20, 120); ctx.lineTo(60, -20); ctx.lineTo(10, -20); ctx.closePath(); ctx.fillStyle = '#FFD43B'; ctx.fill(); ctx.lineWidth = 8; ctx.strokeStyle = P.ink; ctx.stroke(); ctx.restore(); }
+const { P, GROUND, FLOOR } = K;
 
-export function buildShots() {
-  const S = [], CUES = [], add = (o) => (S.push(o), o), cue = (t, type, o = {}) => CUES.push({ t: +t.toFixed(3), type, ...o });
-  const cut = (i) => (i === 0 ? 0 : L(i) - 0.08);
-  const blink = (t) => ((t % 3.1) < 0.12 ? 1 : 0);
+// ═════════════════════════ PROCEDURAL SCENERY & ROOMS ═════════════════════════
 
-  // 1 · a normal evening, phone in hand
-  add({ id: 'S01', at: 0, cam: [540, 1100], note: 'evening, hero scrolls phone, looks up', draw(lt, d, t) {
-    K.livingRoom({ night: true, lampOn: true });
-    const up = lt > d * 0.6;
-    K.person({ glow: true, x: 520, y: GROUND, h: 840, mood: up ? 'worried' : 'calm', look: up ? [0.2, -1] : [0.6, 0.6], blink: blink(t), arms: { L: [-6, 14], R: [60, 60] }, hold: (x, y) => K.phone(x + 12, y - 40, 0.55, true) });
-    if (up) K.thought(800, 560, 0.9 * eob(seg(lt, d * 0.6, d * 0.6 + 0.25)), () => bolt(800, 545, 0.75), 640, 760);
-  } });
-  cue(0.2, 'pop', { gain: 0.5 });
+function drawTownHall(lt, d, t, night = false) {
+  // Marble / neoclassical council room with wooden wainscoting and pillars
+  ctx.fillStyle = night ? '#252B3D' : '#EFEAE1';
+  ctx.fillRect(-300, -300, W + 600, FLOOR + 300);
 
-  // 2 · nine at night … everything goes dark
-  { const st = cut(1), dark = Wd('dark', 1) - st;
-    add({ id: 'S02', at: st, cam: [540, 1000], zoom: 0.1, note: 'lamp on, then BLACKOUT on "dark"', draw(lt, d, t) {
-      const off = lt > dark;
-      K.livingRoom({ night: true, lampOn: !off });
-      if (off) { ctx.fillStyle = 'rgba(5,8,18,0.62)'; ctx.fillRect(-300, -300, W + 600, H + 600); }
-      K.person({ glow: true, x: 520, y: GROUND, h: 840, mood: off ? 'scared' : 'calm', look: off ? [Math.sin(lt * 4), -0.3] : [0.5, 0], blink: off ? 0 : blink(t), arms: off ? { L: [-30, 40], R: [-30, 40] } : undefined });
-      K.counterPill('9:00 P.M.', 540, 300, eob(seg(lt, 0, 0.25)));
-      K.cinemaBars(off ? eo(seg(lt, dark, dark + 0.3)) : 0);
-    } });
-    cue(st, 'whoosh'); cue(st + dark, 'thud'); cue(st + dark + 0.05, 'whoosh', { gain: 0.6 }); }
+  // Polished mahogany wainscoting
+  ctx.fillStyle = night ? '#3A2820' : '#6A432D';
+  ctx.fillRect(-300, FLOOR - 320, W + 600, 320);
+  ctx.fillStyle = night ? '#2A1B15' : '#523321';
+  ctx.fillRect(-300, FLOOR - 340, W + 600, 24);
 
-  // 3 · step one: don't touch the fridge
-  { const st = cut(2), fr = Wd('fridge', 2) - st;
-    add({ id: 'S03', at: st, cam: [400, 1100], note: 'kitchen, hand stops before the fridge', draw(lt, d, t) {
-      K.kitchen({ night: true }); ctx.fillStyle = 'rgba(5,8,18,0.35)'; ctx.fillRect(-300, -300, W + 600, H + 600);
-      const reach = eio(seg(lt, 0.1, fr)), stop = lt > fr;
-      K.person({ glow: true, x: 560, y: GROUND, h: 840, dir: -1, mood: stop ? 'determined' : 'calm', look: [-1, 0], arms: { L: [-6, 12], R: [lerp(10, stop ? 40 : 75, reach), 10] }, blink: blink(t) });
-      if (stop) K.cross(260, 760, eob(seg(lt, fr, fr + 0.25)));
-      K.stepCard(1, "DON'T OPEN IT", 540, 300, eob(seg(lt, 0.05, 0.3)));
-    } });
-    cue(st, 'whoosh'); cue(st + 0.05, 'pop'); cue(st + fr, 'boing', { gain: 0.5 }); }
+  // Classical stone pillars
+  for (const px of [140, 940]) {
+    ctx.fillStyle = night ? '#373F54' : '#DFD7C8';
+    ctx.fillRect(px - 45, -300, 90, FLOOR + 300);
+    ctx.fillStyle = night ? '#4A546E' : '#EDE6D8';
+    ctx.fillRect(px - 58, FLOOR - 350, 116, 30);
+    ctx.fillRect(px - 58, 120, 116, 26);
+  }
 
-  // 4 · closed fridge = 4 hours, full freezer = 2 days
-  { const st = cut(3), h4 = Wd('four', 3) - st, fz = Wd('freezer', 3) - st;
-    add({ id: 'S04', at: st, cam: [300, 1050], zoom: 0.08, note: 'fridge with 4 HOURS and 2 DAYS timers', draw(lt, d, t) {
-      K.kitchen({ night: true }); ctx.fillStyle = 'rgba(5,8,18,0.35)'; ctx.fillRect(-300, -300, W + 600, H + 600);
-      K.person({ glow: true, x: 640, y: GROUND, h: 840, dir: -1, mood: lt > fz ? 'happy' : 'calm', look: [-1, -0.5], blink: blink(t) });
-      K.counterPill('FRIDGE: 4 HOURS', 330, 560, lt > h4 ? eob(seg(lt, h4, h4 + 0.25)) : 0);
-      K.counterPill('FREEZER: 2 DAYS', 330, 430, lt > fz ? eob(seg(lt, fz, fz + 0.25)) : 0);
-      if (lt > fz + 0.5) K.check(170, 900, eob(seg(lt, fz + 0.5, fz + 0.75)));
-    } });
-    cue(st, 'whoosh'); cue(st + h4, 'pop'); cue(st + fz, 'pop'); cue(st + fz + 0.5, 'sparkle', { dur: 0.6 }); }
+  // Parquet / oak floor
+  ctx.fillStyle = night ? '#322521' : '#8B5A36';
+  ctx.fillRect(-300, FLOOR, W + 600, H - FLOOR + 300);
+  ctx.strokeStyle = night ? '#251A17' : '#724829';
+  ctx.lineWidth = 6;
+  for (let y = FLOOR + 80; y < H + 300; y += 100) {
+    ctx.beginPath(); ctx.moveTo(-300, y); ctx.lineTo(W + 300, y); ctx.stroke();
+  }
 
-  // 5 · step two: flashlight, not a candle
-  { const st = cut(4), fl = Wd('flashlight', 4) - st, ca = Wd('candle', 4) - st;
-    add({ id: 'S05', at: st, cam: [540, 1100], note: 'flashlight beam on; candle gets a red X', draw(lt, d, t) {
-      K.livingRoom({ night: true, lampOn: false }); ctx.fillStyle = 'rgba(5,8,18,0.5)'; ctx.fillRect(-300, -300, W + 600, H + 600);
-      const on = lt > fl;
-      K.person({ glow: true, x: 420, y: GROUND, h: 840, mood: 'determined', look: [1, 0], arms: { L: [-6, 14], R: [80, 10] }, hold: (x, y) => K.flashlight(x + 10, y, 1.2, on, -0.05) });
-      K.stepCard(2, 'FLASHLIGHT', 540, 300, eob(seg(lt, 0.05, 0.3)));
-      if (lt > ca) { candle(860, 1250, 1, t); K.cross(860, 1020, eob(seg(lt, ca, ca + 0.25)) * 0.9); }
-    } });
-    cue(st, 'whoosh'); cue(st + 0.05, 'pop'); cue(st + fl, 'tock'); cue(st + ca, 'boing', { gain: 0.5 }); }
+  // Official municipal podium in center
+  ctx.fillStyle = night ? '#442C20' : '#5C3822';
+  rr(420, FLOOR - 260, 240, 270, 16); ctx.fill();
+  ctx.fillStyle = night ? '#2E1D15' : '#452918';
+  rr(400, FLOOR - 280, 280, 32, 10); ctx.fill();
 
-  // 6 · candles are a real fire risk (close-up: candle by a curtain)
-  { const st = cut(5);
-    add({ id: 'S06', at: st, cam: [540, 1000], zoom: 0.14, note: 'candle flame licks toward the curtain', draw(lt, d, t) {
-      ctx.fillStyle = P.nWall; ctx.fillRect(-300, -300, W + 600, H + 600); curtain(380, 200, 1150, t * 2);
-      ctx.fillStyle = '#5C4636'; ctx.fillRect(-300, 1380, W + 600, 700);
-      candle(560, 1380, 1.6, t); const glow = ctx.createRadialGradient(560, 1070, 10, 560, 1070, 420); glow.addColorStop(0, 'rgba(242,178,62,0.35)'); glow.addColorStop(1, 'rgba(242,178,62,0)'); ctx.fillStyle = glow; ctx.fillRect(0, 600, W, 900);
-      K.counterPill('FIRE RISK', 540, 330, eob(seg(lt, 0.2, 0.45)));
-    } });
-    cue(st, 'whoosh'); cue(st + 0.2, 'alarm', { dur: 1.2, gain: 0.6 }); }
+  // Dual microphones
+  line([[490, FLOOR - 280], [510, FLOOR - 330]], P.ink, 6);
+  circle(510, FLOOR - 335, 12, '#4A5568');
+  line([[590, FLOOR - 280], [570, FLOOR - 330]], P.ink, 6);
+  circle(570, FLOOR - 335, 12, '#4A5568');
 
-  // 7 · step three: fill bottles with water
-  { const st = cut(6), wt = Wd('water', 6) - st;
-    add({ id: 'S07', at: st, cam: [540, 1100], note: 'bottles pop onto the counter one by one', draw(lt, d, t) {
-      K.kitchen({ night: true }); ctx.fillStyle = 'rgba(5,8,18,0.3)'; ctx.fillRect(-300, -300, W + 600, H + 600);
-      K.person({ glow: true, x: 230, y: GROUND, h: 840, mood: 'happy', look: [1, 0], blink: blink(t) });
-      for (let i = 0; i < 6; i++) { const p = seg(lt, 0.3 + i * 0.22, 0.5 + i * 0.22); if (p > 0) K.bottle(470 + i * 95, 1060, eob(p) * 1.05); }
-      K.stepCard(3, 'STORE WATER', 540, 300, eob(seg(lt, 0.05, 0.3)));
-    } });
-    cue(st, 'whoosh'); cue(st + 0.05, 'pop'); for (let i = 0; i < 6; i++) cue(st + 0.32 + i * 0.22, 'plop', { gain: 0.45 }); }
+  // American / Municipal Flag on right
+  const poleX = 860;
+  line([[poleX, FLOOR - 560], [poleX, FLOOR]], '#D4AF37', 10);
+  circle(poleX, FLOOR - 565, 16, '#F6E05E');
+  // Flag cloth
+  ctx.fillStyle = '#C53030';
+  ctx.beginPath();
+  ctx.moveTo(poleX, FLOOR - 550);
+  ctx.quadraticCurveTo(poleX - 80, FLOOR - 530 + Math.sin(t * 3) * 12, poleX - 160, FLOOR - 540);
+  ctx.lineTo(poleX - 160, FLOOR - 380);
+  ctx.quadraticCurveTo(poleX - 80, FLOOR - 370 + Math.sin(t * 3) * 12, poleX, FLOOR - 390);
+  ctx.closePath();
+  ctx.fill();
 
-  // 8 · a gallon per person, per day
-  { const st = cut(7);
-    add({ id: 'S08', at: st, cam: [540, 1000], zoom: 0.1, note: 'big rule card: 1 gallon / person / day', draw(lt, d, t) {
-      ctx.fillStyle = P.wall; ctx.fillRect(-300, -300, W + 600, H + 600);
-      K.counterPill('1 GALLON', 540, 520, eob(seg(lt, 0.1, 0.35)) * 1.5);
-      K.counterPill('PER PERSON', 540, 720, eob(seg(lt, 0.5, 0.75)) * 1.2);
-      K.counterPill('EVERY DAY', 540, 890, eob(seg(lt, 0.9, 1.15)) * 1.2);
-      K.person({ x: 280, y: 1560, h: 660, mood: 'happy', look: [1, -0.5] }); K.person({ x: 800, y: 1560, h: 600, mood: 'happy', dir: -1, look: [-1, -0.5], cap: '#E2574C' });
-      for (let i = 0; i < 2; i++) K.bottle(450 + i * 180, 1550, 1.3);
-    } });
-    cue(st + 0.1, 'pop'); cue(st + 0.5, 'pop'); cue(st + 0.9, 'pop'); }
+  // Background Citizen Spectators
+  for (let i = 0; i < 2; i++) {
+    const cx = i === 0 ? 250 : 830;
+    K.person({
+      x: cx, y: GROUND - 10, h: 480,
+      dir: i === 0 ? 1 : -1,
+      mood: 'calm',
+      blink: (t % 3 < 0.12 ? 1 : 0),
+      arms: { L: [10, 10], R: [10, 10] }
+    });
+  }
+}
 
-  // 9 · step four: unplug your electronics
-  { const st = cut(8), un = Wd('unplug', 8) - st;
-    add({ id: 'S09', at: st, cam: [600, 1200], note: 'hero pulls the TV plug from the socket', draw(lt, d, t) {
-      K.livingRoom({ night: true, lampOn: false }); ctx.fillStyle = 'rgba(5,8,18,0.4)'; ctx.fillRect(-300, -300, W + 600, H + 600);
-      tv(800, 1250, false); socket(560, 1380);
-      const pulled = eio(seg(lt, un, un + 0.4));
-      plug(560 - pulled * 90, 1380, pulled < 0.1);
-      K.person({ glow: true, x: 330, y: GROUND, h: 840, mood: 'determined', look: [1, 0.8], lean: 18, arms: { L: [-6, 14], R: [lerp(60, 50, pulled), 0] } });
-      K.stepCard(4, 'UNPLUG IT', 540, 300, eob(seg(lt, 0.05, 0.3)));
-    } });
-    cue(st, 'whoosh'); cue(st + 0.05, 'pop'); cue(st + un + 0.1, 'pop', { gain: 0.7 }); }
+function drawCityStreet(lt, d, t, night = false) {
+  // Sky
+  ctx.fillStyle = night ? '#111827' : '#93C5FD';
+  ctx.fillRect(-300, -300, W + 600, FLOOR + 300);
 
-  // 10 · a surge can fry them
-  { const st = cut(9), sg = Wd('surge', 9) - st;
-    add({ id: 'S10', at: st, cam: [540, 1100], zoom: 0.12, note: 'power returns: zap on the TV', draw(lt, d, t) {
-      K.livingRoom({ night: true, lampOn: lt > sg }); ctx.fillStyle = 'rgba(5,8,18,0.35)'; ctx.fillRect(-300, -300, W + 600, H + 600);
-      tv(560, 1350, false); socket(880, 1380); plug(880, 1380, true);
-      if (lt > sg) { const p = seg(lt, sg, sg + 0.6); bolt(560, 1050, eob(clamp(p * 2)) * 1.3); if (Math.floor(lt * 14) % 2 === 0) { ctx.fillStyle = 'rgba(255,240,180,0.25)'; ctx.fillRect(0, 0, W, H); } K.cross(800, 860, eob(seg(lt, sg + 0.3, sg + 0.55)) * 0.8); }
-    } });
-    cue(st, 'whoosh'); cue(st + sg, 'zip'); cue(st + sg + 0.05, 'slam', { gain: 0.6 }); }
+  // Distant City Skyline
+  ctx.fillStyle = night ? '#1F2937' : '#CBD5E1';
+  const bldgs = [[60, 420, 220], [290, 560, 190], [490, 380, 240], [740, 510, 200], [950, 440, 210]];
+  for (const [bx, bh, bw] of bldgs) {
+    ctx.fillRect(bx, FLOOR - bh, bw, bh);
+    // Glowing windows
+    ctx.fillStyle = night ? '#FDE047' : '#FFFFFF';
+    for (let wy = FLOOR - bh + 40; wy < FLOOR - 40; wy += 55) {
+      for (let wx = bx + 25; wx < bx + bw - 30; wx += 45) {
+        if ((wx + wy) % 3 === 0) ctx.fillRect(wx, wy, 20, 30);
+      }
+    }
+    ctx.fillStyle = night ? '#1F2937' : '#CBD5E1';
+  }
 
-  // 11 · day three: lights flicker back on
-  { const st = cut(10), on = Wd('flicker', 10) - st;
-    add({ id: 'S11', at: st, cam: [540, 1050], note: 'DAY 3 card, lamp flickers back on', draw(lt, d, t) {
-      const flick = lt > on && (lt > on + 0.8 || Math.floor(lt * 12) % 2 === 0);
-      K.livingRoom({ night: true, lampOn: flick }); if (!flick) { ctx.fillStyle = 'rgba(5,8,18,0.55)'; ctx.fillRect(-300, -300, W + 600, H + 600); }
-      K.person({ glow: true, x: 520, y: GROUND, h: 840, mood: flick ? 'happy' : 'sleepy', look: [-0.6, -0.8], blink: 0, arms: flick ? { L: [150, 10], R: [150, 10] } : undefined });
-      K.counterPill('DAY 3', 540, 300, eob(seg(lt, 0, 0.25)));
-    } });
-    cue(st, 'whoosh'); cue(st + on, 'tock'); cue(st + on + 0.2, 'tock'); cue(st + on + 0.8, 'sparkle', { dur: 0.8 }); }
+  // Sidewalk & Asphalt Street
+  ctx.fillStyle = night ? '#374151' : '#94A3B8';
+  ctx.fillRect(-300, FLOOR, W + 600, 110);
+  ctx.fillStyle = night ? '#1E293B' : '#475569';
+  ctx.fillRect(-300, FLOOR + 110, W + 600, H - FLOOR - 110 + 300);
 
-  // 12 · because you were ready, you're totally fine
-  { const st = cut(11), fine = Wd('fine', 11) - st;
-    add({ id: 'S12', at: st, cam: [540, 1000], zoom: 0.1, note: 'daylight, hero relaxed, big check', draw(lt, d, t) {
-      K.livingRoom({}); K.person({ x: 480, y: GROUND, h: 860, mood: 'happy', look: [0, 0], blink: blink(t), arms: { L: [-20, 30], R: [130, 60] } });
-      K.check(820, 700, lt > fine - 0.3 ? eob(seg(lt, fine - 0.3, fine)) * 1.3 : 0);
-    } });
-    cue(st, 'whoosh'); cue(st + fine - 0.3, 'sparkle', { dur: 1 }); }
+  // Street Curb & Road Dashes
+  ctx.strokeStyle = '#FACC15';
+  ctx.lineWidth = 14;
+  ctx.setLineDash([80, 60]);
+  ctx.beginPath(); ctx.moveTo(-300, FLOOR + 260); ctx.lineTo(W + 300, FLOOR + 260); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Streetlamp with warm light cone
+  const lx = 200;
+  line([[lx, FLOOR - 620], [lx, FLOOR]], P.ink, 16);
+  ctx.beginPath(); ctx.arc(lx, FLOOR - 620, 28, 0, Math.PI * 2); ctx.fillStyle = '#F59E0B'; ctx.fill();
+  const glow = ctx.createRadialGradient(lx, FLOOR - 580, 20, lx, FLOOR - 580, 380);
+  glow.addColorStop(0, 'rgba(253, 224, 71, 0.35)');
+  glow.addColorStop(1, 'rgba(253, 224, 71, 0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(lx - 380, FLOOR - 600, 760, 700);
+}
+
+function drawCourtroom(lt, d, t) {
+  // High oak courtroom wall
+  ctx.fillStyle = '#451A03';
+  ctx.fillRect(-300, -300, W + 600, FLOOR + 300);
+
+  // Wood Wall Framing Lines
+  ctx.strokeStyle = '#78350F';
+  ctx.lineWidth = 8;
+  for (let x = 120; x < W; x += 220) {
+    ctx.strokeRect(x, 150, 180, FLOOR - 220);
+  }
+
+  // Polished Floor
+  ctx.fillStyle = '#78350F';
+  ctx.fillRect(-300, FLOOR, W + 600, H - FLOOR + 300);
+
+  // Elevated Judge's Bench
+  ctx.fillStyle = '#291003';
+  rr(240, FLOOR - 320, 600, 330, 16); ctx.fill();
+  ctx.fillStyle = '#451A03';
+  rr(220, FLOOR - 340, 640, 32, 10); ctx.fill();
+
+  // Scales of Justice Emblem
+  circle(540, FLOOR - 200, 52, '#D97706');
+  circle(540, FLOOR - 200, 44, '#FDE68A');
+  ctx.fillStyle = '#92400E';
+  ctx.font = 'bold 36px Inter, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('⚖', 540, FLOOR - 200);
+
+  // Wooden Balustrade / Railing in foreground
+  ctx.fillStyle = '#552309';
+  ctx.fillRect(-300, FLOOR + 90, W + 600, 24);
+  for (let rx = -200; rx < W + 200; rx += 90) {
+    ctx.fillRect(rx, FLOOR + 90, 16, 150);
+  }
+}
+
+function drawAuctionDesk(lt, d, t, night = false) {
+  // Indoor study room
+  ctx.fillStyle = night ? '#1E293B' : '#E2E8F0';
+  ctx.fillRect(-300, -300, W + 600, FLOOR + 300);
+
+  // Wall window showing outdoor sky
+  K.windowPane(660, 420, 320, 440, night);
+
+  // Wooden Desk
+  ctx.fillStyle = night ? '#334155' : '#854D0E';
+  ctx.fillRect(180, FLOOR - 140, 720, 150);
+  ctx.fillStyle = night ? '#1E293B' : '#713F12';
+  ctx.fillRect(200, FLOOR + 10, 40, 260);
+  ctx.fillRect(860, FLOOR + 10, 40, 260);
+
+  // Glowing Laptop on desk
+  const lx = 480, ly = FLOOR - 140;
+  ctx.fillStyle = '#0F172A';
+  ctx.fillRect(lx - 90, ly - 12, 180, 14); // base
+  rr(lx - 85, ly - 140, 170, 130, 8); // screen
+  ctx.fillStyle = '#0284C7';
+  ctx.fillRect(lx - 78, ly - 132, 156, 114);
+
+  // Screen auction UI glow
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = 'bold 16px monospace';
+  ctx.fillText('BID: $5,000', lx - 60, ly - 90);
+  ctx.fillStyle = '#22C55E';
+  ctx.fillText('WINNER!', lx - 50, ly - 50);
+
+  // Soft glow cast by laptop on the room
+  const lapGlow = ctx.createRadialGradient(lx, ly - 70, 20, lx, ly - 70, 260);
+  lapGlow.addColorStop(0, 'rgba(56, 189, 248, 0.28)');
+  lapGlow.addColorStop(1, 'rgba(56, 189, 248, 0)');
+  ctx.fillStyle = lapGlow;
+  ctx.fillRect(lx - 260, ly - 330, 520, 400);
+}
+
+function drawDramaticStage(lt, d, t) {
+  // Deep cinematic gradient
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#020617');
+  bg.addColorStop(0.7, '#0F172A');
+  bg.addColorStop(1, '#020617');
+  ctx.fillStyle = bg;
+  ctx.fillRect(-300, -300, W + 600, H + 600);
+
+  // Overhead dramatic spotlight
+  const spotX = 540 + Math.sin(t * 1.5) * 40;
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(spotX, -200);
+  ctx.lineTo(spotX - 380, GROUND + 100);
+  ctx.lineTo(spotX + 380, GROUND + 100);
+  ctx.closePath();
+  const spotGlow = ctx.createRadialGradient(spotX, 900, 80, spotX, 900, 600);
+  spotGlow.addColorStop(0, 'rgba(255, 237, 213, 0.28)');
+  spotGlow.addColorStop(1, 'rgba(255, 237, 213, 0)');
+  ctx.fillStyle = spotGlow;
+  ctx.fill();
+  ctx.restore();
+
+  // Floating ambient dust particles
+  for (let i = 0; i < 18; i++) {
+    const px = (Math.sin(i * 99 + t * 0.4) * 0.5 + 0.5) * W;
+    const py = (Math.cos(i * 33 + t * 0.6) * 0.5 + 0.5) * H;
+    circle(px, py, 2.5 + (i % 3), 'rgba(255, 255, 255, 0.45)');
+  }
+}
+
+// ═════════════════════════ PROCEDURAL STORY PROPS ═════════════════════════
+
+function drawNewspaper(x, y, headline, sc = 1, t = 0) {
+  if (sc <= 0) return;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(sc, sc);
+  ctx.rotate(Math.sin(t * 2) * 0.05);
+
+  // Paper sheet
+  rr(-240, -150, 480, 300, 12);
+  ctx.fillStyle = '#F8FAFC';
+  ctx.fill();
+  ctx.strokeStyle = '#CBD5E1';
+  ctx.lineWidth = 6;
+  ctx.stroke();
+
+  // Header banner: "THE DAILY CHRONICLE"
+  ctx.fillStyle = '#0F172A';
+  ctx.font = '900 28px Inter, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('THE DAILY CHRONICLE', 0, -105);
+  line([[-210, -85], [210, -85]], '#0F172A', 4);
+
+  // Big Bold Headline Text
+  ctx.fillStyle = '#DC2626';
+  ctx.font = '900 38px Inter, sans-serif';
+  ctx.fillText(headline.slice(0, 20), 0, -35);
+
+  // Dummy article paragraphs
+  ctx.fillStyle = '#64748B';
+  for (let r = 0; r < 4; r++) {
+    const ly = 15 + r * 22;
+    line([[-210, ly], [210, ly]], '#94A3B8', 8);
+  }
+
+  // Stamp: "OFFICIAL"
+  ctx.save();
+  ctx.translate(120, 60);
+  ctx.rotate(-0.25);
+  ctx.strokeStyle = '#DC2626';
+  ctx.lineWidth = 6;
+  rr(-80, -28, 160, 56, 8);
+  ctx.stroke();
+  ctx.fillStyle = '#DC2626';
+  ctx.font = '900 24px Inter, sans-serif';
+  ctx.fillText('BREAKING', 0, 8);
+  ctx.restore();
+
+  ctx.restore();
+}
+
+function drawBallotBox(x, y, sc = 1, t = 0) {
+  if (sc <= 0) return;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(sc, sc);
+
+  // Wooden Box
+  rr(-120, -110, 240, 220, 16);
+  ctx.fillStyle = '#1E293B';
+  ctx.fill();
+  ctx.strokeStyle = '#F59E0B';
+  ctx.lineWidth = 6;
+  ctx.stroke();
+
+  // Front Seal
+  circle(0, 10, 50, '#F59E0B');
+  circle(0, 10, 42, '#1E293B');
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = '900 24px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('VOTE', 0, 18);
+
+  // Paper dropping in
+  const dropY = -110 + Math.sin(t * 3) * 20;
+  rr(-50, dropY - 60, 100, 60, 6);
+  ctx.fillStyle = '#F8FAFC';
+  ctx.fill();
+  ctx.strokeStyle = P.ink;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawCashStack(x, y, sc = 1, t = 0) {
+  if (sc <= 0) return;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(sc, sc);
+
+  for (let i = 0; i < 4; i++) {
+    const ox = i * 6, oy = -i * 18;
+    rr(-130 + ox, -40 + oy, 260, 90, 8);
+    ctx.fillStyle = '#15803D';
+    ctx.fill();
+    ctx.strokeStyle = '#86EFAC';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    // Currency badge
+    circle(ox, 5 + oy, 28, '#86EFAC');
+    ctx.fillStyle = '#15803D';
+    ctx.font = '900 32px Inter, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('$', ox, 5 + oy);
+  }
+
+  ctx.restore();
+}
+
+function drawTownSign(x, y, name = 'BRIDGEVILLE', pop = '82', sc = 1) {
+  if (sc <= 0) return;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(sc, sc);
+
+  // Wooden Posts
+  ctx.fillStyle = '#78350F';
+  ctx.fillRect(-170, 0, 24, 180);
+  ctx.fillRect(146, 0, 24, 180);
+
+  // Green Road Signboard
+  rr(-220, -120, 440, 150, 18);
+  ctx.fillStyle = '#15803D';
+  ctx.fill();
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = 6;
+  ctx.stroke();
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = '900 36px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`WELCOME TO ${name.slice(0, 14)}`, 0, -60);
+
+  ctx.font = 'bold 24px Inter, sans-serif';
+  ctx.fillStyle = '#FDE047';
+  ctx.fillText(`POPULATION: ${pop}`, 0, -10);
+
+  ctx.restore();
+}
+
+// ═════════════════════════ SHOT BUILDER ═════════════════════════
+
+export function buildShots(script) {
+  const S = [];
+  const CUES = [];
+  const add = (o) => { S.push(o); return o; };
+  const cue = (t, type, o = {}) => CUES.push({ t: +t.toFixed(3), type, ...o });
+
+  const OP = (typeof window !== 'undefined' && window.OP) || {};
+  const scriptContext = script || OP.script || OP.__OPTIONS__?.script || {};
+  const title = scriptContext.title || 'Incredible True Story';
+  const rawLines = (scriptContext.lines && scriptContext.lines.length) ? scriptContext.lines : (T.lines || []);
+
+  const lines = rawLines.length ? rawLines : [
+    { text: 'An incredible story that completely defied belief.' },
+    { text: 'Nobody ever expected this mistake to happen.' }
+  ];
+
+  // Helper to extract clean punchy headline from line text
+  const extractHeader = (ln, idx) => {
+    if (ln.header) return ln.header.toUpperCase();
+    const t = (ln.text || '').toUpperCase();
+    if (idx === 0) return title.toUpperCase().slice(0, 28);
+    if (t.includes('BID') || t.includes('AUCTION') || t.includes('$') || t.includes('DOLLAR')) {
+      const m = t.match(/\$[\d,]+/) || t.match(/\b\d+\s*DOLLARS?\b/);
+      return m ? m[0] : 'AUCTION BID';
+    }
+    if (t.includes('ERROR') || t.includes('MISTAKE') || t.includes('CATCH') || t.includes('DIGIT')) return 'CLERICAL ERROR';
+    if (t.includes('OWNER') || t.includes('MAYOR') || t.includes('LANDLORD')) return 'ACCIDENTAL MAYOR';
+    if (t.includes('ACRE') || t.includes('LAND') || t.includes('TOWN')) return '700 ACRES WON';
+    if (t.includes('RENT') || t.includes('RESIDENT') || t.includes('PEOPLE')) return '82 RESIDENTS';
+    if (t.includes('FIRE') || t.includes('BUILDING') || t.includes('HOUSE')) return 'THE OLD FIREHOUSE';
+    if (t.includes('WOKE UP') || t.includes('MORNING') || t.includes('SLEEP')) return 'THE MORNING AFTER';
+    const words = t.replace(/[^A-Z0-9 ]/g, '').split(/\s+/).filter((w) => w.length > 2);
+    return words.slice(0, 3).join(' ') || `CHAPTER ${idx + 1}`;
+  };
+
+  lines.forEach((ln, idx) => {
+    const isFirst = idx === 0;
+    const isLast = idx === lines.length - 1;
+    const startVal = ln.s ?? ln.start ?? L(idx);
+    const lineStart = isFirst ? 0 : Math.max(0, startVal - 0.05);
+    const nextLn = lines[idx + 1];
+    const nextStartVal = nextLn ? (nextLn.s ?? nextLn.start ?? L(idx + 1)) : T.dur;
+    const lineEnd = Math.max(lineStart + 0.1, nextStartVal - 0.05);
+
+    const lineText = (ln.text || '').toUpperCase();
+    const lineHeader = extractHeader(ln, idx);
+    const comb = lineText + ' ' + lineHeader;
+
+    // Semantic scene classification
+    let sceneType = 'hall';
+    if (comb.includes('AUCTION') || comb.includes('ONLINE') || comb.includes('BID') || comb.includes('SCROLL')) {
+      sceneType = 'auction';
+    } else if (comb.includes('STREET') || comb.includes('ROAD') || comb.includes('TOWN') || comb.includes('ACRE') || comb.includes('BRIDGEVILLE')) {
+      sceneType = 'street';
+    } else if (comb.includes('COURT') || comb.includes('LEGAL') || comb.includes('ERROR') || comb.includes('PAPERWORK')) {
+      sceneType = 'court';
+    } else if (comb.includes('SHOCK') || comb.includes('SUDDEN') || comb.includes('CRAZY') || comb.includes('DIGIT') || comb.includes('CATCH')) {
+      sceneType = 'dramatic';
+    } else {
+      sceneType = idx % 2 === 0 ? 'hall' : 'street';
+    }
+
+    // Hero Character Acting Configuration
+    let mood = 'calm';
+    let heroDir = 1;
+    let heroPose = {};
+
+    if (comb.includes('SHOCK') || comb.includes('ERROR') || comb.includes('ACCIDENTAL') || comb.includes('WHAT') || comb.includes('WOKE UP')) {
+      mood = 'scared';
+      heroPose = { lean: -8, blink: 0, arms: { L: [-30, 40], R: [-30, 40] } };
+    } else if (comb.includes('MAYOR') || comb.includes('WIN') || comb.includes('PROUD') || comb.includes('OWNER') || comb.includes('RENT')) {
+      mood = 'happy';
+      heroPose = { lean: 0, arms: { L: [60, 60], R: [60, 60] } };
+    } else if (comb.includes('DECIDED') || comb.includes('PAPERWORK') || comb.includes('RULE') || comb.includes('BID')) {
+      mood = 'determined';
+      heroPose = { lean: 4, arms: { L: [-10, 15], R: [75, 10] } };
+    } else {
+      mood = 'calm';
+      heroPose = { lean: 0, arms: { L: [-6, 14], R: [20, 20] } };
+    }
+
+    // Audio cues per shot
+    cue(lineStart, 'whoosh', { gain: 0.45 });
+    cue(lineStart + 0.12, 'pop', { gain: 0.5 });
+    if (comb.includes('WIN') || comb.includes('MAYOR') || isLast) {
+      cue(lineStart + 0.35, 'sparkle', { dur: 0.6 });
+    } else if (comb.includes('ERROR') || comb.includes('CATCH')) {
+      cue(lineStart + 0.3, 'thud', { gain: 0.6 });
+    }
+
+    add({
+      id: `shot_${idx}`,
+      at: lineStart,
+      note: `${lineHeader}: ${lineText.slice(0, 30)}`,
+      draw(lt, d, t) {
+        // 1. Draw procedural environment
+        if (sceneType === 'auction') {
+          drawAuctionDesk(lt, d, t, false);
+        } else if (sceneType === 'street') {
+          drawCityStreet(lt, d, t, false);
+        } else if (sceneType === 'court') {
+          drawCourtroom(lt, d, t);
+        } else if (sceneType === 'dramatic') {
+          drawDramaticStage(lt, d, t);
+        } else {
+          drawTownHall(lt, d, t, false);
+        }
+
+        // 2. Animated Hero Character Performance
+        const walkCycle = lt < 1.2 ? (t * 12) : null;
+        const heroX = lerp(440, 520, Math.min(1, lt / 0.8));
+        const blinkVal = (t % 3.2 < 0.14) ? 1 : 0;
+
+        K.person({
+          x: heroX,
+          y: GROUND,
+          h: 820,
+          dir: heroDir,
+          mood: mood,
+          blink: blinkVal,
+          walk: walkCycle,
+          ...heroPose
+        });
+
+        // 3. Dynamic Narrative Focal Props
+        const popScale = eob(seg(lt, 0.15, 0.45));
+        if (comb.includes('AUCTION') || comb.includes('BID') || comb.includes('$')) {
+          drawCashStack(820, 920, popScale * 0.9, t);
+        } else if (comb.includes('MAYOR') || comb.includes('TOWN') || comb.includes('ACRE')) {
+          drawTownSign(780, 840, 'BRIDGEVILLE', '82', popScale * 0.9);
+        } else if (comb.includes('PAPERWORK') || comb.includes('ERROR') || comb.includes('CLERICAL')) {
+          drawNewspaper(780, 840, lineHeader, popScale * 0.9, t);
+        } else if (comb.includes('VOTE') || comb.includes('ELECTION')) {
+          drawBallotBox(800, 920, popScale * 0.9, t);
+        }
+
+        // 4. Punchy Golden Chapter Plaque at Top (Smooth spring entrance)
+        const plaqueScale = eob(seg(lt, 0.05, 0.35));
+        K.stepCard(idx + 1, lineHeader.slice(0, 22), 540, 280, plaqueScale);
+
+        // 5. Cinematic bars for dramatic twists or final hook
+        if (comb.includes('ERROR') || comb.includes('CATCH') || isLast) {
+          K.cinemaBars(eo(seg(lt, 0, 0.3)));
+        }
+      }
+    });
+  });
 
   return { shots: S, cues: CUES };
 }
