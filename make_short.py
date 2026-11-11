@@ -121,8 +121,9 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
         if topic and topic != "auto":
             story_data = {"title": topic, "premise": topic, "cta_keyword": "TOOL"}
         else:
-            print("[1/5] Harvesting breaking tech/AI exploit (GitHub Trending / Hacker News / Master Vault)...")
-            story_data = get_next_tech_story()
+            harvest_mode = "skill" if style == "claude-desk" else "tech"
+            print(f"[1/5] Harvesting targeted {harvest_mode.upper()} intel for {style}...")
+            story_data = get_next_tech_story(force_mode=harvest_mode)
         print(f"[1/5] Generating 2-character dialogue script for '{story_data.get('title')}' ({style})...")
         try:
             script_data = generate_dialogue_script(story_data, style=style)
