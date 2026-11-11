@@ -83,7 +83,7 @@ export function buildShots(E, script) {
     if (txt.includes('BLOOD') || txt.includes('CELL')) return 'BLOODSTREAM';
     const m = txt.match(/[\d,.]+\s*(?:SECONDS?|MINUTES?|HOURS?|PERCENT|%|BPM|LITERS?)\b/i);
     if (m) return m[0].toUpperCase();
-    return idx === 0 ? title.slice(0, 18) : null;
+    return idx === 0 ? (title.length > 40 ? title.slice(0, 37) + '...' : title) : null;
   };
 
   const extractHeadline = (txt, idx) => {
@@ -152,7 +152,9 @@ export function buildShots(E, script) {
           blit();
 
           if (pillText) {
-            pill(pillText, 540, 1180, eob(seg(lt, 0.15, 0.4)), '#FFD43B', 'rgba(12,14,20,0.85)', 68);
+            // Place clean header pill at top (y=260) instead of mouth (y=1180)
+            const sz = Math.max(28, Math.min(50, Math.floor(750 / (pillText.length * 0.58))));
+            pill(pillText, 540, 260, eob(seg(lt, 0.15, 0.4)), '#FFD43B', 'rgba(12,14,20,0.88)', sz);
           }
 
         } else if (sceneType === 'real_orbit') {
@@ -169,7 +171,8 @@ export function buildShots(E, script) {
           blit();
 
           if (pillText) {
-            pill(pillText, 540, 1180, eob(seg(lt, 0.1, 0.35)), '#FFD43B', 'rgba(12,14,20,0.85)', 72);
+            // Upper screen zone (y=340) well above torso
+            pill(pillText, 540, 340, eob(seg(lt, 0.1, 0.35)), '#FFD43B', 'rgba(12,14,20,0.85)', 60);
           }
 
         } else if (sceneType === 'xray_organ') {

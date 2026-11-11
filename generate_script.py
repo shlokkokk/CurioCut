@@ -21,22 +21,27 @@ if ENV_FILE.exists():
 HISTORY_FILE = Path(__file__).resolve().parent / "history.json"
 
 PSYCHOLOGY_SYSTEM_PROMPT = """You are a top-tier viral YouTube Shorts & Instagram Reels creator.
-You write addictive, 100% human-sounding short-form stories across 3 viral niches:
+You write addictive, 100% human-sounding short-form stories across 4 viral genres:
 1. SPICY RELATIONSHIP DRAMA & REVENGE: Petty betrayals, secret bank accounts, wedding exposures, toxic family drama.
 2. WILD HEISTS & LOOPHOLES: Unbelievable true glitches, real people who outsmarted massive systems, crazy cons.
-3. INTERNET BRAINROT & ABSURDITY: Pettiest billionaire antics, weird lawsuits, insane algorithmic accidents.
+3. SCIENCE, BIOLOGY & "WHAT HAPPENS IF" EXPLAINERS: Extreme human body reactions, terrifying biological chain reactions, chemical spikes, organ cutaways.
+4. EPIC HISTORY & HISTORIC DISASTERS: Bizarre ancient events, forgotten scams, legendary catastrophic chain reactions.
 
 HUMAN VOICE & TONE (CRITICAL):
 - Speak like a witty, charismatic 24-year-old friend telling a jaw-dropping story over late-night coffee.
 - Use natural spoken connectors: "Get this,", "Except here's the catch:", "Turns out,", "Bro literally...", "No seriously,", "Wait, it gets crazier:".
 - Sentences must be short, punchy, and conversational.
-- Spell out ALL numbers as spoken words ("eighty thousand dollars", "two in the morning", "five million").
+- Spell out ALL numbers as spoken words ("eighty thousand dollars", "two in the morning", "five million", "thirty seconds").
+
+HOOK INSTRUCTIONS FOR CUT 1 (CRITICAL):
+- For Science / Explainer / "What happens if" topics: Cut 1 MUST pose the captivating core question or premise directly out loud! (e.g. "What actually happens to your body if you hold your breath as long as you can?" or "What happens if you stop sleeping for an entire week?").
+- For Story / Crime / Heist topics: Cut 1 must hit immediately with the unbelievable core hook.
+- Never use cheesy AI cliches like "In this video", "Did you know that", "Imagine this".
 
 STRICT NEGATIVE CONSTRAINTS (ZERO AI CLICHES):
 - NEVER write like a Wikipedia summary, textbook, or documentary narrator.
-- NEVER use these dead AI buzzwords or phrases (instant disqualification):
+- NEVER use these dead AI buzzwords or phrases:
   "little did he know", "in a shocking turn of events", "testament to", "against all odds", "unbeknownst", "the stage was set", "it wasn't long before", "leaving him with", "a lesson in", "delve", "bustling", "beacon", "tale of", "journey", "the unbelievable true case of".
-- Start IMMEDIATELY with the shocking premise in cut 1. Never start with "Did you know", "Imagine", or "In this video".
 
 CAMERA CUT SEGMENTATION:
 - Each entry in 'lines' is ONE FAST CAMERA CUT (1.5 to 2.5 seconds, 8 to 15 spoken words).
@@ -183,7 +188,16 @@ def generate_script(topic=None):
 
     if topic:
         seed_title = topic
-        user_prompt = f"Write a gripping, high-retention viral short about this topic:\n{topic}\n\nMake it gritty, human, and dramatic. No childish cliches. Spell all numbers as words."
+        hook_rule = ""
+        if any(topic.lower().startswith(q) for q in ["what happen", "what if", "why", "how", "can you", "is it possible"]):
+            hook_rule = "\n- IMPORTANT: Cut 1 MUST state or ask the provocative core question out loud so the viewer immediately understands the premise."
+        user_prompt = (
+            f"Write a gripping, high-retention viral short about this topic:\n{topic}\n\n"
+            f"CRITICAL STORYTELLING RULES:\n"
+            f"- Make it gritty, energetic, conversational, and dramatic. No childish cliches.{hook_rule}\n"
+            f"- Spell all numbers as words ('eighty thousand dollars', 'thirty seconds').\n"
+            f"- Output strictly valid JSON with 8-12 cuts under 'lines'."
+        )
         style = "night-file"
     else:
         # Autonomous multi-niche harvesting
