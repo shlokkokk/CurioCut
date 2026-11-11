@@ -633,11 +633,14 @@ function shouldTriggerDm(commentText, ruleKeyword) {
 async function resolveFromDiscordPosts(botToken, permalink, normKw) {
   if (!botToken) return null;
   try {
-    const res = await fetch("https://discord.com/api/v10/channels/1569382175185305601/messages?limit=20", {
+    const res = await fetch("https://discord.com/api/v10/channels/1569382175185305601/messages?limit=25", {
       headers: { "Authorization": `Bot ${botToken}`, "User-Agent": "CurioCut-Edge" }
     });
     if (!res.ok) return null;
     const msgs = await res.json();
+    let kwCandidate = null;
+    const cleanPermalink = permalink ? permalink.replace(/\/$/, "") : "";
+
     for (const m of msgs) {
       const e = m.embeds?.[0];
       if (!e) continue;
@@ -650,16 +653,21 @@ async function resolveFromDiscordPosts(botToken, permalink, normKw) {
 
       const kwMatch = (kwField?.value || "").match(/`([^`]+)`/);
       const foundKw = kwMatch ? kwMatch[1].trim() : "";
-      const linkMatches = permalink && desc.includes(permalink.replace(/\/$/, ""));
-      const kwMatches = normKw && foundKw && normalizeToken(foundKw) === normKw;
-      if (linkMatches || kwMatches) {
-        return {
-          title: (e.title || "").replace(/^Instagram Reel:\s*/i, "").trim() || "CurioCut Tool",
-          keyword: foundKw || normKw,
-          resource_url: urlMatch[1].trim()
-        };
+      const entry = {
+        title: (e.title || "").replace(/^Instagram Reel:\s*/i, "").trim() || "CurioCut Tool",
+        keyword: foundKw || normKw,
+        resource_url: urlMatch[1].trim()
+      };
+
+      // Always prefer exact Reel permalink match over shared keyword fallback
+      if (cleanPermalink && desc.includes(cleanPermalink)) {
+        return { ...entry, matchedByPermalink: true };
+      }
+      if (!kwCandidate && normKw && foundKw && normalizeToken(foundKw) === normKw) {
+        kwCandidate = { ...entry, matchedByPermalink: false };
       }
     }
+    return kwCandidate;
   } catch (err) {
     console.error("Discord fallback lookup error:", err);
   }
@@ -697,34 +705,53 @@ async function resolveReelRule(mediaId, env, token, botToken) {
   const looksTech = Boolean(extractedKw) || ["#ai", "#developer", "#coding", "#opensource", "#github", "#claude", "#deepseek"].some(t => lowerCap.includes(t));
 
   let resolved = null;
-  if (normKw && env.REELS_KV) {
+  let registry = null;
+  try {
+    const ghRes = await fetch("https://raw.githubusercontent.com/shlokkokk/CurioCut/main/published_reels.json", {
+      headers: { "User-Agent": "CurioCut-Edge/1.0" }
+    });
+    if (ghRes.ok) {
+      registry = await ghRes.json();
+      if (mediaId && registry[mediaId]) {
+        const exact = registry[mediaId];
+        resolved = {
+          title: exact.title,
+          keyword: exact.cta_keyword || extractedKw,
+          resource_url: exact.resource_url || "",
+          category: exact.category || ""
+        };
+      }
+    }
+  } catch {}
+
+  let discordHit = null;
+  if (!resolved && looksTech) {
+    discordHit = await resolveFromDiscordPosts(botToken, permalink, normKw);
+    if (discordHit && discordHit.matchedByPermalink) {
+      resolved = discordHit;
+    }
+  }
+
+  if (!resolved && normKw && env.REELS_KV) {
     resolved = await env.REELS_KV.get(`kw:${normKw}`, "json");
   }
 
-  if (!resolved) {
-    try {
-      const ghRes = await fetch("https://raw.githubusercontent.com/shlokkokk/CurioCut/main/published_reels.json", {
-        headers: { "User-Agent": "CurioCut-Edge/1.0" }
-      });
-      if (ghRes.ok) {
-        const registry = await ghRes.json();
-        const found = registry[mediaId] || Object.values(registry).find(r =>
-          normKw && r.cta_keyword && normalizeToken(r.cta_keyword) === normKw
-        );
-        if (found) {
-          resolved = {
-            title: found.title,
-            keyword: found.cta_keyword || extractedKw,
-            resource_url: found.resource_url || "",
-            category: found.category || ""
-          };
-        }
-      }
-    } catch {}
+  if (!resolved && registry && normKw) {
+    const byKw = Object.values(registry).find(r =>
+      r.cta_keyword && normalizeToken(r.cta_keyword) === normKw
+    );
+    if (byKw) {
+      resolved = {
+        title: byKw.title,
+        keyword: byKw.cta_keyword || extractedKw,
+        resource_url: byKw.resource_url || "",
+        category: byKw.category || ""
+      };
+    }
   }
 
-  if (!resolved && looksTech) {
-    resolved = await resolveFromDiscordPosts(botToken, permalink, normKw);
+  if (!resolved && discordHit) {
+    resolved = discordHit;
   }
 
   const rawResolvedUrl = (resolved?.resource_url || "").trim();
