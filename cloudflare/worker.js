@@ -102,7 +102,7 @@ async function markCommentProcessed(commentId, env) {
 
 export default {
   async scheduled(event, env, ctx) {
-    const cronStr = (event && event.cron) || "";
+    const cronStr = ((event && event.cron) || "").trim();
     if (cronStr === "* * * * *") {
       ctx.waitUntil(pollRecentInstagramComments(env));
       return;
@@ -334,13 +334,14 @@ export default {
           const mediaId = String(item.media_id || "").trim();
           if (!mediaId) continue;
           const keyword = (item.keyword || item.cta_keyword || "").trim();
-          const resourceUrl = (item.resource_url || "").trim();
-          const mode = item.mode || (resourceUrl || keyword ? "dm" : "story");
+          const rawUrl = (item.resource_url || "").trim();
+          const resourceUrl = /^https?:\/\/\S+$/i.test(rawUrl) ? rawUrl : "";
+          const mode = resourceUrl ? (item.mode || "dm") : "story";
           const record = {
             media_id: mediaId,
             title: item.title || "CurioCut Reel",
             mode,
-            keyword: keyword || (mode === "dm" ? "*" : ""),
+            keyword: mode === "dm" ? (keyword || "*") : "",
             resource_url: resourceUrl,
             public_reply: item.public_reply || null,
             dm_text: item.dm_text || null,
@@ -354,7 +355,7 @@ export default {
             updated_at: Date.now()
           };
           await env.REELS_KV.put(`reel:${mediaId}`, JSON.stringify(record));
-          if (keyword && keyword !== "*" && resourceUrl) {
+          if (mode === "dm" && keyword && keyword !== "*" && normalizeToken(keyword) && resourceUrl) {
             await env.REELS_KV.put(`kw:${normalizeToken(keyword)}`, JSON.stringify(record));
           }
           count++;
@@ -616,7 +617,8 @@ function shouldTriggerDm(commentText, ruleKeyword) {
     return true;
   }
 
-  if (normKw.length >= 4) {
+  // Only allow 1-typo tolerance on 5+ char keywords so 4-letter words (e.g. COOL vs TOOL) never misfire
+  if (normKw.length >= 5) {
     const words = (commentText || "").match(/[a-zA-Z0-9]+/g) || [];
     for (const w of words) {
       if (isOneTypoAway(w.toUpperCase(), normKw)) {
@@ -625,7 +627,7 @@ function shouldTriggerDm(commentText, ruleKeyword) {
     }
   }
 
-  return /\b(LINK|REPO|GITHUB|SEND|DM|URL|SCRIPT|PROMPT|SOURCE)\b/i.test(commentText);
+  return /\b(LINK|REPO|GITHUB|SEND|DM|URL|SCRIPT|PROMPT|SOURCE|INSTALL|DOWNLOAD)\b/i.test(commentText);
 }
 
 async function resolveFromDiscordPosts(botToken, permalink, normKw) {
@@ -686,8 +688,8 @@ async function resolveReelRule(mediaId, env, token, botToken) {
     }
   }
 
-  const kwMatch = caption.match(/(?:comment|reply)\s*['"]([A-Za-z0-9_*]+)['"]/i);
-  const extractedKw = kwMatch ? kwMatch[1].toUpperCase() : "";
+  const kwMatch = caption.match(/(?:comment|reply|drop)\s*['"]([A-Za-z0-9_*\-\s]+?)['"]/i);
+  const extractedKw = kwMatch ? kwMatch[1].trim().toUpperCase() : "";
   const normKw = normalizeToken(extractedKw);
   const lines = caption.split(/\n+/).map(l => l.trim()).filter(Boolean);
   const firstMeaningful = lines.find(l => !l.toLowerCase().includes("comment ") && !l.startsWith("#")) || "CurioCut";
@@ -725,7 +727,8 @@ async function resolveReelRule(mediaId, env, token, botToken) {
     resolved = await resolveFromDiscordPosts(botToken, permalink, normKw);
   }
 
-  const resourceUrl = resolved?.resource_url || "";
+  const rawResolvedUrl = (resolved?.resource_url || "").trim();
+  const resourceUrl = /^https?:\/\/\S+$/i.test(rawResolvedUrl) ? rawResolvedUrl : "";
   const title = resolved?.title || firstMeaningful;
   const keyword = resolved?.keyword || extractedKw;
   const mode = (resourceUrl || extractedKw) ? "dm" : (looksTech ? "dm" : "story");
@@ -757,24 +760,50 @@ async function resolveReelRule(mediaId, env, token, botToken) {
 }
 
 /**
+ * Posts a public Instagram reply via Graph API and returns status + trimmed error.
+ */
+async function postMetaCommentReply(commentId, message, token) {
+  try {
+    const replyUrl = `https://graph.facebook.com/v21.0/${commentId}/replies?message=${encodeURIComponent(message)}&access_token=${token}`;
+    const rRes = await fetch(replyUrl, { method: "POST" });
+    if (rRes.ok) return { ok: true, errorMsg: "" };
+    const errText = await rRes.text();
+    return { ok: false, errorMsg: errText.slice(0, 180) };
+  } catch (eRep) {
+    return { ok: false, errorMsg: eRep.message || "Network error" };
+  }
+}
+
+/**
+ * Parses ISO timestamps from Meta (normalizing +0000 offsets for V8 Date.parse).
+ */
+function parseMetaTimestampMs(ts) {
+  if (!ts) return 0;
+  const normalized = String(ts).replace(/([+-]\d{2})(\d{2})$/, "$1:$2");
+  const ms = Date.parse(normalized);
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+/**
  * Shared processor for a single Instagram comment from either a real-time
  * webhook event or the 1-minute cron poller.
  */
 async function processInstagramComment(comment, env, skipReplyCheck = false) {
   const token = env.INSTAGRAM_ACCESS_TOKEN;
-  const accountId = env.INSTAGRAM_ACCOUNT_ID || "17841434641576009";
+  const accountId = String(env.INSTAGRAM_ACCOUNT_ID || "17841434641576009");
   const botToken = env.DISCORD_BOT_TOKEN || ["MTU2OTc0NzczNTcyMzI0OTczNQ", "GJ6qW0", "yW95EFsWYvdw6E9AHynAtA02VAso9IUKOwY37s"].join(".");
   const dmsChannelId = "1569750975189876858";
 
   if (!token || !comment || !comment.id) return { skipped: "missing_token_or_comment" };
 
-  const commentId = comment.id;
+  const commentId = String(comment.id);
   const text = (comment.text || "").trim();
+  const safeText = text.slice(0, 900);
   const user = comment.from?.username || "viewer";
-  const mediaId = comment.media?.id;
+  const mediaId = comment.media?.id ? String(comment.media.id) : "";
 
   // Ignore own bot comments or known bot reply echoes
-  if (comment.from?.id === accountId || user.toLowerCase() === "curiocutt") {
+  if (String(comment.from?.id || "") === accountId || user.toLowerCase() === "curiocutt") {
     return { commentId, skipped: "self" };
   }
   const lowText = text.toLowerCase();
@@ -792,12 +821,13 @@ async function processInstagramComment(comment, env, skipReplyCheck = false) {
   // Verify live Meta Graph API state when coming from webhook without nested replies
   if (!skipReplyCheck) {
     try {
-      const checkUrl = `https://graph.facebook.com/v21.0/${commentId}/replies?access_token=${token}`;
+      const checkUrl = `https://graph.facebook.com/v21.0/${commentId}/replies?fields=id,username&limit=5&access_token=${token}`;
       const checkRes = await fetch(checkUrl);
       if (checkRes.ok) {
         const checkData = await checkRes.json();
-        if (checkData && checkData.data && checkData.data.length > 0) {
-          console.log(`[Instagram Responder] Comment ${commentId} already has ${checkData.data.length} existing replies on Meta. Skipping duplicate.`);
+        const botReplied = (checkData?.data || []).some(r => (r.username || "").toLowerCase() === "curiocutt");
+        if (botReplied) {
+          console.log(`[Instagram Responder] Comment ${commentId} already has a @curiocutt reply on Meta. Skipping duplicate.`);
           return { commentId, skipped: "already_replied" };
         }
       }
@@ -807,26 +837,22 @@ async function processInstagramComment(comment, env, skipReplyCheck = false) {
   }
 
   const rule = await resolveReelRule(mediaId, env, token, botToken);
-  const reelUrl = rule.permalink || `https://www.instagram.com/reel/${mediaId || ""}`;
+  const reelUrl = /^https?:\/\/\S+$/i.test(rule.permalink || "") ? rule.permalink : `https://www.instagram.com/reel/${mediaId || ""}`;
+  const validResourceUrl = /^https?:\/\/\S+$/i.test(rule.resource_url || "") ? rule.resource_url : "";
+  const safeRuleTitle = (rule.title || "CurioCut Reel").replace(/[\[\]()]/g, "").slice(0, 120);
 
   // Mode 1: Non-Tech Story Reel -> rotating "follow for more" public reply only, NO DM
-  if (rule.mode === "story" || !rule.resource_url) {
+  if (rule.mode === "story" || !validResourceUrl) {
     if (normalizeToken(text).length < 2) {
       console.log(`[Instagram Responder] Skipping short/empty story comment ${commentId}: "${text}"`);
       return { commentId, mediaId, mode: "story", skipped: "too_short" };
     }
     const pubText = rule.public_reply
-      ? applyTemplate(rule.public_reply, { user, keyword: rule.keyword, title: rule.title })
+      ? applyTemplate(rule.public_reply, { user, keyword: rule.keyword, title: safeRuleTitle })
       : pickReply(STORY_PUBLIC_REPLIES, commentId || text, { user });
 
-    let publicOk = false;
-    try {
-      const replyUrl = `https://graph.facebook.com/v21.0/${commentId}/replies?message=${encodeURIComponent(pubText)}&access_token=${token}`;
-      const rRes = await fetch(replyUrl, { method: "POST" });
-      publicOk = rRes.ok;
-    } catch (eRep) {
-      console.error("Story public reply error:", eRep);
-    }
+    const rep = await postMetaCommentReply(commentId, pubText, token);
+    const publicOk = rep.ok;
 
     if (botToken) {
       try {
@@ -840,10 +866,10 @@ async function processInstagramComment(comment, env, skipReplyCheck = false) {
           body: JSON.stringify({
             embeds: [{
               title: publicOk ? "Story Comment Replied" : "Story Reply Failed",
-              description: `@${user} commented \`${text}\` on **${rule.title}**`,
+              description: `@${user} commented \`${safeText}\` on **${safeRuleTitle}**`.slice(0, 1500),
               color: publicOk ? 0x0EA5E9 : 0xEF4444,
               fields: [
-                { name: "Reply Sent", value: pubText, inline: false },
+                { name: "Reply Sent", value: (publicOk ? pubText : (rep.errorMsg || "Meta API error")).slice(0, 900), inline: false },
                 { name: "Mode", value: "Story Reel (Public Follow-CTA Only, No DM)", inline: false }
               ],
               footer: { text: "24/7 Cloudflare Edge Auto-Responder" }
@@ -856,7 +882,7 @@ async function processInstagramComment(comment, env, skipReplyCheck = false) {
         });
       } catch {}
     }
-    return { commentId, mediaId, mode: "story", publicOk, dmOk: false };
+    return { commentId, mediaId, mode: "story", publicOk, dmOk: false, pubErrorMsg: rep.errorMsg };
   }
 
   // Mode 2: Tech Reel -> keyword + link-request check before replying & DMing
@@ -866,21 +892,14 @@ async function processInstagramComment(comment, env, skipReplyCheck = false) {
   }
 
   const isClaudeSkill = Boolean(rule.is_claude_skill);
-  const resourceUrl = rule.resource_url;
-  const reelTitle = rule.title || "CurioCut Tool";
-  const reelKeyword = rule.keyword || text.toUpperCase();
+  const resourceUrl = validResourceUrl;
+  const reelTitle = safeRuleTitle || "CurioCut Tool";
+  const reelKeyword = (rule.keyword || text.toUpperCase()).slice(0, 60);
 
   const actionButtons = [
-    { type: 2, style: 5, label: "View Reel on Instagram", url: reelUrl }
+    { type: 2, style: 5, label: "View Reel on Instagram", url: reelUrl },
+    { type: 2, style: 5, label: isClaudeSkill ? "Open Claude Skill Repo" : "Open Tool Repo", url: resourceUrl }
   ];
-  if (resourceUrl && resourceUrl.startsWith("http")) {
-    actionButtons.push({
-      type: 2,
-      style: 5,
-      label: isClaudeSkill ? "Open Claude Skill Repo" : "Open Tool Repo",
-      url: resourceUrl
-    });
-  }
   const components = [{ type: 1, components: actionButtons }];
 
   // Stage 1: Initial Discord log
@@ -889,11 +908,11 @@ async function processInstagramComment(comment, env, skipReplyCheck = false) {
     const initPayload = {
       embeds: [{
         title: isClaudeSkill ? "Claude Skill Comment Detected" : "New Keyword Comment Detected",
-        description: `@${user} commented on **${reelTitle}**:`,
+        description: `@${user} commented on **${reelTitle}**:`.slice(0, 1500),
         color: isClaudeSkill ? 0x8B5CF6 : 0x3B82F6,
         fields: [
-          { name: "User", value: `@${user}`, inline: true },
-          { name: "Comment", value: text, inline: true },
+          { name: "User", value: `@${user}`.slice(0, 200), inline: true },
+          { name: "Comment", value: (safeText || "-").slice(0, 900), inline: true },
           { name: "Status", value: "Sending DM & Public Reply...", inline: false }
         ],
         footer: { text: "24/7 Cloudflare Edge Auto-Responder" }
@@ -918,18 +937,11 @@ async function processInstagramComment(comment, env, skipReplyCheck = false) {
   }
 
   // Stage 2: Send public reply on Reel (no em dashes)
-  let publicOk = false;
   const pubText = rule.public_reply
     ? applyTemplate(rule.public_reply, { user, keyword: reelKeyword, title: reelTitle, link: resourceUrl })
     : pickReply(TECH_DM_REPLIES, commentId || text, { user });
-
-  try {
-    const replyUrl = `https://graph.facebook.com/v21.0/${commentId}/replies?message=${encodeURIComponent(pubText)}&access_token=${token}`;
-    const rRes = await fetch(replyUrl, { method: "POST" });
-    publicOk = rRes.ok;
-  } catch (eRep) {
-    console.error("Public reply error:", eRep);
-  }
+  const rep = await postMetaCommentReply(commentId, pubText, token);
+  const publicOk = rep.ok;
 
   // Stage 3: Send private DM with link (try Page me/messages first, then IG accountId/messages)
   let dmOk = false;
@@ -999,13 +1011,13 @@ async function processInstagramComment(comment, env, skipReplyCheck = false) {
       const deliveredPayload = {
         embeds: [{
           title,
-          description: desc,
+          description: desc.slice(0, 1500),
           color,
           fields: [
-            { name: "User", value: `@${user}`, inline: true },
-            { name: "Keyword", value: reelKeyword || text.toUpperCase(), inline: true },
-            { name: isClaudeSkill ? "Claude Skill" : "Resource", value: `[${reelTitle}](${resourceUrl})`, inline: false },
-            { name: "Status", value: statusStr, inline: false }
+            { name: "User", value: `@${user}`.slice(0, 200), inline: true },
+            { name: "Keyword", value: (reelKeyword || text.toUpperCase() || "-").slice(0, 100), inline: true },
+            { name: isClaudeSkill ? "Claude Skill" : "Resource", value: `[${reelTitle}](${resourceUrl})`.slice(0, 900), inline: false },
+            { name: "Status", value: statusStr.slice(0, 900), inline: false }
           ],
           footer: { text: "24/7 Cloudflare Edge Auto-Responder" }
         }],
@@ -1051,17 +1063,17 @@ async function handleInstagramWebhook(body, env) {
  */
 async function pollRecentInstagramComments(env) {
   const token = env.INSTAGRAM_ACCESS_TOKEN;
-  const accountId = env.INSTAGRAM_ACCOUNT_ID || "17841434641576009";
+  const accountId = String(env.INSTAGRAM_ACCOUNT_ID || "17841434641576009");
   if (!token) return { ok: false, error: "missing_token" };
 
-  const cutoffMs = Date.now() - 2 * 3600 * 1000;
+  const cutoffMs = Date.now() - 6 * 3600 * 1000;
   const processed = [];
   let checkedMedia = 0;
   const scanAll = (new Date().getUTCMinutes() % 10) === 0;
   const maxPages = scanAll ? 10 : 1;
 
   try {
-    let nextUrl = `https://graph.facebook.com/v21.0/${accountId}/media?fields=id,permalink,timestamp,comments.limit(10){id,text,from,username,timestamp,replies.limit(1){id}}&limit=50&access_token=${token}`;
+    let nextUrl = `https://graph.facebook.com/v21.0/${accountId}/media?fields=id,permalink,timestamp,comments.limit(25){id,text,from,username,timestamp,replies.limit(5){id,username}}&limit=50&access_token=${token}`;
     let page = 0;
 
     while (nextUrl && page < maxPages) {
@@ -1078,12 +1090,13 @@ async function pollRecentInstagramComments(env) {
         const comments = m.comments?.data || [];
         for (const c of comments) {
           if (!c.id) continue;
-          if (c.replies?.data && c.replies.data.length > 0) continue;
+          const botReplied = (c.replies?.data || []).some(r => (r.username || "").toLowerCase() === "curiocutt");
+          if (botReplied) continue;
 
           const uname = c.username || c.from?.username || "viewer";
-          if (c.from?.id === accountId || uname.toLowerCase() === "curiocutt") continue;
+          if (String(c.from?.id || "") === accountId || uname.toLowerCase() === "curiocutt") continue;
 
-          const cTs = c.timestamp ? Date.parse(c.timestamp) : 0;
+          const cTs = parseMetaTimestampMs(c.timestamp);
           if (cTs && cTs < cutoffMs) continue;
 
           const resItem = await processInstagramComment({

@@ -351,9 +351,12 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
             details=f"Publishing {file_size_mb:.1f} MB vertical short to YouTube Shorts & Instagram Reels..."
         )
         if style in ["claude-desk", "dev-studio"]:
-            cta = script_data.get("cta_keyword", "TOOL")
+            cta = (script_data.get("cta_keyword") or "TOOL").strip()
+            raw_res_url = str(script_data.get("resource_url") or "").strip()
+            has_res_url = raw_res_url.startswith(("http://", "https://"))
+            cta_line = f"Follow & comment '{cta}' for the direct link in your DMs!\n\n" if has_res_url else ""
             desc = (
-                f"Follow & comment '{cta}' for the direct link in your DMs!\n\n"
+                f"{cta_line}"
                 f"{title}\n\n"
                 f"Daily underground AI breakthroughs & open-source developer exploits.\n\n"
                 f"#ai #developer #claude #anthropic #tech #github #coding #automation #curiocut #programming #software #opensource #aitools"
@@ -420,17 +423,22 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
                 print("\n  >> Uploading to Instagram Reels...")
                 from instagram_uploader import upload_reel
                 is_tech = style in ["claude-desk", "dev-studio"]
+                raw_url = str(script_data.get("resource_url") or "").strip()
+                valid_url = raw_url if raw_url.startswith(("http://", "https://")) else ""
+                has_tech_dm = is_tech and bool(valid_url)
                 reel_meta = {
                     "title": title,
-                    "mode": "dm" if is_tech else "story",
-                    "cta_keyword": script_data.get("cta_keyword", "") if is_tech else "",
-                    "resource_url": script_data.get("resource_url", "") if is_tech else "",
+                    "mode": "dm" if has_tech_dm else "story",
+                    "cta_keyword": script_data.get("cta_keyword", "") if has_tech_dm else "",
+                    "resource_url": valid_url if has_tech_dm else "",
                     "category": script_data.get("category", style),
                     "is_claude_skill": style == "claude-desk" or script_data.get("category") == "claude_skill",
                 }
-                if is_tech:
+                if has_tech_dm:
                     kw = reel_meta.get("cta_keyword") or "TOOL"
                     first_cmt = f"Follow first so IG lets the DM go through, then drop '{kw}' below and check your DMs within a minute!"
+                elif is_tech:
+                    first_cmt = "Follow @curiocutt for daily open-source AI tools and coding breakdowns."
                 else:
                     story_openers = {
                         "deep-dive": "Did you expect that ending? Follow @curiocutt for daily human body deep dives.",
@@ -452,8 +460,8 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
                     caption=desc,
                     permalink=ig_permalink,
                     media_id=ig_media_id,
-                    keyword=script_data.get("cta_keyword"),
-                    resource_url=script_data.get("resource_url"),
+                    keyword=reel_meta.get("cta_keyword"),
+                    resource_url=reel_meta.get("resource_url"),
                     title=title
                 )
 
@@ -463,8 +471,9 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
                     reels_map = json.loads(reels_map_file.read_text(encoding="utf-8")) if reels_map_file.exists() else {}
                     reels_map[str(ig_media_id)] = {
                         "title": title,
-                        "cta_keyword": script_data.get("cta_keyword", "TOOL"),
-                        "resource_url": script_data.get("resource_url", ""),
+                        "cta_keyword": reel_meta.get("cta_keyword", ""),
+                        "resource_url": reel_meta.get("resource_url", ""),
+                        "mode": reel_meta.get("mode", "story"),
                         "permalink": ig_permalink
                     }
                     reels_map_file.write_text(json.dumps(reels_map, indent=2), encoding="utf-8")

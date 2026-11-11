@@ -16,7 +16,7 @@ if ENV_FILE.exists():
     for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
         if "=" in line and not line.strip().startswith("#"):
             k, v = line.split("=", 1)
-            os.environ[k.strip()] = v.strip()
+            os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
 
 GRAPH_API_VERSION = "v21.0"
 GRAPH_API_BASE = f"https://graph.facebook.com/{GRAPH_API_VERSION}"
@@ -108,18 +108,19 @@ def register_reel_edge(media_id, metadata=None, caption="", permalink=""):
     meta = dict(metadata or {})
     kw = (meta.get("cta_keyword") or meta.get("keyword") or "").strip()
     if not kw and caption:
-        m = re.search(r"(?:comment|reply)\s*['\"]([A-Za-z0-9_*]+)['\"]", caption, flags=re.IGNORECASE)
+        m = re.search(r"(?:comment|reply|drop)\s*['\"]([A-Za-z0-9_*\-\s]+?)['\"]", caption, flags=re.IGNORECASE)
         if m:
-            kw = m.group(1).upper()
+            kw = m.group(1).strip().upper()
 
-    resource_url = (meta.get("resource_url") or "").strip()
-    mode = meta.get("mode") or ("dm" if (resource_url or kw) else "story")
+    raw_url = (meta.get("resource_url") or "").strip()
+    resource_url = raw_url if raw_url.startswith(("http://", "https://")) else ""
+    mode = "dm" if (resource_url and meta.get("mode", "dm") != "story") else "story"
 
     payload = {
         "media_id": str(media_id),
         "title": meta.get("title") or (caption.splitlines()[0][:80] if caption else "CurioCut Reel"),
         "mode": mode,
-        "keyword": kw,
+        "keyword": kw if mode == "dm" else "",
         "resource_url": resource_url,
         "public_reply": meta.get("public_reply"),
         "dm_text": meta.get("dm_text"),
@@ -128,41 +129,50 @@ def register_reel_edge(media_id, metadata=None, caption="", permalink=""):
         "is_claude_skill": bool(meta.get("is_claude_skill"))
     }
 
-    try:
-        req = urllib.request.Request(
-            f"{worker_url}/register-reel",
-            data=json.dumps(payload).encode("utf-8"),
-            headers={
-                "Content-Type": "application/json",
-                "X-Curio-Auth": auth_token,
-                "User-Agent": "CurioCut-Publisher/1.0"
-            },
-            method="POST"
-        )
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            res = json.loads(resp.read().decode("utf-8"))
-            if res.get("ok"):
-                print(f"  Edge Comment-to-DM rule registered automatically ({mode}, keyword={kw or 'none'}).")
-                return True
-    except Exception as e:
-        print(f"  Edge registry note: {e}")
+    for attempt in range(2):
+        try:
+            req = urllib.request.Request(
+                f"{worker_url}/register-reel",
+                data=json.dumps(payload).encode("utf-8"),
+                headers={
+                    "Content-Type": "application/json",
+                    "X-Curio-Auth": auth_token,
+                    "User-Agent": "CurioCut-Publisher/1.0"
+                },
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                res = json.loads(resp.read().decode("utf-8"))
+                if res.get("ok"):
+                    print(f"  Edge Comment-to-DM rule registered automatically ({mode}, keyword={kw or 'none'}).")
+                    return True
+        except Exception as e:
+            if attempt == 0:
+                time.sleep(2)
+            else:
+                print(f"  Edge registry note: {e}")
     return False
 
 def post_first_comment(media_id, comment_text, access_token):
-    """Posts an initial creator comment right after a Reel is published."""
+    """Posts an initial creator comment after a Reel finishes propagating."""
     if not media_id or not comment_text or not access_token:
         return False
-    try:
-        resp = _api_request(
-            f"{GRAPH_API_BASE}/{media_id}/comments",
-            method="POST",
-            data={"message": comment_text, "access_token": access_token},
-        )
-        if resp.get("id"):
-            print(f"  First comment posted (ID: {resp['id']}): {comment_text[:60]}...")
-            return True
-    except Exception as e:
-        print(f"  First comment note: {e}")
+    time.sleep(3)
+    for attempt in range(3):
+        try:
+            resp = _api_request(
+                f"{GRAPH_API_BASE}/{media_id}/comments",
+                method="POST",
+                data={"message": comment_text, "access_token": access_token},
+            )
+            if isinstance(resp, dict) and resp.get("id"):
+                print(f"  First comment posted (ID: {resp['id']}): {comment_text[:60]}...")
+                return True
+        except Exception as e:
+            if attempt < 2:
+                time.sleep(3)
+            else:
+                print(f"  First comment note: {e}")
     return False
 
 def upload_reel(video_source, caption="New Short by CurioCut", ig_user_id=None, access_token=None, metadata=None, first_comment=None):
