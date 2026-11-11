@@ -154,53 +154,68 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
 
     history_file = WORKSPACE / "history.json"
     
-    # 1. Dynamic AI Style Selection
-    if topic and topic != "auto" and (not style or style in ["auto", "classic"]):
-        style = classify_style_for_story(topic)
-        print(f"[AI Director] Classified topic '{topic}' -> Dynamic Style: '{style}'")
-    elif not style or style in ["auto", "classic"]:
-        style = get_next_style(history_file)
-        print(f"[AI Director] Active Rotation Style: '{style}'")
-
-    template_dir = SKILL_DIR / "styles" / style / "example"
-    if not template_dir.exists():
-        raise FileNotFoundError(f"Style template not found: {template_dir}")
-
-    # 2. Determine Script (100% Dynamic Narrative Matching)
+    # 1. Determine Script and Dynamic Style
     from generate_script import generate_script
-    if style in ["claude-desk", "dev-studio"]:
+    script_data = None
+
+    if topic and topic != "auto":
+        # Topic explicitly provided: classify style if not forced
+        if not style or style in ["auto", "classic"]:
+            style = classify_style_for_story(topic)
+            print(f"[AI Director] Classified topic '{topic}' -> Dynamic Style: '{style}'")
+        else:
+            print(f"[AI Director] User-specified Style: '{style}' for topic: '{topic}'")
+
+        if style in ["claude-desk", "dev-studio"]:
+            from generate_tech_dialogue import generate_dialogue_script
+            story_data = {"title": topic, "premise": topic, "cta_keyword": "TOOL"}
+            try:
+                script_data = generate_dialogue_script(story_data, style=style)
+            except Exception as e:
+                print(f"Notice: Dynamic tech dialogue exception: {e}.")
+        else:
+            print(f"[1/5] Writing viral script matching style '{style}' for topic: {topic}...")
+            try:
+                script_data = generate_script(topic)
+            except Exception as e:
+                print(f"Notice: Dynamic script generation exception: {e}.")
+
+    elif style in ["claude-desk", "dev-studio"]:
+        # Dedicated Tech Slots (Slot 2 / Slot 3)
         from tech_harvester import get_next_tech_story
         from generate_tech_dialogue import generate_dialogue_script
-        if topic and topic != "auto":
-            story_data = {"title": topic, "premise": topic, "cta_keyword": "TOOL"}
-        else:
-            harvest_mode = "skill" if style == "claude-desk" else "tech"
-            print(f"[1/5] Harvesting targeted {harvest_mode.upper()} intel for {style}...")
-            story_data = get_next_tech_story(force_mode=harvest_mode)
+        harvest_mode = "skill" if style == "claude-desk" else "tech"
+        print(f"[1/5] Harvesting targeted {harvest_mode.upper()} intel for {style}...")
+        story_data = get_next_tech_story(force_mode=harvest_mode)
         print(f"[1/5] Generating 2-character dialogue script for '{story_data.get('title')}' ({style})...")
         try:
             script_data = generate_dialogue_script(story_data, style=style)
         except Exception as e:
-            print(f"Notice: Dynamic tech dialogue exception: {e}. Using synchronized style script.")
-            script_data = None
-    elif topic and topic != "auto":
-        print(f"[1/5] Writing viral script matching style '{style}' for topic: {topic}...")
-        try:
-            script_data = generate_script(topic)
-        except Exception as e:
-            print(f"Notice: Dynamic script generation exception: {e}. Using synchronized style script.")
-            script_data = None
+            print(f"Notice: Dynamic tech dialogue exception: {e}.")
+
     else:
-        print(f"[1/5] Harvesting dynamic viral story for '{style}' engine...")
+        # Fully autonomous daily run: harvest story across niches and match style
+        print("[1/5] Harvesting dynamic viral story from global knowledge vault...")
+        from story_harvester import get_next_daily_story
         try:
-            from story_harvester import get_next_daily_story
             story_data = get_next_daily_story()
+            # If style was 'auto' or unspecified, match to harvested story niche
+            if not style or style in ["auto", "classic"]:
+                style = story_data.get("style", "tall-tale")
+                print(f"[AI Director] Harvested '{story_data.get('title')}' -> Matched Style: '{style}'")
+            else:
+                print(f"[AI Director] Using specified style '{style}' with story: '{story_data.get('title')}'")
+
             premise = story_data.get("premise", story_data.get("title", ""))
-            print(f"  Harvested: {story_data.get('title')}")
             script_data = generate_script(premise)
         except Exception as e:
-            print(f"Notice: Dynamic script generation exception: {e}. Using synchronized style script.")
-            script_data = None
+            print(f"Notice: Autonomous story harvesting exception: {e}.")
+            if not style or style in ["auto", "classic"]:
+                style = get_next_style(history_file)
+
+    template_dir = SKILL_DIR / "styles" / style / "example"
+    if not template_dir.exists():
+        raise FileNotFoundError(f"Style template not found: {template_dir}")
             
         if not script_data:
             script_path = template_dir / "script.json"
