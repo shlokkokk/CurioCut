@@ -191,3 +191,4 @@ All three slots can also be manually triggered from Discord `#panel` or via GitH
 ## License
 
 MIT. The Three.js vendor files in `faceless-shorts-skill/` are MIT licensed separately — see `vendor/LICENSE-three.txt` in each style directory.
+
