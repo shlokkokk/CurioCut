@@ -1,8 +1,10 @@
 # Uploads vertical mp4 to Instagram Reels via Meta Graph API
 import os
 import sys
+import re
 import time
 import json
+import hashlib
 import urllib.request
 import urllib.parse
 import urllib.error
@@ -91,7 +93,79 @@ def upload_to_temp_host(video_path):
 
     raise RuntimeError("Failed to host video for Instagram Reels ingest. Check internet connection.")
 
-def upload_reel(video_source, caption="New Short by CurioCut", ig_user_id=None, access_token=None):
+def register_reel_edge(media_id, metadata=None, caption="", permalink=""):
+    """Automatically registers published Reel comment-to-DM rules in Cloudflare Edge KV."""
+    if not media_id:
+        return False
+
+    worker_url = os.environ.get("CURIOCUT_EDGE_URL", "https://curiocut-corn.pcgpt00.workers.dev").rstrip("/")
+    dms_webhook = os.environ.get("DISCORD_WEBHOOK_DMS_SENT", "").strip()
+    explicit_secret = os.environ.get("EDGE_REGISTER_SECRET", "").strip()
+    auth_token = explicit_secret or (hashlib.sha256(dms_webhook.encode("utf-8")).hexdigest() if dms_webhook else "")
+    if not auth_token:
+        return False
+
+    meta = dict(metadata or {})
+    kw = (meta.get("cta_keyword") or meta.get("keyword") or "").strip()
+    if not kw and caption:
+        m = re.search(r"(?:comment|reply)\s*['\"]([A-Za-z0-9_*]+)['\"]", caption, flags=re.IGNORECASE)
+        if m:
+            kw = m.group(1).upper()
+
+    resource_url = (meta.get("resource_url") or "").strip()
+    mode = meta.get("mode") or ("dm" if (resource_url or kw) else "story")
+
+    payload = {
+        "media_id": str(media_id),
+        "title": meta.get("title") or (caption.splitlines()[0][:80] if caption else "CurioCut Reel"),
+        "mode": mode,
+        "keyword": kw,
+        "resource_url": resource_url,
+        "public_reply": meta.get("public_reply"),
+        "dm_text": meta.get("dm_text"),
+        "permalink": permalink or f"https://www.instagram.com/reel/{media_id}/",
+        "category": meta.get("category") or ("story" if mode == "story" else "breaking_tech"),
+        "is_claude_skill": bool(meta.get("is_claude_skill"))
+    }
+
+    try:
+        req = urllib.request.Request(
+            f"{worker_url}/register-reel",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "X-Curio-Auth": auth_token,
+                "User-Agent": "CurioCut-Publisher/1.0"
+            },
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            res = json.loads(resp.read().decode("utf-8"))
+            if res.get("ok"):
+                print(f"  Edge Comment-to-DM rule registered automatically ({mode}, keyword={kw or 'none'}).")
+                return True
+    except Exception as e:
+        print(f"  Edge registry note: {e}")
+    return False
+
+def post_first_comment(media_id, comment_text, access_token):
+    """Posts an initial creator comment right after a Reel is published."""
+    if not media_id or not comment_text or not access_token:
+        return False
+    try:
+        resp = _api_request(
+            f"{GRAPH_API_BASE}/{media_id}/comments",
+            method="POST",
+            data={"message": comment_text, "access_token": access_token},
+        )
+        if resp.get("id"):
+            print(f"  First comment posted (ID: {resp['id']}): {comment_text[:60]}...")
+            return True
+    except Exception as e:
+        print(f"  First comment note: {e}")
+    return False
+
+def upload_reel(video_source, caption="New Short by CurioCut", ig_user_id=None, access_token=None, metadata=None, first_comment=None):
     """Full workflow to publish a Reel on Instagram.
     video_source can be either a public HTTPS URL or a local path to an MP4.
     """
@@ -175,10 +249,14 @@ def upload_reel(video_source, caption="New Short by CurioCut", ig_user_id=None, 
         pass
 
     print("\n" + "="*60)
-    print(f"🎉 REEL SUCCESSFULLY PUBLISHED!")
+    print(f"REEL SUCCESSFULLY PUBLISHED!")
     print(f"Instagram Media ID: {media_id}")
     print(f"Live URL: {permalink}")
     print("="*60 + "\n")
+
+    register_reel_edge(media_id, metadata=metadata, caption=caption, permalink=permalink)
+    if first_comment:
+        post_first_comment(media_id, first_comment, access_token)
     return media_id, permalink
 
 if __name__ == "__main__":

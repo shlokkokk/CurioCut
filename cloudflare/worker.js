@@ -40,9 +40,39 @@ async function clearSlotSkipped() {
   }
 }
 
-async function isCommentProcessed(commentId) {
+async function sha256Hex(str) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function verifyEdgeAuth(request, env) {
+  const provided = (
+    request.headers.get("x-curio-auth") ||
+    (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "")
+  ).trim();
+  if (!provided) return false;
+
+  if (env.EDGE_REGISTER_SECRET && provided === env.EDGE_REGISTER_SECRET) {
+    return true;
+  }
+  if (env.DISCORD_WEBHOOK_DMS_SENT) {
+    const expected = await sha256Hex(env.DISCORD_WEBHOOK_DMS_SENT);
+    if (provided === expected) return true;
+  }
+  return false;
+}
+
+function normalizeToken(str) {
+  return (str || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+}
+
+async function isCommentProcessed(commentId, env) {
   if (!commentId) return false;
   try {
+    if (env && env.REELS_KV) {
+      const kvHit = await env.REELS_KV.get(`seen:${commentId}`);
+      if (kvHit) return true;
+    }
     const url = `https://curiocut.internal/processed-comment/${commentId}`;
     const res = await caches.default.match(url);
     return !!res;
@@ -51,9 +81,12 @@ async function isCommentProcessed(commentId) {
   }
 }
 
-async function markCommentProcessed(commentId) {
+async function markCommentProcessed(commentId, env) {
   if (!commentId) return;
   try {
+    if (env && env.REELS_KV) {
+      await env.REELS_KV.put(`seen:${commentId}`, "1", { expirationTtl: 604800 });
+    }
     const url = `https://curiocut.internal/processed-comment/${commentId}`;
     const res = new Response(JSON.stringify({ commentId, processedAt: Date.now() }), {
       headers: {
@@ -69,6 +102,12 @@ async function markCommentProcessed(commentId) {
 
 export default {
   async scheduled(event, env, ctx) {
+    const cronStr = (event && event.cron) || "";
+    if (cronStr === "* * * * *") {
+      ctx.waitUntil(pollRecentInstagramComments(env));
+      return;
+    }
+
     // Check if user requested to skip the upcoming slot
     if (await isSlotSkipped()) {
       console.log("[CurioCut Edge Cron] Skipping scheduled slot as requested from Discord. Resetting skip flag.");
@@ -77,7 +116,6 @@ export default {
     }
 
     const hourUTC = new Date().getUTCHours();
-    const cronStr = (event && event.cron) || "";
 
     let slotType = "classic";
     if (hourUTC === 12 || cronStr.includes("12")) {
@@ -280,6 +318,85 @@ export default {
       return new Response(statusText, { headers: { "Content-Type": "text/plain" } });
     }
 
+    // 2.5 Automatic Reel Registration & Lookup (Cloudflare KV Edge Registry)
+    if (path.includes("register-reel") && request.method === "POST") {
+      if (!(await verifyEdgeAuth(request, env))) {
+        return Response.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+      }
+      if (!env.REELS_KV) {
+        return Response.json({ ok: false, error: "REELS_KV not bound" }, { status: 500 });
+      }
+      try {
+        const body = await request.json();
+        const items = Array.isArray(body.reels) ? body.reels : [body];
+        let count = 0;
+        for (const item of items) {
+          const mediaId = String(item.media_id || "").trim();
+          if (!mediaId) continue;
+          const keyword = (item.keyword || item.cta_keyword || "").trim();
+          const resourceUrl = (item.resource_url || "").trim();
+          const mode = item.mode || (resourceUrl || keyword ? "dm" : "story");
+          const record = {
+            media_id: mediaId,
+            title: item.title || "CurioCut Reel",
+            mode,
+            keyword: keyword || (mode === "dm" ? "*" : ""),
+            resource_url: resourceUrl,
+            public_reply: item.public_reply || null,
+            dm_text: item.dm_text || null,
+            permalink: item.permalink || `https://www.instagram.com/reel/${mediaId}/`,
+            category: item.category || "",
+            is_claude_skill: Boolean(
+              item.is_claude_skill ||
+              item.category === "claude_skill" ||
+              (item.title || "").toLowerCase().includes("claude")
+            ),
+            updated_at: Date.now()
+          };
+          await env.REELS_KV.put(`reel:${mediaId}`, JSON.stringify(record));
+          if (keyword && keyword !== "*" && resourceUrl) {
+            await env.REELS_KV.put(`kw:${normalizeToken(keyword)}`, JSON.stringify(record));
+          }
+          count++;
+        }
+        if (env.INSTAGRAM_ACCESS_TOKEN) {
+          const accountId = env.INSTAGRAM_ACCOUNT_ID || "17841434641576009";
+          ctx.waitUntil(
+            fetch(`https://graph.facebook.com/v21.0/${accountId}/subscribed_apps?subscribed_fields=comments,messages&access_token=${env.INSTAGRAM_ACCESS_TOKEN}`, {
+              method: "POST"
+            }).catch(() => {})
+          );
+        }
+        return Response.json({ ok: true, registered: count });
+      } catch (err) {
+        return Response.json({ ok: false, error: err.message }, { status: 400 });
+      }
+    }
+
+    if (path.endsWith("/reels") && request.method === "GET") {
+      if (!(await verifyEdgeAuth(request, env))) {
+        return Response.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+      }
+      if (!env.REELS_KV) {
+        return Response.json({ ok: false, error: "REELS_KV not bound" }, { status: 500 });
+      }
+      const listed = await env.REELS_KV.list({ prefix: "reel:", limit: 100 });
+      const reels = [];
+      for (const k of listed.keys) {
+        const val = await env.REELS_KV.get(k.name, "json");
+        if (val) reels.push(val);
+      }
+      return Response.json({ ok: true, count: reels.length, reels });
+    }
+
+    if (path.endsWith("/poll-comments")) {
+      if (!(await verifyEdgeAuth(request, env))) {
+        return Response.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+      }
+      const result = await pollRecentInstagramComments(env);
+      return Response.json(result);
+    }
+
     // 3. Instagram Real-Time Comment-to-DM Webhook
     if (path.includes("instagram") || path.includes("webhook")) {
       // GET: Meta Webhook Verification
@@ -296,7 +413,17 @@ export default {
 
       // POST: Instant Event from Meta
       if (request.method === "POST") {
-        ctx.waitUntil(handleInstagramWebhook(request, env));
+        let parsedBody = null;
+        try {
+          parsedBody = await request.json();
+        } catch (err) {
+          return Response.json({ ok: false, error: "Invalid JSON body" }, { status: 400 });
+        }
+        if (urlObj.searchParams.get("sync") === "1") {
+          const trace = await handleInstagramWebhook(parsedBody, env);
+          return Response.json({ ok: true, trace });
+        }
+        ctx.waitUntil(handleInstagramWebhook(parsedBody, env));
         return new Response("EVENT_RECEIVED", { status: 200 });
       }
     }
@@ -405,240 +532,573 @@ async function verifyDiscordSignature(request, rawBody, publicKeyHex) {
   }
 }
 
-async function handleInstagramWebhook(request, env) {
+const TECH_DM_REPLIES = [
+  "Check your DMs @{user}, just sent it over!",
+  "Sent to your DMs @{user}! Check your message requests.",
+  "Just dropped the link in your DMs @{user}!",
+  "Done @{user}, sent the setup link to your inbox.",
+  "Sent @{user}! Check your Instagram DMs."
+];
+
+const STORY_PUBLIC_REPLIES = [
+  "Appreciate you watching @{user}! Follow @curiocutt so you don't miss tomorrow's story.",
+  "Wild right?! New bizarre true stories drop daily on @curiocutt, hit follow to stay tuned.",
+  "Thanks for dropping by @{user}! Follow @curiocutt for more stories like this every day.",
+  "Glad you caught this one @{user}, follow so tomorrow's drop hits your feed!",
+  "Appreciate the comment @{user}! Follow @curiocutt for daily deep dives and true stories."
+];
+
+function pickReply(list, seedStr, vars) {
+  let hash = 0;
+  for (let i = 0; i < seedStr.length; i++) {
+    hash = ((hash << 5) - hash + seedStr.charCodeAt(i)) | 0;
+  }
+  const tpl = list[Math.abs(hash) % list.length];
+  return applyTemplate(tpl, vars);
+}
+
+function applyTemplate(tpl, vars) {
+  return String(tpl || "")
+    .replace(/\{user\}/gi, vars.user || "friend")
+    .replace(/\{keyword\}/gi, vars.keyword || "")
+    .replace(/\{title\}/gi, vars.title || "")
+    .replace(/\{link\}/gi, vars.link || "");
+}
+
+/**
+ * Returns true if two strings are within 1 edit (insert, delete, substitute,
+ * or adjacent character swap) so minor keyword typos still match.
+ */
+function isOneTypoAway(a, b) {
+  const m = a.length;
+  const n = b.length;
+  if (Math.abs(m - n) > 1) return false;
+  if (a === b) return true;
+
+  if (m === n) {
+    let diffs = [];
+    for (let i = 0; i < m; i++) {
+      if (a[i] !== b[i]) {
+        diffs.push(i);
+        if (diffs.length > 2) return false;
+      }
+    }
+    if (diffs.length === 1) return true;
+    // Adjacent transposition (e.g. DHSGO vs DSHGO)
+    return diffs.length === 2 && diffs[1] === diffs[0] + 1 && a[diffs[0]] === b[diffs[1]] && a[diffs[1]] === b[diffs[0]];
+  }
+
+  const [shorter, longer] = m < n ? [a, b] : [b, a];
+  let i = 0;
+  let j = 0;
+  let skipped = false;
+  while (i < shorter.length && j < longer.length) {
+    if (shorter[i] === longer[j]) {
+      i++;
+      j++;
+    } else if (!skipped) {
+      skipped = true;
+      j++;
+    } else {
+      return false;
+    }
+  }
+  return true;
+}
+
+function shouldTriggerDm(commentText, ruleKeyword) {
+  const kw = (ruleKeyword || "").trim();
+  if (kw === "*") return true;
+
+  const normComment = normalizeToken(commentText);
+  const normKw = normalizeToken(kw);
+  if (normKw && normComment.includes(normKw)) {
+    return true;
+  }
+
+  if (normKw.length >= 4) {
+    const words = (commentText || "").match(/[a-zA-Z0-9]+/g) || [];
+    for (const w of words) {
+      if (isOneTypoAway(w.toUpperCase(), normKw)) {
+        return true;
+      }
+    }
+  }
+
+  return /\b(LINK|REPO|GITHUB|SEND|DM|URL|SCRIPT|PROMPT|SOURCE)\b/i.test(commentText);
+}
+
+async function resolveFromDiscordPosts(botToken, permalink, normKw) {
+  if (!botToken) return null;
   try {
-    const body = await request.json();
-    const token = env.INSTAGRAM_ACCESS_TOKEN;
-    const accountId = env.INSTAGRAM_ACCOUNT_ID || "17841434641576009";
-    const botToken = env.DISCORD_BOT_TOKEN || ["MTU2OTc0NzczNTcyMzI0OTczNQ", "GJ6qW0", "yW95EFsWYvdw6E9AHynAtA02VAso9IUKOwY37s"].join(".");
-    const dmsChannelId = "1569750975189876858";
+    const res = await fetch("https://discord.com/api/v10/channels/1569382175185305601/messages?limit=20", {
+      headers: { "Authorization": `Bot ${botToken}`, "User-Agent": "CurioCut-Edge" }
+    });
+    if (!res.ok) return null;
+    const msgs = await res.json();
+    for (const m of msgs) {
+      const e = m.embeds?.[0];
+      if (!e) continue;
+      const desc = e.description || "";
+      const fields = e.fields || [];
+      const kwField = fields.find(f => (f.name || "").toLowerCase().includes("growth trigger"));
+      const resField = fields.find(f => (f.name || "").toLowerCase().includes("resource delivered"));
+      const urlMatch = (resField?.value || "").match(/\((https?:\/\/[^)]+)\)/);
+      if (!urlMatch) continue;
 
-    if (!token) return;
+      const kwMatch = (kwField?.value || "").match(/`([^`]+)`/);
+      const foundKw = kwMatch ? kwMatch[1].trim() : "";
+      const linkMatches = permalink && desc.includes(permalink.replace(/\/$/, ""));
+      const kwMatches = normKw && foundKw && normalizeToken(foundKw) === normKw;
+      if (linkMatches || kwMatches) {
+        return {
+          title: (e.title || "").replace(/^Instagram Reel:\s*/i, "").trim() || "CurioCut Tool",
+          keyword: foundKw || normKw,
+          resource_url: urlMatch[1].trim()
+        };
+      }
+    }
+  } catch (err) {
+    console.error("Discord fallback lookup error:", err);
+  }
+  return null;
+}
 
+async function resolveReelRule(mediaId, env, token, botToken) {
+  if (mediaId && env.REELS_KV) {
+    const kvRule = await env.REELS_KV.get(`reel:${mediaId}`, "json");
+    if (kvRule) return kvRule;
+  }
+
+  // Fallback: fetch live IG post caption + permalink
+  let caption = "";
+  let permalink = mediaId ? `https://www.instagram.com/reel/${mediaId}/` : "";
+  if (mediaId && token) {
+    try {
+      const mRes = await fetch(`https://graph.facebook.com/v21.0/${mediaId}?fields=caption,permalink&access_token=${token}`);
+      if (mRes.ok) {
+        const mData = await mRes.json();
+        caption = mData.caption || "";
+        permalink = mData.permalink || permalink;
+      }
+    } catch (err) {
+      console.error("Live caption fetch error:", err);
+    }
+  }
+
+  const kwMatch = caption.match(/(?:comment|reply)\s*['"]([A-Za-z0-9_*]+)['"]/i);
+  const extractedKw = kwMatch ? kwMatch[1].toUpperCase() : "";
+  const normKw = normalizeToken(extractedKw);
+  const lines = caption.split(/\n+/).map(l => l.trim()).filter(Boolean);
+  const firstMeaningful = lines.find(l => !l.toLowerCase().includes("comment ") && !l.startsWith("#")) || "CurioCut";
+  const lowerCap = caption.toLowerCase();
+  const looksTech = Boolean(extractedKw) || ["#ai", "#developer", "#coding", "#opensource", "#github", "#claude", "#deepseek"].some(t => lowerCap.includes(t));
+
+  let resolved = null;
+  if (normKw && env.REELS_KV) {
+    resolved = await env.REELS_KV.get(`kw:${normKw}`, "json");
+  }
+
+  if (!resolved) {
+    try {
+      const ghRes = await fetch("https://raw.githubusercontent.com/shlokkokk/CurioCut/main/published_reels.json", {
+        headers: { "User-Agent": "CurioCut-Edge/1.0" }
+      });
+      if (ghRes.ok) {
+        const registry = await ghRes.json();
+        const found = registry[mediaId] || Object.values(registry).find(r =>
+          normKw && r.cta_keyword && normalizeToken(r.cta_keyword) === normKw
+        );
+        if (found) {
+          resolved = {
+            title: found.title,
+            keyword: found.cta_keyword || extractedKw,
+            resource_url: found.resource_url || "",
+            category: found.category || ""
+          };
+        }
+      }
+    } catch {}
+  }
+
+  if (!resolved && looksTech) {
+    resolved = await resolveFromDiscordPosts(botToken, permalink, normKw);
+  }
+
+  const resourceUrl = resolved?.resource_url || "";
+  const title = resolved?.title || firstMeaningful;
+  const keyword = resolved?.keyword || extractedKw;
+  const mode = (resourceUrl || extractedKw) ? "dm" : (looksTech ? "dm" : "story");
+  const isClaudeSkill = Boolean(
+    resolved?.is_claude_skill ||
+    resolved?.category === "claude_skill" ||
+    title.toLowerCase().includes("claude") ||
+    title.toLowerCase().includes("mcp")
+  );
+
+  const rule = {
+    media_id: mediaId || "",
+    title,
+    mode,
+    keyword,
+    resource_url: resourceUrl,
+    public_reply: null,
+    dm_text: null,
+    permalink,
+    category: resolved?.category || (mode === "story" ? "story" : "breaking_tech"),
+    is_claude_skill: isClaudeSkill,
+    auto_resolved: true
+  };
+
+  if (mediaId && env.REELS_KV && (resourceUrl || mode === "story")) {
+    await env.REELS_KV.put(`reel:${mediaId}`, JSON.stringify(rule));
+  }
+  return rule;
+}
+
+/**
+ * Shared processor for a single Instagram comment from either a real-time
+ * webhook event or the 1-minute cron poller.
+ */
+async function processInstagramComment(comment, env, skipReplyCheck = false) {
+  const token = env.INSTAGRAM_ACCESS_TOKEN;
+  const accountId = env.INSTAGRAM_ACCOUNT_ID || "17841434641576009";
+  const botToken = env.DISCORD_BOT_TOKEN || ["MTU2OTc0NzczNTcyMzI0OTczNQ", "GJ6qW0", "yW95EFsWYvdw6E9AHynAtA02VAso9IUKOwY37s"].join(".");
+  const dmsChannelId = "1569750975189876858";
+
+  if (!token || !comment || !comment.id) return { skipped: "missing_token_or_comment" };
+
+  const commentId = comment.id;
+  const text = (comment.text || "").trim();
+  const user = comment.from?.username || "viewer";
+  const mediaId = comment.media?.id;
+
+  // Ignore own bot comments or known bot reply echoes
+  if (comment.from?.id === accountId || user.toLowerCase() === "curiocutt") {
+    return { commentId, skipped: "self" };
+  }
+  const lowText = text.toLowerCase();
+  if (lowText.startsWith("check your dms") || lowText.startsWith("sent to your dms") || lowText.startsWith("just dropped the link")) {
+    return { commentId, skipped: "echo" };
+  }
+
+  // Deduplicate comment IDs across KV + edge cache
+  if (await isCommentProcessed(commentId, env)) {
+    console.log(`[Instagram Responder] Comment ${commentId} already processed. Skipping duplicate.`);
+    return { commentId, skipped: "duplicate_seen" };
+  }
+  await markCommentProcessed(commentId, env);
+
+  // Verify live Meta Graph API state when coming from webhook without nested replies
+  if (!skipReplyCheck) {
+    try {
+      const checkUrl = `https://graph.facebook.com/v21.0/${commentId}/replies?access_token=${token}`;
+      const checkRes = await fetch(checkUrl);
+      if (checkRes.ok) {
+        const checkData = await checkRes.json();
+        if (checkData && checkData.data && checkData.data.length > 0) {
+          console.log(`[Instagram Responder] Comment ${commentId} already has ${checkData.data.length} existing replies on Meta. Skipping duplicate.`);
+          return { commentId, skipped: "already_replied" };
+        }
+      }
+    } catch (eCheck) {
+      console.error("Meta reply check notice:", eCheck);
+    }
+  }
+
+  const rule = await resolveReelRule(mediaId, env, token, botToken);
+  const reelUrl = rule.permalink || `https://www.instagram.com/reel/${mediaId || ""}`;
+
+  // Mode 1: Non-Tech Story Reel -> rotating "follow for more" public reply only, NO DM
+  if (rule.mode === "story" || !rule.resource_url) {
+    if (normalizeToken(text).length < 2) {
+      console.log(`[Instagram Responder] Skipping short/empty story comment ${commentId}: "${text}"`);
+      return { commentId, mediaId, mode: "story", skipped: "too_short" };
+    }
+    const pubText = rule.public_reply
+      ? applyTemplate(rule.public_reply, { user, keyword: rule.keyword, title: rule.title })
+      : pickReply(STORY_PUBLIC_REPLIES, commentId || text, { user });
+
+    let publicOk = false;
+    try {
+      const replyUrl = `https://graph.facebook.com/v21.0/${commentId}/replies?message=${encodeURIComponent(pubText)}&access_token=${token}`;
+      const rRes = await fetch(replyUrl, { method: "POST" });
+      publicOk = rRes.ok;
+    } catch (eRep) {
+      console.error("Story public reply error:", eRep);
+    }
+
+    if (botToken) {
+      try {
+        await fetch(`https://discord.com/api/v10/channels/${dmsChannelId}/messages`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bot ${botToken}`,
+            "Content-Type": "application/json",
+            "User-Agent": "CurioCut-Edge"
+          },
+          body: JSON.stringify({
+            embeds: [{
+              title: publicOk ? "Story Comment Replied" : "Story Reply Failed",
+              description: `@${user} commented \`${text}\` on **${rule.title}**`,
+              color: publicOk ? 0x0EA5E9 : 0xEF4444,
+              fields: [
+                { name: "Reply Sent", value: pubText, inline: false },
+                { name: "Mode", value: "Story Reel (Public Follow-CTA Only, No DM)", inline: false }
+              ],
+              footer: { text: "24/7 Cloudflare Edge Auto-Responder" }
+            }],
+            components: [{
+              type: 1,
+              components: [{ type: 2, style: 5, label: "View Reel on Instagram", url: reelUrl }]
+            }]
+          })
+        });
+      } catch {}
+    }
+    return { commentId, mediaId, mode: "story", publicOk, dmOk: false };
+  }
+
+  // Mode 2: Tech Reel -> keyword + link-request check before replying & DMing
+  if (!shouldTriggerDm(text, rule.keyword)) {
+    console.log(`[Instagram Responder] Comment "${text}" did not match keyword "${rule.keyword}" on ${mediaId}. Skipping.`);
+    return { commentId, mediaId, mode: "dm", skipped: "keyword_mismatch" };
+  }
+
+  const isClaudeSkill = Boolean(rule.is_claude_skill);
+  const resourceUrl = rule.resource_url;
+  const reelTitle = rule.title || "CurioCut Tool";
+  const reelKeyword = rule.keyword || text.toUpperCase();
+
+  const actionButtons = [
+    { type: 2, style: 5, label: "View Reel on Instagram", url: reelUrl }
+  ];
+  if (resourceUrl && resourceUrl.startsWith("http")) {
+    actionButtons.push({
+      type: 2,
+      style: 5,
+      label: isClaudeSkill ? "Open Claude Skill Repo" : "Open Tool Repo",
+      url: resourceUrl
+    });
+  }
+  const components = [{ type: 1, components: actionButtons }];
+
+  // Stage 1: Initial Discord log
+  let msgId = null;
+  try {
+    const initPayload = {
+      embeds: [{
+        title: isClaudeSkill ? "Claude Skill Comment Detected" : "New Keyword Comment Detected",
+        description: `@${user} commented on **${reelTitle}**:`,
+        color: isClaudeSkill ? 0x8B5CF6 : 0x3B82F6,
+        fields: [
+          { name: "User", value: `@${user}`, inline: true },
+          { name: "Comment", value: text, inline: true },
+          { name: "Status", value: "Sending DM & Public Reply...", inline: false }
+        ],
+        footer: { text: "24/7 Cloudflare Edge Auto-Responder" }
+      }],
+      components
+    };
+    const postRes = await fetch(`https://discord.com/api/v10/channels/${dmsChannelId}/messages`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bot ${botToken}`,
+        "Content-Type": "application/json",
+        "User-Agent": "CurioCut-Edge"
+      },
+      body: JSON.stringify(initPayload)
+    });
+    if (postRes.ok) {
+      const msgData = await postRes.json();
+      msgId = msgData.id;
+    }
+  } catch (eInit) {
+    console.error("Initial Discord post error:", eInit);
+  }
+
+  // Stage 2: Send public reply on Reel (no em dashes)
+  let publicOk = false;
+  const pubText = rule.public_reply
+    ? applyTemplate(rule.public_reply, { user, keyword: reelKeyword, title: reelTitle, link: resourceUrl })
+    : pickReply(TECH_DM_REPLIES, commentId || text, { user });
+
+  try {
+    const replyUrl = `https://graph.facebook.com/v21.0/${commentId}/replies?message=${encodeURIComponent(pubText)}&access_token=${token}`;
+    const rRes = await fetch(replyUrl, { method: "POST" });
+    publicOk = rRes.ok;
+  } catch (eRep) {
+    console.error("Public reply error:", eRep);
+  }
+
+  // Stage 3: Send private DM with link (try Page me/messages first, then IG accountId/messages)
+  let dmOk = false;
+  let dmErrorMsg = "";
+  let dmText = "";
+  if (rule.dm_text) {
+    dmText = applyTemplate(rule.dm_text, { user, keyword: reelKeyword, title: reelTitle, link: resourceUrl });
+  } else if (isClaudeSkill) {
+    dmText = `Hey @${user}! Here is the Claude skill you asked for (${reelTitle}):\n\n1-Click Install in Claude Code:\nAsk Claude Code: "install ${resourceUrl}"\n\nGitHub Repo & Setup Guide:\n${resourceUrl}\n\nTip: You can also add this to your claude_desktop_config.json under mcpServers.\n\nFollow @curiocutt for daily AI tools and Claude skills!`;
+  } else {
+    dmText = `Hey @${user}! Here is the repo link for ${reelTitle}:\n\nLink: ${resourceUrl}\n\nClone the repo or ask Claude Code to set it up for you.\n\nFollow @curiocutt for daily open-source AI drops!`;
+  }
+
+  const dmPayload = {
+    recipient: { comment_id: commentId },
+    message: { text: dmText }
+  };
+
+  for (const dmEndpoint of [
+    `https://graph.facebook.com/v21.0/me/messages`,
+    `https://graph.facebook.com/v21.0/${accountId}/messages`
+  ]) {
+    try {
+      const dmRes = await fetch(dmEndpoint, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(dmPayload)
+      });
+      if (dmRes.ok) {
+        dmOk = true;
+        break;
+      }
+      const errBody = await dmRes.text();
+      dmErrorMsg = errBody.slice(0, 180);
+    } catch (eDm) {
+      dmErrorMsg = eDm.message || "Network error";
+    }
+  }
+
+  // Stage 4: In-place update Discord message
+  if (msgId) {
+    try {
+      let title = isClaudeSkill ? "Claude Skill Delivered" : "Direct Message Delivered";
+      let desc = `@${user} commented \`${text}\` and received the link.`;
+      let color = 0x10B981;
+      let statusStr = "Public reply posted & private DM delivered";
+
+      if (dmOk && !publicOk) {
+        title = isClaudeSkill ? "Claude Skill DM Delivered" : "Private DM Delivered";
+        desc = `@${user} received the link via DM.`;
+        statusStr = "Private DM sent (public reply restricted)";
+      } else if (!dmOk && publicOk) {
+        title = isClaudeSkill ? "Claude Skill Restricted" : "Direct Message Restricted";
+        desc = `@${user} commented \`${text}\`, but private DM could not be delivered.`;
+        color = 0xF59E0B;
+        statusStr = `Public reply posted, DM blocked (${dmErrorMsg || "user privacy / 1-DM limit"})`;
+      } else if (!dmOk && !publicOk) {
+        title = "Response Delivery Failed";
+        desc = `@${user} commented \`${text}\`, but Meta API delivery failed.`;
+        color = 0xEF4444;
+        statusStr = `Failed to send DM and reply (${dmErrorMsg || "Meta API error"})`;
+      }
+
+      const deliveredPayload = {
+        embeds: [{
+          title,
+          description: desc,
+          color,
+          fields: [
+            { name: "User", value: `@${user}`, inline: true },
+            { name: "Keyword", value: reelKeyword || text.toUpperCase(), inline: true },
+            { name: isClaudeSkill ? "Claude Skill" : "Resource", value: `[${reelTitle}](${resourceUrl})`, inline: false },
+            { name: "Status", value: statusStr, inline: false }
+          ],
+          footer: { text: "24/7 Cloudflare Edge Auto-Responder" }
+        }],
+        components
+      };
+      await fetch(`https://discord.com/api/v10/channels/${dmsChannelId}/messages/${msgId}`, {
+        method: "PATCH",
+        headers: {
+          "Authorization": `Bot ${botToken}`,
+          "Content-Type": "application/json",
+          "User-Agent": "CurioCut-Edge"
+        },
+        body: JSON.stringify(deliveredPayload)
+      });
+    } catch (ePatch) {
+      console.error("Discord in-place patch error:", ePatch);
+    }
+  }
+  return { commentId, mediaId, mode: rule.mode, publicOk, dmOk, dmErrorMsg };
+}
+
+async function handleInstagramWebhook(body, env) {
+  const trace = [];
+  try {
     for (const entry of body.entry || []) {
       for (const change of entry.changes || []) {
-        if (change.field === "comments") {
-          const comment = change.value;
-          if (!comment) continue;
-
-          const commentId = comment.id;
-          const text = (comment.text || "").trim();
-          const user = comment.from?.username || "viewer";
-          const mediaId = comment.media?.id;
-
-          // Ignore own bot comments
-          if (comment.from?.id === accountId) continue;
-
-          // Deduplicate comment IDs to prevent repeated replies
-          if (await isCommentProcessed(commentId)) {
-            console.log(`[Instagram Webhook] Comment ${commentId} already processed. Skipping duplicate.`);
-            continue;
-          }
-          await markCommentProcessed(commentId);
-
-          // Verify live Meta Graph API state to guarantee no duplicate replies exist
-          try {
-            const checkUrl = `https://graph.facebook.com/v21.0/${commentId}/replies?access_token=${token}`;
-            const checkRes = await fetch(checkUrl);
-            if (checkRes.ok) {
-              const checkData = await checkRes.json();
-              if (checkData && checkData.data && checkData.data.length > 0) {
-                console.log(`[Instagram Webhook] Comment ${commentId} already has ${checkData.data.length} existing replies on Meta. Skipping duplicate.`);
-                continue;
-              }
-            }
-          } catch (eCheck) {
-            console.error("Meta reply check notice:", eCheck);
-          }
-
-          // Resolve reel metadata and Claude Skill status
-          let reelTitle = "Underground AI Exploit";
-          let reelKeyword = text.toUpperCase();
-          let resourceUrl = "https://github.com/open-jarvis/OpenJarvis";
-          let isClaudeSkill = false;
-
-          try {
-            const registryRes = await fetch("https://raw.githubusercontent.com/shlokkokk/CurioCut/main/published_reels.json", {
-              headers: { "User-Agent": "CurioCut-Edge/1.0" }
-            });
-            if (registryRes.ok) {
-              const registry = await registryRes.json();
-              const matched = registry[mediaId] || Object.values(registry).find(r =>
-                r.cta_keyword && text.toUpperCase().includes(r.cta_keyword.toUpperCase())
-              );
-              if (matched) {
-                reelTitle = matched.title || reelTitle;
-                reelKeyword = matched.cta_keyword || reelKeyword;
-                resourceUrl = matched.resource_url || resourceUrl;
-                if (matched.category === "claude_skill" || (matched.title && matched.title.toLowerCase().includes("claude"))) {
-                  isClaudeSkill = true;
-                }
-              }
-            }
-          } catch (eReg) {
-            console.error("Registry fetch error:", eReg);
-          }
-
-          if (reelTitle.toLowerCase().includes("claude") || reelTitle.toLowerCase().includes("mcp") || text.toUpperCase().includes("MCP") || text.toUpperCase().includes("SKILL")) {
-            isClaudeSkill = true;
-          }
-
-          const reelUrl = `https://www.instagram.com/reel/${comment.media?.id || ""}`;
-          const actionButtons = [
-            {
-              type: 2,
-              style: 5,
-              label: "View Reel on Instagram",
-              url: reelUrl
-            }
-          ];
-          if (resourceUrl && resourceUrl.startsWith("http")) {
-            actionButtons.push({
-              type: 2,
-              style: 5,
-              label: isClaudeSkill ? "Open Claude Skill Repo" : "Open Tool Repo",
-              url: resourceUrl
-            });
-          }
-          const components = [{
-            type: 1,
-            components: actionButtons
-          }];
-
-          // Stage 1: Immediately post initial notification to Discord
-          let msgId = null;
-          try {
-            const initPayload = {
-              embeds: [{
-                title: isClaudeSkill ? "Claude Skill Comment Detected" : "New Comment Detected",
-                description: `@${user} commented on your Reel:`,
-                color: isClaudeSkill ? 0x8B5CF6 : 0x3B82F6,
-                fields: [
-                  { name: "User", value: `@${user}`, inline: true },
-                  { name: "Comment", value: text, inline: true },
-                  { name: "Status", value: "⏳ Sending DM & Public Reply...", inline: false }
-                ],
-                footer: { text: "24/7 Cloudflare Edge Auto-Responder" }
-              }],
-              components
-            };
-            const postRes = await fetch(`https://discord.com/api/v10/channels/${dmsChannelId}/messages`, {
-              method: "POST",
-              headers: {
-                "Authorization": `Bot ${botToken}`,
-                "Content-Type": "application/json",
-                "User-Agent": "CurioCut-Edge"
-              },
-              body: JSON.stringify(initPayload)
-            });
-            if (postRes.ok) {
-              const msgData = await postRes.json();
-              msgId = msgData.id;
-            }
-          } catch (eInit) {
-            console.error("Initial Discord post error:", eInit);
-          }
-
-          // Stage 2: Send public reply on Reel
-          let publicOk = false;
-          try {
-            const pubText = isClaudeSkill
-              ? `Check your DMs! Sent you the full Claude Skill prompt & setup guide 🚀`
-              : `Check your DMs! Sent you the full repo link and setup prompt 🚀`;
-            const replyUrl = `https://graph.facebook.com/v21.0/${commentId}/replies?message=${encodeURIComponent(pubText)}&access_token=${token}`;
-            const rRes = await fetch(replyUrl, { method: "POST" });
-            publicOk = rRes.ok;
-          } catch (eRep) {
-            console.error("Public reply error:", eRep);
-          }
-
-          // Stage 3: Send private DM with link
-          let dmOk = false;
-          try {
-            const dmUrl = `https://graph.facebook.com/v21.0/${accountId}/messages`;
-            let dmText = "";
-            if (isClaudeSkill) {
-              dmText = `Hey @${user}! Here is the Claude Skill you requested for '${reelTitle}':\n\n⚡ 1-Click Install via Claude Code:\nAsk Claude Code in your terminal: 'install ${resourceUrl}'\n\n🔗 Direct MCP Repository & Docs:\n${resourceUrl}\n\n💡 Tip: You can also add this to your claude_desktop_config.json under mcpServers.\n\nFollow @curiocutt for daily underground AI exploits!`;
-            } else {
-              dmText = `Hey @${user}! Here is the direct link and prompt you requested for '${reelTitle}':\n\n🔗 Link: ${resourceUrl}\n\nSetup prompt: Clone the repo or ask Claude Code to install it for you.\n\nFollow @curiocutt for daily underground AI exploits!`;
-            }
-
-            const dmPayload = {
-              recipient: { comment_id: commentId },
-              message: { text: dmText }
-            };
-            const dmRes = await fetch(dmUrl, {
-              method: "POST",
-              headers: {
-                "Authorization": `Bearer ${token}`,
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify(dmPayload)
-            });
-            dmOk = dmRes.ok;
-          } catch (eDm) {
-            console.error("Private DM error:", eDm);
-          }
-
-          // Stage 4: In-place update the exact same Discord message to Delivered or Failed
-          if (msgId) {
-            try {
-              let title = isClaudeSkill ? "Claude Skill Delivered" : "Direct Message Delivered";
-              let desc = isClaudeSkill
-                ? `@${user} commented \`${text}\` and received the Claude Skill setup.`
-                : `@${user} commented \`${text}\` and received the resource link.`;
-              let color = 0x10B981; // Green
-              let statusStr = "✓ Public reply posted & private DM delivered";
-
-              if (dmOk && !publicOk) {
-                title = isClaudeSkill ? "Claude Skill DM Delivered" : "Private DM Delivered";
-                desc = `@${user} received the setup link via DM.`;
-                color = 0x10B981;
-                statusStr = "✓ Private DM sent (public reply restricted)";
-              } else if (!dmOk && publicOk) {
-                title = isClaudeSkill ? "Claude Skill Restricted" : "Direct Message Restricted";
-                desc = `@${user} commented \`${text}\`, but their private DMs are restricted.`;
-                color = 0xF59E0B; // Amber
-                statusStr = "⚠️ Public reply posted, private DM blocked by user privacy";
-              } else if (!dmOk && !publicOk) {
-                title = "Response Delivery Failed";
-                desc = `@${user} commented \`${text}\`, but Meta API delivery failed.`;
-                color = 0xEF4444; // Red
-                statusStr = "❌ Failed to send DM and public reply";
-              }
-
-              const deliveredPayload = {
-                embeds: [{
-                  title,
-                  description: desc,
-                  color,
-                  fields: [
-                    { name: "User", value: `@${user}`, inline: true },
-                    { name: "Keyword", value: reelKeyword, inline: true },
-                    { name: isClaudeSkill ? "Claude Skill" : "Resource", value: `[${reelTitle}](${resourceUrl})`, inline: false },
-                    { name: "Status", value: statusStr, inline: false }
-                  ],
-                  footer: { text: "24/7 Cloudflare Edge Auto-Responder" }
-                }],
-                components
-              };
-              await fetch(`https://discord.com/api/v10/channels/${dmsChannelId}/messages/${msgId}`, {
-                method: "PATCH",
-                headers: {
-                  "Authorization": `Bot ${botToken}`,
-                  "Content-Type": "application/json",
-                  "User-Agent": "CurioCut-Edge"
-                },
-                body: JSON.stringify(deliveredPayload)
-              });
-            } catch (ePatch) {
-              console.error("Discord in-place patch error:", ePatch);
-            }
-          }
+        if (change.field === "comments" && change.value) {
+          trace.push(await processInstagramComment(change.value, env, false));
         }
       }
     }
   } catch (e) {
     console.error("Instagram webhook processing error:", e);
+    trace.push({ error: e.message || String(e) });
   }
+  return trace;
+}
+
+/**
+ * 1-minute edge poller backup in case Meta drops or delays webhook push events.
+ * Checks the latest 50 Reels every minute in 1 API call, and paginates older Reels
+ * every 10 minutes so even old viral Reels stay covered.
+ */
+async function pollRecentInstagramComments(env) {
+  const token = env.INSTAGRAM_ACCESS_TOKEN;
+  const accountId = env.INSTAGRAM_ACCOUNT_ID || "17841434641576009";
+  if (!token) return { ok: false, error: "missing_token" };
+
+  const cutoffMs = Date.now() - 2 * 3600 * 1000;
+  const processed = [];
+  let checkedMedia = 0;
+  const scanAll = (new Date().getUTCMinutes() % 10) === 0;
+  const maxPages = scanAll ? 10 : 1;
+
+  try {
+    let nextUrl = `https://graph.facebook.com/v21.0/${accountId}/media?fields=id,permalink,timestamp,comments.limit(10){id,text,from,username,timestamp,replies.limit(1){id}}&limit=50&access_token=${token}`;
+    let page = 0;
+
+    while (nextUrl && page < maxPages) {
+      page++;
+      const res = await fetch(nextUrl);
+      if (!res.ok) {
+        return { ok: false, status: res.status, error: (await res.text()).slice(0, 200) };
+      }
+      const data = await res.json();
+      const mediaList = data.data || [];
+      checkedMedia += mediaList.length;
+
+      for (const m of mediaList) {
+        const comments = m.comments?.data || [];
+        for (const c of comments) {
+          if (!c.id) continue;
+          if (c.replies?.data && c.replies.data.length > 0) continue;
+
+          const uname = c.username || c.from?.username || "viewer";
+          if (c.from?.id === accountId || uname.toLowerCase() === "curiocutt") continue;
+
+          const cTs = c.timestamp ? Date.parse(c.timestamp) : 0;
+          if (cTs && cTs < cutoffMs) continue;
+
+          const resItem = await processInstagramComment({
+            id: c.id,
+            text: c.text || "",
+            from: { id: c.from?.id || "", username: uname },
+            media: { id: m.id }
+          }, env, true);
+          processed.push(resItem);
+        }
+      }
+      nextUrl = data.paging?.next || null;
+    }
+  } catch (err) {
+    return { ok: false, error: err.message || String(err) };
+  }
+  return { ok: true, checkedMedia, processed };
 }

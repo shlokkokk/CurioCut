@@ -353,7 +353,7 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
         if style in ["claude-desk", "dev-studio"]:
             cta = script_data.get("cta_keyword", "TOOL")
             desc = (
-                f"💬 Follow & comment '{cta}' for the direct link in your DMs!\n\n"
+                f"Follow & comment '{cta}' for the direct link in your DMs!\n\n"
                 f"{title}\n\n"
                 f"Daily underground AI breakthroughs & open-source developer exploits.\n\n"
                 f"#ai #developer #claude #anthropic #tech #github #coding #automation #curiocut #programming #software #opensource #aitools"
@@ -419,7 +419,34 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
             try:
                 print("\n  >> Uploading to Instagram Reels...")
                 from instagram_uploader import upload_reel
-                ig_media_id, ig_permalink = upload_reel(str(output_mp4), caption=desc)
+                is_tech = style in ["claude-desk", "dev-studio"]
+                reel_meta = {
+                    "title": title,
+                    "mode": "dm" if is_tech else "story",
+                    "cta_keyword": script_data.get("cta_keyword", "") if is_tech else "",
+                    "resource_url": script_data.get("resource_url", "") if is_tech else "",
+                    "category": script_data.get("category", style),
+                    "is_claude_skill": style == "claude-desk" or script_data.get("category") == "claude_skill",
+                }
+                if is_tech:
+                    kw = reel_meta.get("cta_keyword") or "TOOL"
+                    first_cmt = f"Follow first so IG lets the DM go through, then drop '{kw}' below and check your DMs within a minute!"
+                else:
+                    story_openers = {
+                        "deep-dive": "Did you expect that ending? Follow @curiocutt for daily human body deep dives.",
+                        "night-file": "What is your theory on this one? Follow @curiocutt for daily unsolved files.",
+                        "paper-atlas": "Wait until you look into the aftermath of this one. Follow @curiocutt for daily history drops.",
+                    }
+                    first_cmt = story_openers.get(
+                        style,
+                        "Which part caught you off guard the most? Follow @curiocutt so tomorrow's story hits your feed.",
+                    )
+                ig_media_id, ig_permalink = upload_reel(
+                    str(output_mp4),
+                    caption=desc,
+                    metadata=reel_meta,
+                    first_comment=first_cmt,
+                )
                 print(f"  Live on Instagram: {ig_permalink}")
                 notify_instagram_post(
                     caption=desc,

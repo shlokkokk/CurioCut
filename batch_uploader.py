@@ -200,9 +200,20 @@ def process_queue(privacy_status="public", delay_between_seconds=75):
         try:
             print("  [2/2] Uploading to Instagram Reels...")
             ig_caption = f"{title}\n\n{hook}\n\n" + " ".join([f"#{t}" for t in tags[:12]])
-            ig_resp = upload_reel(str(v_path), caption=ig_caption)
-            ig_id = ig_resp.get("id") if isinstance(ig_resp, dict) else str(ig_resp)
-            ig_url = f"https://www.instagram.com/reel/{ig_id}/" if ig_id else "Uploaded"
+            p_script = Path(item["project_dir"]) / "script.json"
+            s_data = json.loads(p_script.read_text(encoding="utf-8")) if p_script.exists() else {}
+            r_url = s_data.get("resource_url", "")
+            r_kw = s_data.get("cta_keyword", "")
+            reel_meta = {
+                "title": title,
+                "mode": "dm" if (r_url or r_kw) else "story",
+                "cta_keyword": r_kw,
+                "resource_url": r_url,
+                "category": s_data.get("category", ""),
+            }
+            ig_resp = upload_reel(str(v_path), caption=ig_caption, metadata=reel_meta)
+            ig_id = ig_resp[0] if isinstance(ig_resp, tuple) else (ig_resp.get("id") if isinstance(ig_resp, dict) else str(ig_resp))
+            ig_url = ig_resp[1] if isinstance(ig_resp, tuple) else (f"https://www.instagram.com/reel/{ig_id}/" if ig_id else "Uploaded")
             record["instagram"] = ig_url
             print(f"  ✓ Instagram Reel published: {ig_url}")
 
