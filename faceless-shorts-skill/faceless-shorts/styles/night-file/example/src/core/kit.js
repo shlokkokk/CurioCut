@@ -121,13 +121,75 @@ export function cassette(x, y, s = 1, spin = 0) {
 export function marker(x, y, s, n) { ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.beginPath(); ctx.moveTo(-60, 0); ctx.lineTo(-40, -110); ctx.lineTo(40, -110); ctx.lineTo(60, 0); ctx.closePath(); ctx.fillStyle = P.tape; ctx.fill(); ctx.font = '900 70px Inter'; ctx.fillStyle = P.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(n), 0, -52); ctx.restore(); }
 /** hand-drawn red circle around (x, y); p 0..1 draws it on */
 export function redCircle(x, y, rx, ry, p = 1) { if (p <= 0) return; ctx.beginPath(); for (let i = 0; i <= 60 * p; i++) { const a = -1.9 + i / 60 * (TAU + 0.5), k = 1 + 0.05 * Math.sin(i * 0.7); const px = x + Math.cos(a) * rx * k, py = y + Math.sin(a) * ry * k; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.strokeStyle = P.red; ctx.lineWidth = 10; ctx.lineCap = 'round'; ctx.stroke(); }
-/** typewriter date stamp, lower-left; p 0..1 types it on (with a cursor) */
-export function dateStamp(line1, line2, p = 1, x = 90, y = 1240) {
-  const n1 = Math.floor(line1.length * clamp(p * 1.6)), n2 = Math.floor(line2.length * clamp(p * 1.6 - 0.6));
-  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 12;
-  ctx.font = `700 92px ${MONO}`; ctx.fillStyle = P.cream; ctx.fillText(line1.slice(0, n1), x, y);
-  ctx.font = `700 56px ${MONO}`; ctx.fillStyle = P.red; ctx.fillText(line2.slice(0, n2), x, y + 76);
-  ctx.shadowBlur = 0; if (p < 1 && Math.floor(p * 20) % 2 === 0) { ctx.fillStyle = P.cream; ctx.fillRect(x + (n2 ? ctx.measureText(line2.slice(0, n2)).width : (ctx.font = `700 92px ${MONO}`, ctx.measureText(line1.slice(0, n1)).width)) + 6, y + (n2 ? 18 : -56), 26, n2 ? 46 : 64); }
+/** typewriter date stamp with automatic multi-line word wrapping; never overflows the screen */
+export function dateStamp(line1, line2 = '', p = 1, x = 80, y = 280, maxW = 900) {
+  ctx.save();
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.shadowColor = 'rgba(0,0,0,0.85)';
+  ctx.shadowBlur = 12;
+
+  // 1. Line 1 (Typewriter header e.g. CASE FILE or DATE)
+  ctx.font = `700 86px ${MONO}`;
+  ctx.fillStyle = P.cream;
+  const n1 = Math.floor(line1.length * clamp(p * 1.6));
+  ctx.fillText(line1.slice(0, n1), x, y);
+
+  // 2. Line 2 (Header / Title) wrapped onto multiple lines if it exceeds maxW
+  ctx.font = `700 52px ${MONO}`;
+  ctx.fillStyle = P.red;
+
+  const words = (line2 || '').split(/\s+/).filter(Boolean);
+  const wrappedLines = [];
+  let curLine = '';
+
+  for (const w of words) {
+    const test = curLine ? curLine + ' ' + w : w;
+    if (ctx.measureText(test).width > maxW && curLine) {
+      wrappedLines.push(curLine);
+      curLine = w;
+    } else {
+      curLine = test;
+    }
+  }
+  if (curLine) wrappedLines.push(curLine);
+
+  // Progressive typing across wrapped lines
+  let charsBudget = Math.floor((line2 || '').length * clamp(p * 1.6 - 0.4));
+  let cursorX = x;
+  let cursorY = y + 72;
+
+  wrappedLines.forEach((wLine, lineIdx) => {
+    const lineY = y + 72 + lineIdx * 64;
+    const charsThisLine = Math.min(wLine.length, Math.max(0, charsBudget));
+    const textToDraw = wLine.slice(0, charsThisLine);
+
+    if (textToDraw) {
+      ctx.fillText(textToDraw, x, lineY);
+    }
+
+    if (charsBudget >= 0 && charsBudget <= wLine.length) {
+      cursorX = x + ctx.measureText(textToDraw).width;
+      cursorY = lineY;
+    }
+
+    charsBudget -= (wLine.length + 1);
+  });
+
+  // Blinking Typewriter Cursor block
+  ctx.shadowBlur = 0;
+  if (p < 1 && Math.floor(p * 20) % 2 === 0) {
+    ctx.fillStyle = P.cream;
+    if (p * 1.6 < 0.6) {
+      ctx.font = `700 86px ${MONO}`;
+      const c1X = x + ctx.measureText(line1.slice(0, n1)).width + 6;
+      ctx.fillRect(c1X, y - 64, 24, 66);
+    } else {
+      ctx.fillRect(cursorX + 6, cursorY - 42, 22, 46);
+    }
+  }
+
+  ctx.restore();
 }
 /** black redaction bars over text lines (for "the file says…") */
 export function redacted(x, y, widths, p = 1) { widths.forEach((w, i) => { ctx.fillStyle = P.ink; ctx.fillRect(x, y + i * 60, w * clamp(p * 2 - i * 0.3), 36); }); }

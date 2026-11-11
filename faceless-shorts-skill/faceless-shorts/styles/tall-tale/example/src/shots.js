@@ -22,15 +22,21 @@ const LOOK = {
 };
 const person = (k, opts) => new Toon({ ...LOOK[k], extra: [...(LOOK[k]?.extra || [])] }, opts);
 
-// 2D Polish Overlays on top of 3D Canvas
+// 2D Polish Overlays on top of 3D Canvas (Auto-scaling to guarantee safe margins)
 function stepCard(n, label, x, y, sc = 1) {
   if (sc <= 0) return;
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(sc, sc);
-  ctx.font = '900 50px Inter, sans-serif';
+
+  let fs = 50;
+  ctx.font = `900 ${fs}px Inter, sans-serif`;
+  while (ctx.measureText(label).width > 680 && fs > 26) {
+    fs -= 2;
+    ctx.font = `900 ${fs}px Inter, sans-serif`;
+  }
   const tw = ctx.measureText(label).width;
-  const w = Math.max(460, tw + 210);
+  const w = Math.min(940, Math.max(460, tw + 210));
 
   // Shadow
   ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
@@ -53,9 +59,9 @@ function stepCard(n, label, x, y, sc = 1) {
   ctx.font = '900 62px Inter, sans-serif';
   ctx.fillText(String(n), -w / 2 + 75, 4);
 
-  // Chapter Header Text
+  // Chapter Header Text (Auto-scaled)
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = '900 48px Inter, sans-serif';
+  ctx.font = `900 ${fs}px Inter, sans-serif`;
   ctx.textAlign = 'left';
   ctx.fillText(label, -w / 2 + 144, 2);
 

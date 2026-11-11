@@ -115,10 +115,10 @@ export function buildShots(E, script) {
   };
 
   const extractHeader = (txt, idx) => {
-    if (idx === 0) return title.length > 38 ? title.slice(0, 35) + '...' : title;
+    if (idx === 0) return title;
     if (idx === totalLines - 1) return 'STATUS: UNSOLVED';
     const words = txt.replace(/[^A-Z0-9 ]/g, '').split(/\s+/).filter((w) => w.length > 2);
-    return words.slice(0, 3).join(' ') || `EXHIBIT ${idx + 1}`;
+    return words.slice(0, 4).join(' ') || `EXHIBIT ${idx + 1}`;
   };
 
   lines.forEach((ln, idx) => {
@@ -141,14 +141,16 @@ export function buildShots(E, script) {
       sceneType = 'opening_date';
     } else if (isLast) {
       sceneType = 'case_file_slam';
-    } else if (lineText.includes('HOUSE') || lineText.includes('NIGHT') || lineText.includes('OUTSIDE') || lineText.includes('STREET') || lineText.includes('DARK')) {
-      sceneType = 'house_night';
-    } else if (lineText.includes('FILE') || lineText.includes('WALL') || lineText.includes('PHOTO') || lineText.includes('FOUND') || lineText.includes('EVIDENCE') || lineText.includes('PROOF')) {
-      sceneType = 'case_wall';
-    } else if (lineText.includes('TICKET') || lineText.includes('NOTE') || lineText.includes('DEMAND') || lineText.includes('$') || lineText.includes('CASH') || lineText.includes('PAPER')) {
+    } else if (lineText.includes('MONEY') || lineText.includes('MILLION') || lineText.includes('DOLLAR') || lineText.includes('$') || lineText.includes('BUY') || lineText.includes('SELL') || lineText.includes('RICH') || lineText.includes('FORTUNE') || lineText.includes('PRICE') || lineText.includes('GOLD') || lineText.includes('CASH') || lineText.includes('TICKET') || lineText.includes('NOTE') || lineText.includes('DEMAND')) {
       sceneType = 'paper_evidence';
-    } else if (lineText.includes('TAPE') || lineText.includes('CLOCK') || lineText.includes('TIME') || lineText.includes('HOUR') || lineText.includes('RECORD')) {
+    } else if (lineText.includes('HOUSE') || lineText.includes('NIGHT') || lineText.includes('OUTSIDE') || lineText.includes('STREET') || lineText.includes('DARK') || lineText.includes('SHIP') || lineText.includes('PORT') || lineText.includes('HARBOR') || lineText.includes('VOYAGE') || lineText.includes('TOWN') || lineText.includes('CITY')) {
+      sceneType = 'house_night';
+    } else if (lineText.includes('FILE') || lineText.includes('WALL') || lineText.includes('PHOTO') || lineText.includes('FOUND') || lineText.includes('EVIDENCE') || lineText.includes('PROOF') || lineText.includes('BOARD') || lineText.includes('POLICE') || lineText.includes('INVESTIGAT') || lineText.includes('DISCOVER')) {
+      sceneType = 'case_wall';
+    } else if (lineText.includes('TAPE') || lineText.includes('CLOCK') || lineText.includes('TIME') || lineText.includes('HOUR') || lineText.includes('RECORD') || lineText.includes('YEAR') || lineText.includes('LATER') || lineText.includes('LISTEN')) {
       sceneType = 'classified_tape';
+    } else if (lineText.includes('TALK') || lineText.includes('ASK') || lineText.includes('TELL') || lineText.includes('WITNESS') || lineText.includes('PEOPLE') || lineText.includes('CLERK') || lineText.includes('SAID')) {
+      sceneType = 'corridor_witness';
     } else {
       const cycle = idx % 4;
       const sets = ['corridor_subject', 'house_night', 'case_wall', 'corridor_witness'];
@@ -184,8 +186,8 @@ export function buildShots(E, script) {
           render(CR.scene, V3(0, 1, -5));
           blit();
 
-          // Typewriter date stamp
-          K.dateStamp(dateText, title.length > 38 ? title.slice(0, 35) + '...' : title, clamp(lt / 1.5), 80, 320);
+          // Typewriter date stamp with auto-wrapping full title
+          K.dateStamp(dateText, title, clamp(lt / 1.5), 80, 260);
 
         } else if (sceneType === 'corridor_subject') {
           // Glowing red subject walking down the corridor under spotlight

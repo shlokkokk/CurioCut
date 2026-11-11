@@ -136,8 +136,30 @@ export function timeline(years, x, y, w, p = 0, active = -1) {
   years.forEach((yr, i) => { const tx = x + w * i / (years.length - 1); circle(tx, y, i === active ? 22 : 14, i === active ? P.crimson : P.ink); label(String(yr), tx, y + 60, 40, i === active ? P.crimson : P.ink); });
   const mx = x + w * clamp(p); cut(P_poly([[mx, y - 26], [mx - 26, y - 70], [mx + 26, y - 70]]), P.crimson, { shadow: 0.5, edge: 4 });
 }
-/** a pinned paper slip with a few words (for names, places, numbers) */
-export function slip(text, x, y, sc = 1, rot = -0.03, size = 54) { if (sc <= 0) return; ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(sc, sc); ctx.font = `700 ${size}px ${SERIF}`; const w = ctx.measureText(text).width + 70; cut(P_rr(-w / 2, -size * 0.8, w, size * 1.6, 4), P.edge); ctx.fillStyle = P.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, 0, 4); circle(0, -size * 0.8 + 6, 10, P.crimson); ctx.restore(); }
+/** a pinned paper slip with auto-scaling to guarantee it never flows out of screen */
+export function slip(text, x, y, sc = 1, rot = -0.03, size = 54, maxW = 920) {
+  if (sc <= 0) return;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rot);
+  ctx.scale(sc, sc);
+
+  let fs = size;
+  ctx.font = `700 ${fs}px ${SERIF}`;
+  while (ctx.measureText(text).width + 80 > maxW && fs > 22) {
+    fs -= 2;
+    ctx.font = `700 ${fs}px ${SERIF}`;
+  }
+  const tw = ctx.measureText(text).width;
+  const w = Math.min(maxW, tw + 70);
+  cut(P_rr(-w / 2, -fs * 0.8, w, fs * 1.6, 4), P.edge);
+  ctx.fillStyle = P.ink;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 0, 4);
+  circle(0, -fs * 0.8 + 6, 10, P.crimson);
+  ctx.restore();
+}
 
 // ═════════════════════════ CAPTION LOOK ═════════════════════════
 export const CAPLOOK = { font: `700 88px ${SERIF}`, y: 1640, maxW: 940, fg: P.ink, hi: P.crimson };
