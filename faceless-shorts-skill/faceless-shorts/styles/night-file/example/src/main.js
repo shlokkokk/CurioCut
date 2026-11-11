@@ -32,7 +32,7 @@ function draw(t) {
     buildCaptions(script);
     GL.width = Math.round(1080 * RES); GL.height = Math.round(1920 * RES);
     const E = makeEngine(GL, { w: GL.width, h: GL.height, samples: AA });
-    const { shots, cues } = buildShots(E);
+    const { shots, cues } = buildShots(E, script);
     shots.sort((a, b) => a.at - b.at);
     OP._shots = shots; OP.script = script;
     OP.duration = () => T.dur;

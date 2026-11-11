@@ -35,7 +35,7 @@ EVERGREEN_VAULT = [
     },
     {
         "niche": "spicy_drama",
-        "style": "inside-out",
+        "style": "night-file",
         "title": "The Hidden Nanny Cam Confession",
         "premise": "A wife suspected her husband of lying about his late-night business trips. She placed a tiny voice recorder inside the master bedroom headboard. When she listened to the audio, she didn't just hear infidelity—she heard her husband and her own sister plotting how to drain her trust fund. She quietly transferred the funds, filed an emergency restraining order, and left the audio playing on repeat in the empty house."
     },
@@ -73,28 +73,56 @@ EVERGREEN_VAULT = [
     # Internet Brainrot & Modern Absurdity
     {
         "niche": "brainrot_absurd",
-        "style": "inside-out",
+        "style": "night-file",
         "title": "The 10 Million Dollar Spotify AI Royalty Glitch",
         "premise": "A musician created hundreds of thousands of AI-generated ambient songs and programmed a network of thousands of automated streaming bots to play them on repeat 24 hours a day. For over seven years, the automated streams flew completely under the radar, harvesting over $10 million in streaming royalties before federal agents finally caught on."
     },
     {
         "niche": "brainrot_absurd",
-        "style": "stick-story",
+        "style": "tall-tale",
         "title": "The Man Who Sued Red Bull for No Wings",
         "premise": "In 2014, a consumer noticed Red Bull's famous slogan claimed 'Red Bull gives you wings'. He filed a massive class-action lawsuit claiming he drank the energy drink for 10 years without growing physical wings or gaining enhanced athletic ability. Red Bull chose to settle the lawsuit for $13 million, offering a $10 check to anyone who bought a can."
     },
     {
         "niche": "brainrot_absurd",
-        "style": "inside-out",
+        "style": "tall-tale",
         "title": "The Guy Who Bought Every Seat in a Movie Theater",
         "premise": "In 2014, a wealthy Chinese ex-boyfriend discovered his former partner was attending the Valentine's Day premiere of Transformers with her new partner. To ruin their date, he bought every single odd-numbered seat in the entire IMAX theater, forcing every couple in the room to sit separately."
+    },
+    # Science, Human Body & Medical "What Happens If"
+    {
+        "niche": "science_body",
+        "style": "deep-dive",
+        "title": "What Happens If You Hold Your Breath Too Long",
+        "premise": "What actually happens to your body when you hold your breath as long as you can? For the first 30 seconds, nothing much happens and your lungs are full of oxygen. But then carbon dioxide starts building up in your bloodstream. That panic you feel isn't lack of oxygen—it is CO2 toxicity forcing your diaphragm to spasm. If you push further, your heart slows down, and your brain pulls the emergency plug and knocks you out cold."
+    },
+    {
+        "niche": "science_body",
+        "style": "deep-dive",
+        "title": "What Happens If You Stop Sleeping for 7 Days",
+        "premise": "If you stay awake for 24 hours, your brain functions like you are legally drunk. By day three, your body stops producing dopamine and you start seeing shadowy hallucinations. By day five, your body temperature plummets and white blood cell count crashes as your immune system attacks itself. Push it to day seven, and your brain micro-sleeps while your eyes are still wide open."
+    },
+    # History, Disasters & Historic Mysteries
+    {
+        "niche": "history_lore",
+        "style": "paper-atlas",
+        "title": "The Baker Who Accidentally Burned London",
+        "premise": "In 1666, royal baker Thomas Farriner forgot to put out the embers in his bakery oven on Pudding Lane. A spark jumped onto dry timber straw. Within three days, gale-force winds pushed the wall of fire across thirteen thousand houses and Saint Paul's Cathedral, erasing 80 percent of historic London from the map while the Mayor famously dismissed it as nothing."
+    },
+    {
+        "niche": "history_lore",
+        "style": "paper-atlas",
+        "title": "The Soldier Who Survived Both Atomic Bombs",
+        "premise": "In August 1945, naval engineer Tsutomu Yamaguchi was in Hiroshima on a business trip when the first atomic blast detonated less than two miles away. He survived with severe burns. Two days later, he returned to his company headquarters in Nagasaki to report to his boss. As he was describing the explosion in Hiroshima, the second atomic bomb detonated right outside the window. He lived to age ninety-three."
     }
 ]
 
 SUBREDDIT_MAP = {
     "spicy_drama": ["BestofRedditorUpdates", "TrueOffMyChest", "relationship_advice"],
     "real_heists": ["todayilearned", "history"],
-    "brainrot_absurd": ["wallstreetbets", "facepalm", "mildlyinfuriating"]
+    "brainrot_absurd": ["wallstreetbets", "facepalm", "mildlyinfuriating"],
+    "science_body": ["explainlikeimfive", "askscience", "todayilearned"],
+    "history_lore": ["history", "todayilearned", "AskHistorians"]
 }
 
 def sanitize_text(text):
@@ -195,7 +223,7 @@ def fetch_from_wikipedia():
 
 def get_next_daily_story():
     """Bulletproof multi-tier harvester that guarantees 100% success in any scenario."""
-    niches = ["spicy_drama", "real_heists", "brainrot_absurd"]
+    niches = ["spicy_drama", "real_heists", "brainrot_absurd", "science_body", "history_lore"]
     chosen_niche = random.choice(niches)
     print(f"\n[Story Harvester] Active Niche: {chosen_niche.upper()}")
 
@@ -226,9 +254,11 @@ def get_next_daily_story():
     style_mapping = {
         "spicy_drama": "night-file",
         "real_heists": "tall-tale",
-        "brainrot_absurd": "inside-out"
+        "brainrot_absurd": "tall-tale",
+        "science_body": "deep-dive",
+        "history_lore": "paper-atlas"
     }
-    style = story.get("style", style_mapping.get(chosen_niche, "night-file"))
+    style = story.get("style", style_mapping.get(chosen_niche, "tall-tale"))
 
     return {
         "niche": chosen_niche,

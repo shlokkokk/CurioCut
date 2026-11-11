@@ -41,16 +41,58 @@ except ImportError:
 node_candidate = BIN_DIR / ("node.exe" if os.name == 'nt' else "node")
 NODE_EXE = str(node_candidate) if node_candidate.exists() else "node"
 
-# 3 Flagship 100% Dynamic 3D Animation Engines for the 3 daily slots:
-# Slot 1: tall-tale (Full 3D Cartoon Town, 3D bean toons, 3D storefronts & mayor office)
-# Slot 2: claude-desk (Full 3D Tech Studio, ClaudeBot & SkepticBot, neon rim lights, 3D holo props)
-# Slot 3: dev-studio (Full 3D Dev Studio, Human Dev & Thruster Robot Mascot, 3D tech lab)
-ROTATION_STYLES = [
+# Suite of 100% Dynamic 3D/Cut-Paper Animation Engines:
+# 1. tall-tale: 3D Cartoon Town, Street, Mayor Office, Loopholes & Bizarre True Stories
+# 2. night-file: Dark 3D Investigative Corridor, House at Night, Cork Evidence Board with Red String & Polaroids
+# 3. paper-atlas: Aged Cut-Paper Parchment Maps, Dashed Routes, Timber Towns, Burning Paper & Royal Wax Seals
+# 4. deep-dive: 3D Human Anatomy, Sunlit Room, Glowing Cyan X-Ray Skeleton, Macro Blood Vessels
+# 5. claude-desk: 3D AI Tech Studio, ClaudeBot & SkepticBot, Hologram Props
+# 6. dev-studio: 3D Developer Lab, Human Dev & Jetpack Thruster Robot Mascot
+DYNAMIC_STYLES = [
     "tall-tale",
+    "night-file",
+    "paper-atlas",
+    "deep-dive",
     "claude-desk",
     "dev-studio"
 ]
-CLASSIC_STYLES = ROTATION_STYLES
+CLASSIC_STYLES = DYNAMIC_STYLES
+
+def classify_style_for_story(text=""):
+    """Intelligently matches narrative content to the best 3D visual engine."""
+    t = text.lower()
+    
+    # 1. Tech / AI / Coding / Agent tools
+    if any(k in t for k in ["claude", "github", "prompt", "llm", "ai model", "developer", "coding", "terminal", "docker", "agent", "python", "javascript", "react"]):
+        return "claude-desk" if ("claude" in t or "prompt" in t) else "dev-studio"
+
+    # 2. Crime / Mystery / Secrets / Betrayal / Cold Case / Surveillance / Heist
+    if any(k in t for k in [
+        "investigation", "mystery", "murder", "unsolved", "suspect", "fbi", "police",
+        "affair", "cheating", "revenge", "secret", "nanny cam", "confession",
+        "spy", "cctv", "interrogation", "con artist", "fake airport", "cooper", "hijack",
+        "cold case", "crime", "classified", "evidence", "detective"
+    ]):
+        return "night-file"
+
+    # 3. Science / Biology / Anatomy / Medical / "What happens if"
+    if any(k in t for k in [
+        "body", "lungs", "blood", "brain", "heart", "breathe", "breath", "oxygen",
+        "sleep", "dopamine", "muscle", "organ", "medical", "disease", "biological",
+        "cells", "skeleton", "x-ray", "stomach", "dna", "what happens if"
+    ]):
+        return "deep-dive"
+
+    # 4. History / Disasters / Wars / Empires / Ancient World / Maps
+    if any(k in t for k in [
+        "history", "ancient", "century", "empire", "king", "queen", "war", "battle",
+        "fire of", "london", "rome", "fleet", "route", "expedition", "atomic",
+        "nuclear", "1666", "monarch", "dynasty", "pharaoh", "medieval", "colosseum"
+    ]):
+        return "paper-atlas"
+
+    # 5. Loopholes / Absurd real-life / Auctions / Heists / Funny cons
+    return "tall-tale"
 
 def run_cmd(cmd, cwd=None, env=None, on_line=None):
     """Helper to run command with properly configured PATH and stream output live."""
@@ -111,14 +153,20 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
     print("="*70 + "\n")
 
     history_file = WORKSPACE / "history.json"
-    if not style or style in ["auto", "classic"]:
+    
+    # 1. Dynamic AI Style Selection
+    if topic and topic != "auto" and (not style or style in ["auto", "classic"]):
+        style = classify_style_for_story(topic)
+        print(f"[AI Director] Classified topic '{topic}' -> Dynamic Style: '{style}'")
+    elif not style or style in ["auto", "classic"]:
         style = get_next_style(history_file)
+        print(f"[AI Director] Active Rotation Style: '{style}'")
 
     template_dir = SKILL_DIR / "styles" / style / "example"
     if not template_dir.exists():
         raise FileNotFoundError(f"Style template not found: {template_dir}")
 
-    # Determine script
+    # 2. Determine Script (100% Dynamic Narrative Matching)
     from generate_script import generate_script
     if style in ["claude-desk", "dev-studio"]:
         from tech_harvester import get_next_tech_story
@@ -136,12 +184,20 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
             print(f"Notice: Dynamic tech dialogue exception: {e}. Using synchronized style script.")
             script_data = None
     elif topic and topic != "auto":
-        print(f"[1/5] Writing viral script for topic: {topic}...")
-        script_data = generate_script(topic)
-    else:
-        print(f"[1/5] Dynamically generating fresh viral script for style: '{style}'...")
+        print(f"[1/5] Writing viral script matching style '{style}' for topic: {topic}...")
         try:
-            script_data = generate_script()
+            script_data = generate_script(topic)
+        except Exception as e:
+            print(f"Notice: Dynamic script generation exception: {e}. Using synchronized style script.")
+            script_data = None
+    else:
+        print(f"[1/5] Harvesting dynamic viral story for '{style}' engine...")
+        try:
+            from story_harvester import get_next_daily_story
+            story_data = get_next_daily_story()
+            premise = story_data.get("premise", story_data.get("title", ""))
+            print(f"  Harvested: {story_data.get('title')}")
+            script_data = generate_script(premise)
         except Exception as e:
             print(f"Notice: Dynamic script generation exception: {e}. Using synchronized style script.")
             script_data = None
@@ -149,6 +205,10 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
         if not script_data:
             script_path = template_dir / "script.json"
             script_data = json.loads(script_path.read_text(encoding="utf-8"))
+
+    if not script_data:
+        script_path = template_dir / "script.json"
+        script_data = json.loads(script_path.read_text(encoding="utf-8"))
 
     title = script_data.get("title", "Untitled Short")
     print(f"Title: {title}")
