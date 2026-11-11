@@ -3,7 +3,7 @@
 // 2. MascotBot: The cute floating AI companion (glossy white egg bot, curved cyber visor with glowing LED eyes, antenna, hovering fins).
 import * as THREE from 'three';
 
-const SKIN_TONE = '#E5A65D';
+const SKIN_TONE = '#F5CEB3'; // Natural warm skin tone
 const HOODIE_BLUE = '#1E293B';
 const HOODIE_STRING = '#F8FAFC';
 const HAIR_DARK = '#1C1917';
@@ -66,37 +66,61 @@ function renderHumanFace(face, st) {
     // Blinking eyelids
     ctx.strokeStyle = '#2B1810';
     ctx.lineWidth = 10;
+    ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(leftX - 30, eyeY);
-    ctx.quadraticCurveTo(leftX, eyeY + 12, leftX + 30, eyeY);
+    ctx.quadraticCurveTo(leftX, eyeY + 14, leftX + 30, eyeY);
+    ctx.stroke();
+
+    ctx.beginPath();
     ctx.moveTo(rightX - 30, eyeY);
-    ctx.quadraticCurveTo(rightX, eyeY + 12, rightX + 30, eyeY);
+    ctx.quadraticCurveTo(rightX, eyeY + 14, rightX + 30, eyeY);
     ctx.stroke();
   } else {
-    // Eye whites
+    // Left eye white
     ctx.fillStyle = '#FFFFFF';
     ctx.beginPath();
-    ctx.ellipse(leftX, eyeY, 34, 24, 0, 0, Math.PI * 2);
-    ctx.ellipse(rightX, eyeY, 34, 24, 0, 0, Math.PI * 2);
+    ctx.ellipse(leftX, eyeY, 32, 26, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = '#3A1F12';
+    ctx.strokeStyle = '#2B1810';
     ctx.lineWidth = 4;
     ctx.stroke();
 
-    // Iris (Deep brown)
-    ctx.fillStyle = '#321E14';
+    // Right eye white
+    ctx.beginPath();
+    ctx.ellipse(rightX, eyeY, 32, 26, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Left Iris & Pupil
+    ctx.fillStyle = '#1E1B2E';
     ctx.beginPath();
     ctx.arc(leftX + lookX * 6, eyeY + lookY * 4, 18, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Right Iris & Pupil
+    ctx.beginPath();
     ctx.arc(rightX + lookX * 6, eyeY + lookY * 4, 18, 0, Math.PI * 2);
     ctx.fill();
 
-    // Catchlight highlight sparkles
+    // Catchlight highlight sparkles (clean separated sparkles)
     ctx.fillStyle = '#FFFFFF';
-    ctx.beginPath();
-    ctx.arc(leftX + lookX * 6 - 5, eyeY + lookY * 4 - 5, 6, 0, Math.PI * 2);
-    ctx.arc(rightX + lookX * 6 - 5, eyeY + lookY * 4 - 5, 6, 0, Math.PI * 2);
-    ctx.fill();
+    const drawSparkle = (cx, cy, r) => {
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+    };
+    drawSparkle(leftX + lookX * 6 - 6, eyeY + lookY * 4 - 6, 7);
+    drawSparkle(leftX + lookX * 6 + 6, eyeY + lookY * 4 + 6, 3.5);
+    drawSparkle(rightX + lookX * 6 - 6, eyeY + lookY * 4 - 6, 7);
+    drawSparkle(rightX + lookX * 6 + 6, eyeY + lookY * 4 + 6, 3.5);
   }
+
+  // Subtle cute nose
+  ctx.fillStyle = '#E5A885';
+  ctx.beginPath();
+  ctx.arc(256, 310, 5, 0, Math.PI * 2);
+  ctx.fill();
 
   // Mouth
   const mouthY = 380;
@@ -357,13 +381,17 @@ export class MascotBot {
     this.bodyMesh.castShadow = true;
     this.botBody.add(this.bodyMesh);
 
-    // 2. Glossy Curved Front Visor Screen
-    const visorGeo = new THREE.SphereGeometry(0.42, 32, 18, 0, Math.PI);
-    visorGeo.scale(0.86, 0.88, 0.88);
-    const visorMat = new THREE.MeshBasicMaterial({ map: this.face.tex });
+    // 2. Glossy Curved Front Visor Screen (Positioned proudly on front face facing +Z)
+    const visorGeo = new THREE.PlaneGeometry(0.56, 0.38, 16, 16);
+    const pos = visorGeo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const vx = pos.getX(i);
+      pos.setZ(i, -Math.pow(vx, 2) * 0.45);
+    }
+    visorGeo.computeVertexNormals();
+    const visorMat = new THREE.MeshBasicMaterial({ map: this.face.tex, transparent: true });
     this.visor = new THREE.Mesh(visorGeo, visorMat);
-    this.visor.rotation.y = -Math.PI / 2;
-    this.visor.position.set(0, 1.36, 0.04);
+    this.visor.position.set(0, 1.40, 0.41);
     this.botBody.add(this.visor);
 
     // 3. Cute Top Antenna & Glowing Beacon
