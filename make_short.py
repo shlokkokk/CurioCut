@@ -47,8 +47,8 @@ CLASSIC_STYLES = [
 ]
 ROTATION_STYLES = CLASSIC_STYLES
 
-def run_cmd(cmd, cwd=None, env=None, on_line=None, timeout=600):
-    """Helper to run command with properly configured PATH and stream output live with unbreakable timeout guard."""
+def run_cmd(cmd, cwd=None, env=None, on_line=None):
+    """Helper to run command with properly configured PATH and stream output live."""
     merged_env = os.environ.copy()
     if env:
         merged_env.update(env)
@@ -57,7 +57,6 @@ def run_cmd(cmd, cwd=None, env=None, on_line=None, timeout=600):
     if bin_str not in merged_env.get("PATH", ""):
         merged_env["PATH"] = f"{bin_str};{merged_env.get('PATH', '')}" if os.name == 'nt' else f"{bin_str}:{merged_env.get('PATH', '')}"
 
-    start_time = time.time()
     process = subprocess.Popen(
         cmd,
         cwd=cwd,
@@ -69,10 +68,7 @@ def run_cmd(cmd, cwd=None, env=None, on_line=None, timeout=600):
     )
     output_lines = []
     if process.stdout:
-        while True:
-            line = process.stdout.readline()
-            if not line:
-                break
+        for line in iter(process.stdout.readline, ''):
             print(line, end='', flush=True)
             output_lines.append(line)
             if on_line:
@@ -80,20 +76,10 @@ def run_cmd(cmd, cwd=None, env=None, on_line=None, timeout=600):
                     on_line(line)
                 except Exception:
                     pass
-            if time.time() - start_time > timeout:
-                process.kill()
-                raise TimeoutError(f"Command timed out after {timeout}s: {' '.join(str(c) for c in cmd)}")
         process.stdout.close()
-
-    try:
-        remaining_timeout = max(1.0, timeout - (time.time() - start_time))
-        return_code = process.wait(timeout=remaining_timeout)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        raise TimeoutError(f"Command timed out after {timeout}s: {' '.join(str(c) for c in cmd)}")
-
+    return_code = process.wait()
     if return_code != 0:
-        raise RuntimeError(f"Command failed with code {return_code}: {' '.join(str(c) for c in cmd)}")
+        raise RuntimeError(f"Command failed with code {return_code}: {' '.join(cmd)}")
     return ''.join(output_lines)
 
 def get_next_style(history_file):

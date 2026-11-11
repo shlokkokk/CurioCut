@@ -98,23 +98,18 @@ except Exception:
     pass
 
 cmd = [sys.executable, "make_short.py", "--style", style_arg, "--upload", "--privacy", "public"]
-try:
-    res = subprocess.run(cmd, timeout=1500)
-    return_code = res.returncode
-except subprocess.TimeoutExpired:
-    print("\n[TIMEOUT ERROR] Video generation exceeded 25-minute ceiling. Shutting down worker...", flush=True)
-    return_code = 124
+res = subprocess.run(cmd)
 
-if return_code == 0:
+if res.returncode == 0:
     print("\n" + "="*70, flush=True)
     print("🎉 SHORT SUCCESSFULLY CREATED AND PUBLISHED TO CLOUD!", flush=True)
     print("="*70 + "\n", flush=True)
     # Note: Instagram Comment-to-DM is handled 24/7 in real-time by Cloudflare Edge Webhooks
 else:
-    print(f"\nWorker exited with error code {return_code}", flush=True)
+    print(f"\nWorker exited with error code {res.returncode}", flush=True)
     try:
         from discord_notifier import notify_error
-        notify_error("Cloud Runner", f"Worker stopped with code {return_code}")
+        notify_error("Cloud Runner", f"Worker stopped with code {res.returncode}")
     except Exception:
         pass
-    sys.exit(return_code)
+    sys.exit(res.returncode)
