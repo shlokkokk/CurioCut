@@ -31,8 +31,12 @@ WORKSPACE = Path(__file__).resolve().parent
 SKILL_DIR = WORKSPACE / "faceless-shorts-skill" / "faceless-shorts"
 FACELSS_HOME = Path.home() / ".faceless-shorts"
 BIN_DIR = FACELSS_HOME / "bin"
-VENV_PYTHON = FACELSS_HOME / "venv" / ("Scripts/python.exe" if os.name == 'nt' else "bin/python")
-PYTHON_EXE = str(VENV_PYTHON) if VENV_PYTHON.exists() else sys.executable
+try:
+    import kokoro_onnx
+    PYTHON_EXE = sys.executable
+except ImportError:
+    VENV_PYTHON = FACELSS_HOME / "venv" / ("Scripts/python.exe" if os.name == 'nt' else "bin/python")
+    PYTHON_EXE = str(VENV_PYTHON) if VENV_PYTHON.exists() else sys.executable
 
 node_candidate = BIN_DIR / ("node.exe" if os.name == 'nt' else "node")
 NODE_EXE = str(node_candidate) if node_candidate.exists() else "node"
