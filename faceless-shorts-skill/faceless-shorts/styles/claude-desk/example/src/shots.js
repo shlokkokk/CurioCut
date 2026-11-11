@@ -9,6 +9,10 @@ import { buildCyberWorld } from './core/world.js';
 import { createDynamicTopicProp } from './core/props.js';
 
 const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+const clamp = (v, min = 0, max = 1) => Math.max(min, Math.min(max, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const eo = (t) => 1 - Math.pow(1 - t, 3);
+const eio = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
 export function buildShots(E) {
   const S = [];
@@ -48,16 +52,16 @@ export function buildShots(E) {
   // Grand Cyber Studio World (Floor, hologram emitter, server monoliths, telemetry screens)
   const world = buildCyberWorld(scene);
 
-  // Characters: Staged on their respective left and right podiums with generous separation
-  // (Left podium: x = -1.18, Right podium: x = +1.18) -> Zero cramping, movie-grade breathing room
+  // Characters: Staged on left and right podiums with golden-ratio separation
+  // (Left podium: x = -0.92, Right podium: x = +0.92) -> 100% fully inside 9:16 frame with zero clipping
   const claude = new ClaudeBot();
-  claude.group.position.set(-1.18, 0, 0.35);
-  claude.group.rotation.y = 0.32;
+  claude.group.position.set(-0.92, 0, 0.35);
+  claude.group.rotation.y = 0.28;
   scene.add(claude.group);
 
   const skeptic = new SkepticBot();
-  skeptic.group.position.set(1.18, 0, 0.35);
-  skeptic.group.rotation.y = -0.32;
+  skeptic.group.position.set(0.92, 0, 0.35);
+  skeptic.group.rotation.y = -0.28;
   scene.add(skeptic.group);
 
   // Global Script Context
@@ -153,36 +157,43 @@ export function buildShots(E) {
         }
 
         // ==========================================
-        // CINEMATIC MOVIE CAMERA DIRECTOR
+        // CINEMATIC MOVIE CAMERA DIRECTOR (Glide Panning)
         // ==========================================
         const progress = Math.min(1, lt / Math.max(1, d));
 
         if (isLast) {
-          // Final CTA: Wide balanced establishing shot framing both presenters and the glowing CTA card
-          const push = progress * 0.15;
-          cam.position.set(0, 1.70, 6.4 - push);
-          cam.lookAt(V3(0, 1.35, 0.2));
+          // Final CTA: Wide balanced establishing shot framing both presenters and glowing CTA card
+          const push = progress * 0.2;
+          cam.position.set(0, 1.82, 7.5 - push);
+          cam.lookAt(V3(0, 1.25, 0.2));
         } else if (isFirst) {
-          // Opening Hook: Majestic establishing push-in showing the grand cyber world
-          const push = progress * 0.25;
-          cam.position.set(0, 1.75, 6.7 - push);
-          cam.lookAt(V3(0, 1.35, 0.2));
+          // Opening Hook: Wide grand cyber establishing shot showing BOTH presenters fully visible
+          const push = progress * 0.3;
+          cam.position.set(0, 1.85, 7.8 - push);
+          cam.lookAt(V3(0, 1.25, 0.2));
         } else if (idx % 2 === 0) {
-          // Showcase Two-Shot: Wide cinematic framing showing BOTH characters separated on their podiums
-          // with the 3D holographic topic prop hovering in clear air in the center
-          const drift = Math.sin(progress * 0.4) * 0.08;
-          cam.position.set(drift, 1.68, 6.25);
-          cam.lookAt(V3(0, 1.35, 0.2));
+          // Showcase Two-Shot: Wide framing showing BOTH presenters 100% visible with floating 3D hologram prop
+          const drift = Math.sin(progress * 0.5) * 0.05;
+          cam.position.set(drift, 1.80, 7.5);
+          cam.lookAt(V3(0, 1.25, 0.2));
         } else if (isSpeakingGuide) {
-          // Medium Hero Presenter Shot on Claude (Comfortable headroom, chest & hands visible, background depth)
-          const slowPan = progress * 0.08;
-          cam.position.set(-0.75 + slowPan, 1.48, 4.45);
-          cam.lookAt(V3(-1.18, 1.05, 0.35));
+          // Medium Hero Presenter Shot on Claude: Centered squarely at x = -0.92 (Zero cutting off!)
+          // Smooth glide pan from right side toward Claude over first 0.55s
+          const glideProgress = eio(clamp(lt / 0.55));
+          const camX = lerp(0.2, -0.92, glideProgress);
+          const camY = 1.44;
+          const camZ = 4.3;
+          cam.position.set(camX, camY, camZ);
+          cam.lookAt(V3(-0.92, 1.05, 0.35));
         } else {
-          // Medium Hero Shot on Skeptic (Comfortable headroom, expressive bow & hands visible)
-          const slowPan = progress * 0.08;
-          cam.position.set(0.75 - slowPan, 1.45, 4.45);
-          cam.lookAt(V3(1.18, 1.02, 0.35));
+          // Medium Hero Shot on Skeptic: Centered squarely at x = 0.92
+          // Smooth glide pan from left side toward Skeptic over first 0.55s
+          const glideProgress = eio(clamp(lt / 0.55));
+          const camX = lerp(-0.2, 0.92, glideProgress);
+          const camY = 1.42;
+          const camZ = 4.3;
+          cam.position.set(camX, camY, camZ);
+          cam.lookAt(V3(0.92, 1.02, 0.35));
         }
 
         // Render WebGL frame with cinematic bloom and subtle depth-of-field

@@ -132,9 +132,9 @@ export function buildCyberWorld(scene) {
   emitterGroup.add(beam);
 
   // 3. Dual Presenter Dais / Podiums (Separated with generous cinematic space)
-  // Claude Podium (Left side: x = -1.35)
+  // Claude Podium (Left side: x = -0.92)
   const claudePodium = new THREE.Group();
-  claudePodium.position.set(-1.35, 0, 0.35);
+  claudePodium.position.set(-0.92, 0, 0.35);
   worldGroup.add(claudePodium);
 
   const daisGeo = new THREE.CylinderGeometry(0.95, 1.05, 0.12, 36);
@@ -156,9 +156,9 @@ export function buildCyberWorld(scene) {
   claudeTrim.position.y = 0.12;
   claudePodium.add(claudeTrim);
 
-  // Skeptic Podium (Right side: x = +1.35)
+  // Skeptic Podium (Right side: x = +0.92)
   const skepticPodium = new THREE.Group();
-  skepticPodium.position.set(1.35, 0, 0.35);
+  skepticPodium.position.set(0.92, 0, 0.35);
   worldGroup.add(skepticPodium);
 
   const skepticDais = new THREE.Mesh(daisGeo, claudeDaisMat);
