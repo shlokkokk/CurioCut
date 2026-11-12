@@ -2,6 +2,7 @@
 import os
 import sys
 import json
+import time
 import shutil
 import argparse
 import re
@@ -153,179 +154,217 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
     print("="*70 + "\n")
 
     history_file = WORKSPACE / "history.json"
-    
-    # 1. Determine Script and Dynamic Style
-    from generate_script import generate_script
-    script_data = None
 
-    if topic and topic != "auto":
-        # Topic explicitly provided: classify style if not forced
-        if not style or style in ["auto", "classic"]:
-            style = classify_style_for_story(topic)
-            print(f"[AI Director] Classified topic '{topic}' -> Dynamic Style: '{style}'")
-        else:
-            print(f"[AI Director] User-specified Style: '{style}' for topic: '{topic}'")
+    if style == "town-rule":
+        # Dedicated Blender 3D Roblox-style Town Rule Storytelling Engine
+        out_dir = WORKSPACE / "town_rule" / "renders"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_tmp = out_dir / f"town_rule_{int(time.time())}.mp4"
+        update_live_progress(
+            step_title="Generating Town Rule 3D Story",
+            percent=15,
+            details="Writing new Town Rule episode & synthesizing voiceover..."
+        )
+        tr_cmd = [PYTHON_EXE, "-u", "-m", "town_rule.run_episode", "--out", str(out_tmp)]
+        if topic and topic != "auto":
+            tr_cmd.extend(["--theme", topic])
+        if draft:
+            tr_cmd.append("--draft")
+        run_cmd(tr_cmd, cwd=WORKSPACE)
 
-        if style in ["claude-desk", "dev-studio"]:
+        ep_timed = WORKSPACE / "town_rule" / "work" / "episode_timed.json"
+        ep_data = json.loads(ep_timed.read_text(encoding="utf-8")) if ep_timed.exists() else {}
+        title = ep_data.get("title", "In This Town")
+        slug = "".join(c if c.isalnum() else "_" for c in title.lower())[:30].strip("_") or "town_rule"
+        output_mp4 = out_dir / f"{slug}.mp4"
+        if out_tmp != output_mp4:
+            if output_mp4.exists():
+                output_mp4.unlink()
+            out_tmp.rename(output_mp4)
+        script_data = {"title": title, "category": "town_rule"}
+        file_size_mb = output_mp4.stat().st_size / (1024 * 1024)
+        print(f"Render complete: {output_mp4.resolve()} ({file_size_mb:.2f} MB)")
+
+        notify_engine(
+            title="Video Render Complete",
+            description=f"**{title}** is rendered ({file_size_mb:.1f} MB). Ready to upload.",
+            fields=[{"name": "Style", "value": style, "inline": True}],
+            color=0x3B82F6
+        )
+    else:
+        # 1. Determine Script and Dynamic Style
+        from generate_script import generate_script
+        script_data = None
+
+    if style != "town-rule":
+        if topic and topic != "auto":
+            # Topic explicitly provided: classify style if not forced
+            if not style or style in ["auto", "classic"]:
+                style = classify_style_for_story(topic)
+                print(f"[AI Director] Classified topic '{topic}' -> Dynamic Style: '{style}'")
+            else:
+                print(f"[AI Director] User-specified Style: '{style}' for topic: '{topic}'")
+
+            if style in ["claude-desk", "dev-studio"]:
+                from generate_tech_dialogue import generate_dialogue_script
+                story_data = {"title": topic, "premise": topic, "cta_keyword": "TOOL"}
+                try:
+                    script_data = generate_dialogue_script(story_data, style=style)
+                except Exception as e:
+                    print(f"Notice: Dynamic tech dialogue exception: {e}.")
+            else:
+                print(f"[1/5] Writing viral script matching style '{style}' for topic: {topic}...")
+                try:
+                    script_data = generate_script(topic)
+                except Exception as e:
+                    print(f"Notice: Dynamic script generation exception: {e}.")
+
+        elif style in ["claude-desk", "dev-studio"]:
+            # Dedicated Tech Slots (Slot 2 / Slot 3)
+            from tech_harvester import get_next_tech_story
             from generate_tech_dialogue import generate_dialogue_script
-            story_data = {"title": topic, "premise": topic, "cta_keyword": "TOOL"}
+            harvest_mode = "skill" if style == "claude-desk" else "tech"
+            print(f"[1/5] Harvesting targeted {harvest_mode.upper()} intel for {style}...")
+            story_data = get_next_tech_story(force_mode=harvest_mode)
+            print(f"[1/5] Generating 2-character dialogue script for '{story_data.get('title')}' ({style})...")
             try:
                 script_data = generate_dialogue_script(story_data, style=style)
             except Exception as e:
                 print(f"Notice: Dynamic tech dialogue exception: {e}.")
+
         else:
-            print(f"[1/5] Writing viral script matching style '{style}' for topic: {topic}...")
+            # Fully autonomous daily run: harvest story across niches and match style
+            print("[1/5] Harvesting dynamic viral story from global knowledge vault...")
+            from story_harvester import get_next_daily_story
             try:
-                script_data = generate_script(topic)
+                story_data = get_next_daily_story()
+                # If style was 'auto' or unspecified, match to harvested story niche
+                if not style or style in ["auto", "classic"]:
+                    style = story_data.get("style", "tall-tale")
+                    print(f"[AI Director] Harvested '{story_data.get('title')}' -> Matched Style: '{style}'")
+                else:
+                    print(f"[AI Director] Using specified style '{style}' with story: '{story_data.get('title')}'")
+
+                premise = story_data.get("premise", story_data.get("title", ""))
+                script_data = generate_script(premise)
             except Exception as e:
-                print(f"Notice: Dynamic script generation exception: {e}.")
+                print(f"Notice: Autonomous story harvesting exception: {e}.")
+                if not style or style in ["auto", "classic"]:
+                    style = get_next_style(history_file)
 
-    elif style in ["claude-desk", "dev-studio"]:
-        # Dedicated Tech Slots (Slot 2 / Slot 3)
-        from tech_harvester import get_next_tech_story
-        from generate_tech_dialogue import generate_dialogue_script
-        harvest_mode = "skill" if style == "claude-desk" else "tech"
-        print(f"[1/5] Harvesting targeted {harvest_mode.upper()} intel for {style}...")
-        story_data = get_next_tech_story(force_mode=harvest_mode)
-        print(f"[1/5] Generating 2-character dialogue script for '{story_data.get('title')}' ({style})...")
-        try:
-            script_data = generate_dialogue_script(story_data, style=style)
-        except Exception as e:
-            print(f"Notice: Dynamic tech dialogue exception: {e}.")
+        template_dir = SKILL_DIR / "styles" / style / "example"
+        if not template_dir.exists():
+            raise FileNotFoundError(f"Style template not found: {template_dir}")
+                
+            if not script_data:
+                script_path = template_dir / "script.json"
+                script_data = json.loads(script_path.read_text(encoding="utf-8"))
 
-    else:
-        # Fully autonomous daily run: harvest story across niches and match style
-        print("[1/5] Harvesting dynamic viral story from global knowledge vault...")
-        from story_harvester import get_next_daily_story
-        try:
-            story_data = get_next_daily_story()
-            # If style was 'auto' or unspecified, match to harvested story niche
-            if not style or style in ["auto", "classic"]:
-                style = story_data.get("style", "tall-tale")
-                print(f"[AI Director] Harvested '{story_data.get('title')}' -> Matched Style: '{style}'")
-            else:
-                print(f"[AI Director] Using specified style '{style}' with story: '{story_data.get('title')}'")
-
-            premise = story_data.get("premise", story_data.get("title", ""))
-            script_data = generate_script(premise)
-        except Exception as e:
-            print(f"Notice: Autonomous story harvesting exception: {e}.")
-            if not style or style in ["auto", "classic"]:
-                style = get_next_style(history_file)
-
-    template_dir = SKILL_DIR / "styles" / style / "example"
-    if not template_dir.exists():
-        raise FileNotFoundError(f"Style template not found: {template_dir}")
-            
         if not script_data:
             script_path = template_dir / "script.json"
             script_data = json.loads(script_path.read_text(encoding="utf-8"))
 
-    if not script_data:
-        script_path = template_dir / "script.json"
-        script_data = json.loads(script_path.read_text(encoding="utf-8"))
+        title = script_data.get("title", "Untitled Short")
+        print(f"Title: {title}")
+        print(f"Style: {style}")
 
-    title = script_data.get("title", "Untitled Short")
-    print(f"Title: {title}")
-    print(f"Style: {style}")
+        notify_engine(
+            title="Short Generation Started",
+            description=f"CurioCut engine started generating: **{title}**",
+            fields=[
+                {"name": "Style", "value": style, "inline": True},
+                {"name": "Upload Target", "value": "YouTube + Instagram" if upload else "Local Only", "inline": True}
+            ]
+        )
+        update_live_progress(
+            step_title="Script & Story Initialized",
+            percent=15,
+            details=f"Topic: **{title}**\nStyle: `{style}` • Target: {'YouTube + Instagram' if upload else 'Local Only'}"
+        )
 
-    notify_engine(
-        title="Short Generation Started",
-        description=f"CurioCut engine started generating: **{title}**",
-        fields=[
-            {"name": "Style", "value": style, "inline": True},
-            {"name": "Upload Target", "value": "YouTube + Instagram" if upload else "Local Only", "inline": True}
-        ]
-    )
-    update_live_progress(
-        step_title="Script & Story Initialized",
-        percent=15,
-        details=f"Topic: **{title}**\nStyle: `{style}` • Target: {'YouTube + Instagram' if upload else 'Local Only'}"
-    )
-
-    # 2. Setup Project Folder
-    slug = "".join(c if c.isalnum() else "_" for c in title.lower())[:30].strip("_")
-    project_dir = WORKSPACE / "projects" / slug
-    if project_dir.exists():
-        shutil.rmtree(project_dir)
+        # 2. Setup Project Folder
+        slug = "".join(c if c.isalnum() else "_" for c in title.lower())[:30].strip("_")
+        project_dir = WORKSPACE / "projects" / slug
+        if project_dir.exists():
+            shutil.rmtree(project_dir)
+            
+        print(f"[2/5] Initializing '{style}' scene in {project_dir.name}...")
+        shutil.copytree(template_dir, project_dir)
+        update_live_progress(
+            step_title="Setting Up 3D Stage Assets",
+            percent=25,
+            details=f"Loading WebGL scene template for `{style}`..."
+        )
         
-    print(f"[2/5] Initializing '{style}' scene in {project_dir.name}...")
-    shutil.copytree(template_dir, project_dir)
-    update_live_progress(
-        step_title="Setting Up 3D Stage Assets",
-        percent=25,
-        details=f"Loading WebGL scene template for `{style}`..."
-    )
-    
-    # Save script.json (preserving perfectly matched line cues)
-    (project_dir / "script.json").write_text(json.dumps(script_data, indent=2), encoding="utf-8")
-    
-    # Clean previous audio/renders
-    for f in ["data/narration.wav", "data/mix.wav"]:
-        p = project_dir / f
-        if p.exists(): p.unlink()
+        # Save script.json (preserving perfectly matched line cues)
+        (project_dir / "script.json").write_text(json.dumps(script_data, indent=2), encoding="utf-8")
         
-    (project_dir / "renders").mkdir(exist_ok=True)
-    (project_dir / "review").mkdir(exist_ok=True)
+        # Clean previous audio/renders
+        for f in ["data/narration.wav", "data/mix.wav"]:
+            p = project_dir / f
+            if p.exists(): p.unlink()
+            
+        (project_dir / "renders").mkdir(exist_ok=True)
+        (project_dir / "review").mkdir(exist_ok=True)
 
-    # 3. Audio & Voiceover (Kokoro + Whisper + Mix)
-    update_live_progress(
-        step_title="Synthesizing Dialogue & Narration",
-        percent=35,
-        details="Generating neural speech with Kokoro TTS..."
-    )
-    if style in ["claude-desk", "dev-studio"]:
-        print("[3/5] Generating dual-character voiceover (Guide + Skeptic/Mascot)...")
-        from dual_voice import synthesize_dialogue
-        synthesize_dialogue(str(project_dir))
-    else:
-        print("[3/5] Generating voiceover (Kokoro TTS)...")
-        run_cmd([PYTHON_EXE, str(SKILL_DIR / "scripts" / "voice.py"), "."], cwd=project_dir)
+        # 3. Audio & Voiceover (Kokoro + Whisper + Mix)
+        update_live_progress(
+            step_title="Synthesizing Dialogue & Narration",
+            percent=35,
+            details="Generating neural speech with Kokoro TTS..."
+        )
+        if style in ["claude-desk", "dev-studio"]:
+            print("[3/5] Generating dual-character voiceover (Guide + Skeptic/Mascot)...")
+            from dual_voice import synthesize_dialogue
+            synthesize_dialogue(str(project_dir))
+        else:
+            print("[3/5] Generating voiceover (Kokoro TTS)...")
+            run_cmd([PYTHON_EXE, str(SKILL_DIR / "scripts" / "voice.py"), "."], cwd=project_dir)
 
-    update_live_progress(
-        step_title="Whisper Subtitle Alignment",
-        percent=45,
-        details="Computing word-level phonetic timestamps & sound cues..."
-    )
-    print("Generating subtitle timings with Whisper...")
-    run_cmd([PYTHON_EXE, str(SKILL_DIR / "scripts" / "words.py"), "."], cwd=project_dir)
+        update_live_progress(
+            step_title="Whisper Subtitle Alignment",
+            percent=45,
+            details="Computing word-level phonetic timestamps & sound cues..."
+        )
+        print("Generating subtitle timings with Whisper...")
+        run_cmd([PYTHON_EXE, str(SKILL_DIR / "scripts" / "words.py"), "."], cwd=project_dir)
 
-    print("Synthesizing procedural sound effects and music bed...")
-    run_cmd([NODE_EXE, "tools/capture.mjs", "cues"], cwd=project_dir)
-    run_cmd([PYTHON_EXE, "tools/mix.py", "."], cwd=project_dir)
+        print("Synthesizing procedural sound effects and music bed...")
+        run_cmd([NODE_EXE, "tools/capture.mjs", "cues"], cwd=project_dir)
+        run_cmd([PYTHON_EXE, "tools/mix.py", "."], cwd=project_dir)
 
-    # 4. Render (Headless Chrome + FFmpeg)
-    output_mp4 = project_dir / "renders" / f"{slug}.mp4"
-    print(f"[4/5] Rendering animation (1080x1920) in headless Chrome...")
-    capture_args = [NODE_EXE, "tools/capture.mjs", "video", str(output_mp4)]
-    if draft:
-        capture_args.append("--draft")
+        # 4. Render (Headless Chrome + FFmpeg)
+        output_mp4 = project_dir / "renders" / f"{slug}.mp4"
+        print(f"[4/5] Rendering animation (1080x1920) in headless Chrome...")
+        capture_args = [NODE_EXE, "tools/capture.mjs", "video", str(output_mp4)]
+        if draft:
+            capture_args.append("--draft")
 
-    def on_render_frame(line):
-        m = re.search(r"\[Render\]\s+Frame\s+(\d+)/(\d+)\s+\((\d+)%\)", line)
-        if m:
-            cur = int(m.group(1))
-            tot = int(m.group(2))
-            pct = int(m.group(3))
-            overall = 50 + int(pct * 0.38) # scales 50% to 88%
-            update_live_progress(
-                step_title="Rendering 3D Scene in Chrome",
-                percent=overall,
-                details=f"Frame {cur}/{tot} ({pct}%) • Headless WebGL @ 1080x1920"
-            )
+        def on_render_frame(line):
+            m = re.search(r"\[Render\]\s+Frame\s+(\d+)/(\d+)\s+\((\d+)%\)", line)
+            if m:
+                cur = int(m.group(1))
+                tot = int(m.group(2))
+                pct = int(m.group(3))
+                overall = 50 + int(pct * 0.38) # scales 50% to 88%
+                update_live_progress(
+                    step_title="Rendering 3D Scene in Chrome",
+                    percent=overall,
+                    details=f"Frame {cur}/{tot} ({pct}%) • Headless WebGL @ 1080x1920"
+                )
 
-    run_cmd(capture_args, cwd=project_dir, on_line=on_render_frame)
-    file_size_mb = output_mp4.stat().st_size / (1024 * 1024)
-    print(f"Render complete: {output_mp4.resolve()} ({file_size_mb:.2f} MB)")
+        run_cmd(capture_args, cwd=project_dir, on_line=on_render_frame)
+        file_size_mb = output_mp4.stat().st_size / (1024 * 1024)
+        print(f"Render complete: {output_mp4.resolve()} ({file_size_mb:.2f} MB)")
 
-    notify_engine(
-        title="Video Render Complete",
-        description=f"**{title}** is rendered ({file_size_mb:.1f} MB). Ready to upload.",
-        fields=[
-            {"name": "Style", "value": style, "inline": True}
-        ],
-        color=0x3B82F6
-    )
+        notify_engine(
+            title="Video Render Complete",
+            description=f"**{title}** is rendered ({file_size_mb:.1f} MB). Ready to upload.",
+            fields=[
+                {"name": "Style", "value": style, "inline": True}
+            ],
+            color=0x3B82F6
+        )
 
     # Record history
     try:
@@ -378,6 +417,12 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
                 f"{title}\n\n"
                 f"Aged parchment chronicles of history's greatest empires, disasters, and turning points.\n\n"
                 f"#history #historicalfacts #ancienthistory #disaster #londonfire #empire #worldhistory #curiocut #shorts"
+            )
+        elif style == "town-rule":
+            desc = (
+                f"{title}\n\n"
+                f"In this town, one bizarre rule decides who survives. Brand new 3D animated town-rule story every day!\n\n"
+                f"#storytime #animation #3danimation #robloxstory #scarystories #plottwist #mystery #curiocut #shorts"
             )
         else:
             desc = (

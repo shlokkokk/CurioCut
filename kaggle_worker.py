@@ -84,8 +84,24 @@ elif "dive" in slot or "science" in slot or "body" in slot:
     style_arg = "deep-dive"
 elif "tall" in slot or "tale" in slot:
     style_arg = "tall-tale"
+elif "town" in slot or "rule" in slot or "roblox" in slot or "story" in slot:
+    style_arg = "town-rule"
 else:
     style_arg = "auto"
+
+if style_arg == "town-rule" and not shutil.which("blender"):
+    blender_dir = Path("/kaggle/working/blender")
+    blender_bin = blender_dir / "blender-4.3.2-linux-x64" / "blender"
+    if not blender_bin.exists():
+        print("[3b/4] Installing portable Blender 4.3.2 for Linux GPU rendering...", flush=True)
+        blender_dir.mkdir(parents=True, exist_ok=True)
+        tar_path = blender_dir / "blender-4.3.2-linux-x64.tar.xz"
+        run(["curl", "-L", "-s", "https://download.blender.org/release/Blender4.3/blender-4.3.2-linux-x64.tar.xz", "-o", str(tar_path)])
+        run(["tar", "-xf", str(tar_path), "-C", str(blender_dir)])
+        tar_path.unlink(missing_ok=True)
+    os.environ["BLENDER_EXE"] = str(blender_bin)
+    os.environ["PATH"] = f"{blender_bin.parent}:{os.environ.get('PATH', '')}"
+
 print(f"\n[4/4] Starting 3D short generation (Slot: {slot} | Style: {style_arg})...", flush=True)
 
 try:

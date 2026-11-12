@@ -1,14 +1,20 @@
 name: Daily CurioCut Shorts Auto-Poster
 
 on:
-  schedule:
-    # Peak Engagement Timings (IST - Indian Standard Time):
-    # - Lunch Window: Triggers 12:25 PM IST (06:55 UTC) -> Video goes LIVE at 1:00 PM IST
-    # - Prime Evening Surge: Triggers 6:25 PM IST (12:55 UTC) -> Video goes LIVE at 7:00 PM IST
-    # (Scheduled at :55 to bypass GitHub's top-of-the-hour :00 congestion queue drops)
-    - cron: '55 6,12 * * *'
   workflow_dispatch: # Allows manual 1-click trigger from GitHub website anytime!
-  repository_dispatch: # Allows external cron triggers (cron-job.org, Cloudflare Workers, webhooks)
+    inputs:
+      slot:
+        description: "Slot / style to run"
+        required: false
+        default: "town-rule"
+        type: choice
+        options:
+          - town-rule
+          - auto
+          - classic
+          - claude-desk
+          - dev-studio
+  repository_dispatch: # Driven by Cloudflare Edge Cron (curiocut-corn) & Discord triggers
     types: [daily_short, tech_short, run_pipeline]
 
 concurrency:
@@ -54,7 +60,7 @@ jobs:
           DISCORD_WEBHOOK_IG_ERRORS: ${{ secrets.DISCORD_WEBHOOK_IG_ERRORS }}
           DISCORD_WEBHOOK_DMS_SENT: ${{ secrets.DISCORD_WEBHOOK_DMS_SENT }}
           DISCORD_WEBHOOK_LIVE_PROGRESS: ${{ secrets.DISCORD_WEBHOOK_LIVE_PROGRESS }}
-          CURIO_SLOT: ${{ github.event.client_payload.slot || 'auto' }}
+          CURIO_SLOT: ${{ github.event.inputs.slot || github.event.client_payload.slot || 'auto' }}
           PYTHONUNBUFFERED: "1"
         run: |
           python trigger_kaggle.py

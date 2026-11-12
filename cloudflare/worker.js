@@ -117,7 +117,8 @@ export default {
 
     const hourUTC = new Date().getUTCHours();
 
-    let slotType = "classic";
+    // Slot 1 default is temporarily "town-rule" while trending (swap back to "classic" anytime)
+    let slotType = "town-rule";
     if (hourUTC === 12 || cronStr.includes("12")) {
       slotType = "claude-desk";
     } else if (hourUTC === 15 || cronStr.includes("15")) {
@@ -175,7 +176,10 @@ export default {
           const slot = (getOpt("slot") || "classic").toLowerCase();
           let targetStyle = "classic";
           let slotName = "Slot 1 (1:00 PM Classic Story)";
-          if (slot.includes("claude") || slot.includes("2")) {
+          if (slot.includes("town") || slot.includes("rule") || slot.includes("4")) {
+            targetStyle = "town-rule";
+            slotName = "Slot 4 (2:55 PM 3D Town-Rule)";
+          } else if (slot.includes("claude") || slot.includes("2")) {
             targetStyle = "claude-desk";
             slotName = "Slot 2 (7:00 PM 3D Claude-Desk)";
           } else if (slot.includes("dev") || slot.includes("studio") || slot.includes("3") || slot.includes("tech")) {
