@@ -35,6 +35,7 @@ def find_blender() -> str:
         return which_b
     candidates = [
         Path.home() / ".faceless-shorts" / "blender" / "blender-4.3.2-windows-x64" / "blender.exe",
+        Path("/kaggle/working/blender/blender-4.3.2-linux-x64/blender"),
         Path("/opt/blender/blender"),
         Path("/usr/local/bin/blender"),
     ]

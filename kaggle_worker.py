@@ -96,9 +96,17 @@ if style_arg == "town-rule" and not shutil.which("blender"):
         print("[3b/4] Installing portable Blender 4.3.2 for Linux GPU rendering...", flush=True)
         blender_dir.mkdir(parents=True, exist_ok=True)
         tar_path = blender_dir / "blender-4.3.2-linux-x64.tar.xz"
-        run(["curl", "-L", "-s", "https://download.blender.org/release/Blender4.3/blender-4.3.2-linux-x64.tar.xz", "-o", str(tar_path)])
-        run(["tar", "-xf", str(tar_path), "-C", str(blender_dir)])
+        subprocess.run(["curl", "-L", "-s", "https://download.blender.org/release/Blender4.3/blender-4.3.2-linux-x64.tar.xz", "-o", str(tar_path)], check=True)
+        subprocess.run(["tar", "-xf", str(tar_path), "-C", str(blender_dir)], check=True)
         tar_path.unlink(missing_ok=True)
+    subprocess.run(["chmod", "+x", str(blender_bin)], check=False)
+    test_res = subprocess.run([str(blender_bin), "--version"], capture_output=True, text=True)
+    if test_res.returncode != 0:
+        print(f"Installing missing Linux libraries for Blender: {test_res.stderr.strip()}", flush=True)
+        subprocess.run(["apt-get", "update", "-y"] + apt_flags, check=False)
+        subprocess.run(["apt-get", "install", "-y"] + apt_flags + [
+            "libsm6", "libxext6", "libxrender1", "libxi6", "libxkbcommon0", "libgl1", "libglu1-mesa", "libxxf86vm1"
+        ], check=False)
     os.environ["BLENDER_EXE"] = str(blender_bin)
     os.environ["PATH"] = f"{blender_bin.parent}:{os.environ.get('PATH', '')}"
 

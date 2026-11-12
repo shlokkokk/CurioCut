@@ -18,6 +18,25 @@ FACELESS_HOME = Path(os.environ.get("FACELESS_HOME", Path.home() / ".faceless-sh
 KDIR = FACELESS_HOME / "kokoro"
 
 
+KOKORO_FILES = {
+    "kokoro-v1.0.onnx": "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx",
+    "voices-v1.0.bin": "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin",
+}
+
+
+def ensure_kokoro_models():
+    KDIR.mkdir(parents=True, exist_ok=True)
+    import urllib.request
+    for name, url in KOKORO_FILES.items():
+        p = KDIR / name
+        if p.exists() and p.stat().st_size > 1_000_000:
+            continue
+        print(f"[town_rule/audio_engine] Downloading Kokoro model {name}...", flush=True)
+        tmp = p.with_suffix(".part")
+        urllib.request.urlretrieve(url, tmp)
+        tmp.rename(p)
+
+
 def _trim_silence(x: np.ndarray, thr: float = 0.008) -> np.ndarray:
     idx = np.where(np.abs(x) > thr)[0]
     if len(idx) == 0:
@@ -31,12 +50,9 @@ def _trim_silence(x: np.ndarray, thr: float = 0.008) -> np.ndarray:
 def synthesize_narration(episode: dict, work_dir: Path) -> tuple[Path, dict]:
     from kokoro_onnx import Kokoro
 
+    ensure_kokoro_models()
     onnx_path = KDIR / "kokoro-v1.0.onnx"
     voices_path = KDIR / "voices-v1.0.bin"
-    if not onnx_path.exists() or not voices_path.exists():
-        raise FileNotFoundError(
-            f"Kokoro models missing in {KDIR}. Run faceless-shorts voice.py --download first."
-        )
 
     kokoro = Kokoro(str(onnx_path), str(voices_path))
     voice = episode.get("voice", "am_michael")
