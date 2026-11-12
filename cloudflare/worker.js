@@ -173,12 +173,12 @@ export default {
         const getOpt = (name) => options.find(o => o.name === name)?.value;
 
         if (cmdName === "trigger") {
-          const slot = (getOpt("slot") || "classic").toLowerCase();
-          let targetStyle = "classic";
-          let slotName = "Slot 1 (1:00 PM Classic Story)";
-          if (slot.includes("town") || slot.includes("rule") || slot.includes("4")) {
-            targetStyle = "town-rule";
-            slotName = "Slot 4 (2:55 PM 3D Town-Rule)";
+          const slot = (getOpt("slot") || "town-rule").toLowerCase();
+          let targetStyle = "town-rule";
+          let slotName = "Slot 1 (1:00 PM 3D Town-Rule)";
+          if (slot.includes("classic")) {
+            targetStyle = "classic";
+            slotName = "Classic Story (Manual)";
           } else if (slot.includes("claude") || slot.includes("2")) {
             targetStyle = "claude-desk";
             slotName = "Slot 2 (7:00 PM 3D Claude-Desk)";
@@ -284,8 +284,8 @@ export default {
         let replyText = "Action received.";
 
         if (customId === "trigger_slot_1") {
-          await triggerGitHub(env.GITHUB_TOKEN, "classic");
-          replyText = "Started generating Slot 1 Classic Story (1:00 PM). Live frame rendering will appear in <#1569750972975288441>.";
+          await triggerGitHub(env.GITHUB_TOKEN, "town-rule");
+          replyText = "Started generating Slot 1 3D Town-Rule Story (1:00 PM). Live frame rendering will appear in <#1569750972975288441>.";
         } else if (customId === "trigger_slot_2") {
           await triggerGitHub(env.GITHUB_TOKEN, "claude-desk");
           replyText = "Started generating Slot 2 3D Claude-Desk Dual Bot (7:00 PM). Live frame rendering will appear in <#1569750972975288441>.";
