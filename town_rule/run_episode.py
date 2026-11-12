@@ -104,7 +104,20 @@ def main():
     render_script = Path(__file__).resolve().parent / "blender_render.py"
 
     print(f"[5/6] Rendering 3D EEVEE Next scene via {blender_exe}...")
-    cmd = [
+
+    # Configure NVIDIA EGL headless acceleration environment if available
+    for p in ["/usr/share/glvnd/egl_vendor.d/10_nvidia.json", "/etc/glvnd/egl_vendor.d/10_nvidia.json"]:
+        if os.path.exists(p):
+            os.environ["__EGL_VENDOR_LIBRARY_FILENAMES"] = p
+            os.environ["__NV_PRIME_RENDER_OFFLOAD"] = "1"
+            os.environ["__GLX_VENDOR_LIBRARY_NAME"] = "nvidia"
+            break
+
+    cmd = []
+    if sys.platform.startswith("linux") and not os.environ.get("DISPLAY") and shutil.which("xvfb-run"):
+        cmd.extend(["xvfb-run", "-a", "-s", "-screen 0 1920x1080x24"])
+
+    cmd.extend([
         blender_exe,
         "--background",
         "--python", str(render_script),
@@ -113,7 +126,7 @@ def main():
         "--out", str(raw_video),
         "--fps", str(args.fps),
         "--faces-dir", str(faces_dir),
-    ]
+    ])
     if args.draft:
         cmd.append("--draft")
     if args.max_frames > 0:

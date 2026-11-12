@@ -5,9 +5,19 @@ import shutil
 import subprocess
 from pathlib import Path
 
-# Force unbuffered streaming & non-interactive execution
+# Force unbuffered streaming & completely non-interactive package execution
 os.environ["PYTHONUNBUFFERED"] = "1"
 os.environ["DEBIAN_FRONTEND"] = "noninteractive"
+os.environ["NEEDRESTART_MODE"] = "a"
+os.environ["NEEDRESTART_SUSPEND"] = "1"
+
+# Suppress Ubuntu needrestart interactive service dialogs completely
+try:
+    needrestart_dir = Path("/etc/needrestart/conf.d")
+    needrestart_dir.mkdir(parents=True, exist_ok=True)
+    (needrestart_dir / "override.conf").write_text("$nrconf{restart} = 'l';\n$nrconf{ui} = 'NeedRestart::UI::stdio';\n", encoding="utf-8")
+except Exception:
+    pass
 
 print("\n" + "="*70, flush=True)
 print("   CURIO CUT - AUTONOMOUS CLOUD EXECUTION WORKER   ", flush=True)
@@ -89,26 +99,48 @@ elif "town" in slot or "rule" in slot or "roblox" in slot or "story" in slot:
 else:
     style_arg = "auto"
 
-if style_arg == "town-rule" and not shutil.which("blender"):
-    blender_dir = Path("/kaggle/working/blender")
-    blender_bin = blender_dir / "blender-4.3.2-linux-x64" / "blender"
-    if not blender_bin.exists():
-        print("[3b/4] Installing portable Blender 4.3.2 for Linux GPU rendering...", flush=True)
-        blender_dir.mkdir(parents=True, exist_ok=True)
-        tar_path = blender_dir / "blender-4.3.2-linux-x64.tar.xz"
-        subprocess.run(["curl", "-L", "-s", "https://download.blender.org/release/Blender4.3/blender-4.3.2-linux-x64.tar.xz", "-o", str(tar_path)], check=True)
-        subprocess.run(["tar", "-xf", str(tar_path), "-C", str(blender_dir)], check=True)
-        tar_path.unlink(missing_ok=True)
-    subprocess.run(["chmod", "+x", str(blender_bin)], check=False)
-    test_res = subprocess.run([str(blender_bin), "--version"], capture_output=True, text=True)
-    if test_res.returncode != 0:
-        print(f"Installing missing Linux libraries for Blender: {test_res.stderr.strip()}", flush=True)
-        subprocess.run(["apt-get", "update", "-y"] + apt_flags, check=False)
-        subprocess.run(["apt-get", "install", "-y"] + apt_flags + [
-            "libsm6", "libxext6", "libxrender1", "libxi6", "libxkbcommon0", "libgl1", "libglu1-mesa", "libxxf86vm1"
-        ], check=False)
-    os.environ["BLENDER_EXE"] = str(blender_bin)
-    os.environ["PATH"] = f"{blender_bin.parent}:{os.environ.get('PATH', '')}"
+if style_arg == "town-rule":
+    # Configure NVIDIA EGL and GLX hardware acceleration for headless GPU rendering
+    for nvidia_json in [
+        "/usr/share/glvnd/egl_vendor.d/10_nvidia.json",
+        "/etc/glvnd/egl_vendor.d/10_nvidia.json",
+    ]:
+        if os.path.exists(nvidia_json):
+            os.environ["__EGL_VENDOR_LIBRARY_FILENAMES"] = nvidia_json
+            os.environ["__NV_PRIME_RENDER_OFFLOAD"] = "1"
+            os.environ["__GLX_VENDOR_LIBRARY_NAME"] = "nvidia"
+            break
+
+    # Ensure Xvfb and required Linux graphics libraries are available
+    if not shutil.which("xvfb-run"):
+        print("[3a/4] Installing Xvfb and graphics libraries for headless GPU rendering...", flush=True)
+        nonint_env = dict(os.environ, DEBIAN_FRONTEND="noninteractive", NEEDRESTART_MODE="a", NEEDRESTART_SUSPEND="1")
+        subprocess.run(["apt-get", "update", "-y", "-q"] + apt_flags, env=nonint_env, check=False)
+        subprocess.run(["apt-get", "install", "-y", "-q"] + apt_flags + [
+            "xvfb", "libsm6", "libxext6", "libxrender1", "libxi6", "libxkbcommon0", "libgl1", "libglu1-mesa", "libxxf86vm1"
+        ], env=nonint_env, check=False)
+
+    if not shutil.which("blender"):
+        blender_dir = Path("/kaggle/working/blender")
+        blender_bin = blender_dir / "blender-4.3.2-linux-x64" / "blender"
+        if not blender_bin.exists():
+            print("[3b/4] Installing portable Blender 4.3.2 for Linux GPU rendering...", flush=True)
+            blender_dir.mkdir(parents=True, exist_ok=True)
+            tar_path = blender_dir / "blender-4.3.2-linux-x64.tar.xz"
+            subprocess.run(["curl", "-L", "-s", "https://download.blender.org/release/Blender4.3/blender-4.3.2-linux-x64.tar.xz", "-o", str(tar_path)], check=True)
+            subprocess.run(["tar", "-xf", str(tar_path), "-C", str(blender_dir)], check=True)
+            tar_path.unlink(missing_ok=True)
+        subprocess.run(["chmod", "+x", str(blender_bin)], check=False)
+        test_res = subprocess.run([str(blender_bin), "--version"], capture_output=True, text=True)
+        if test_res.returncode != 0:
+            print(f"Installing missing Linux libraries for Blender: {test_res.stderr.strip()}", flush=True)
+            nonint_env = dict(os.environ, DEBIAN_FRONTEND="noninteractive", NEEDRESTART_MODE="a", NEEDRESTART_SUSPEND="1")
+            subprocess.run(["apt-get", "update", "-y", "-q"] + apt_flags, env=nonint_env, check=False)
+            subprocess.run(["apt-get", "install", "-y", "-q"] + apt_flags + [
+                "xvfb", "libsm6", "libxext6", "libxrender1", "libxi6", "libxkbcommon0", "libgl1", "libglu1-mesa", "libxxf86vm1"
+            ], env=nonint_env, check=False)
+        os.environ["BLENDER_EXE"] = str(blender_bin)
+        os.environ["PATH"] = f"{blender_bin.parent}:{os.environ.get('PATH', '')}"
 
 print(f"\n[4/4] Starting 3D short generation (Slot: {slot} | Style: {style_arg})...", flush=True)
 
