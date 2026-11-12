@@ -170,7 +170,60 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
             tr_cmd.extend(["--theme", topic])
         if draft:
             tr_cmd.append("--draft")
-        run_cmd(tr_cmd, cwd=WORKSPACE)
+
+        total_render_frames = [2400]
+        last_reported_frame = [0]
+
+        def on_tr_line(line):
+            if "[2/6]" in line:
+                update_live_progress(
+                    step_title="Writing Town Rule Story",
+                    percent=20,
+                    details="Generating 4-act screenplay & procedural cast specs..."
+                )
+            elif "[3/6]" in line:
+                update_live_progress(
+                    step_title="Synthesizing Speech & Audio Mix",
+                    percent=35,
+                    details="Kokoro TTS narration + Whisper phonetic timestamps + SFX..."
+                )
+            elif "Total duration:" in line:
+                m_dur = re.search(r"Total duration:\s*([\d\.]+)s", line)
+                if m_dur:
+                    total_render_frames[0] = max(240, int(float(m_dur.group(1)) * 24))
+            elif "[4/6]" in line:
+                update_live_progress(
+                    step_title="Building Captions & HUD",
+                    percent=45,
+                    details="Compiling word-level highlighted ASS subtitles..."
+                )
+            elif "[5/6]" in line:
+                update_live_progress(
+                    step_title="Launching Blender 3D Engine",
+                    percent=50,
+                    details="Spawning Blender 4.3 EEVEE Next GPU renderer..."
+                )
+            elif "Append frame " in line or "Fra:" in line:
+                m_fr = re.search(r"(?:Append frame |Fra:)(\d+)", line)
+                if m_fr:
+                    f = int(m_fr.group(1))
+                    tot = total_render_frames[0]
+                    if f - last_reported_frame[0] >= 120 or f == 1 or f >= tot:
+                        last_reported_frame[0] = f
+                        pct = min(88, 50 + int((f / max(1, tot)) * 38))
+                        update_live_progress(
+                            step_title="Rendering 3D Scene in Blender",
+                            percent=pct,
+                            details=f"Frame {f}/{tot} ({int(f/max(1, tot)*100)}%) • EEVEE Next @ 1080x1920 HD"
+                        )
+            elif "[6/6]" in line:
+                update_live_progress(
+                    step_title="Burning Captions & Subtitles",
+                    percent=88,
+                    details="Muxing clean audio + burning ASS subtitles with FFmpeg..."
+                )
+
+        run_cmd(tr_cmd, cwd=WORKSPACE, on_line=on_tr_line)
 
         ep_timed = WORKSPACE / "town_rule" / "work" / "episode_timed.json"
         ep_data = json.loads(ep_timed.read_text(encoding="utf-8")) if ep_timed.exists() else {}
