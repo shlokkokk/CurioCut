@@ -874,9 +874,55 @@ def build_environments(scene):
 # Lighting, Weather & Camera Director
 # ---------------------------------------------------------------------------
 def configure_render(scene, fps: int, draft: bool):
-    # Prefer EEVEE Next in Blender 4.2/4.3
-    engines = [e.identifier for e in bpy.types.RenderSettings.bl_rna.properties["engine"].enum_items]
-    scene.render.engine = "BLENDER_EEVEE_NEXT" if "BLENDER_EEVEE_NEXT" in engines else "BLENDER_EEVEE"
+    # Auto-detect hardware GPU acceleration: on Linux headless cloud servers (like Kaggle with Tesla T4),
+    # Cycles OptiX / CUDA communicates directly with NVIDIA hardware compute kernels, completely bypassing
+    # missing X11/EGL display drivers that force EEVEE onto slow CPU llvmpipe.
+    use_gpu_cycles = False
+    try:
+        prefs = bpy.context.preferences
+        cycles_addon = prefs.addons.get("cycles")
+        if cycles_addon:
+            cprefs = cycles_addon.preferences
+            for backend in ["OPTIX", "CUDA"]:
+                try:
+                    cprefs.compute_device_type = backend
+                    cprefs.get_devices()
+                    matched = [d for d in cprefs.devices if d.type == backend]
+                    if matched:
+                        for d in cprefs.devices:
+                            d.use = (d.type == backend)
+                        scene.render.engine = "CYCLES"
+                        scene.cycles.device = "GPU"
+                        scene.cycles.samples = 8 if draft else 16
+                        scene.cycles.preview_samples = 8
+                        scene.cycles.use_denoising = True
+                        if hasattr(scene.cycles, "denoiser"):
+                            scene.cycles.denoiser = "OPENIMAGEDENOISE"
+                        scene.cycles.max_bounces = 4
+                        scene.cycles.diffuse_bounces = 2
+                        scene.cycles.glossy_bounces = 2
+                        scene.cycles.transmission_bounces = 2
+                        scene.cycles.volume_bounces = 0
+                        scene.cycles.transparent_max_bounces = 4
+                        use_gpu_cycles = True
+                        print(f"[blender_render] Activated hardware GPU: {backend} ({matched[0].name}) via CYCLES path-tracer!", flush=True)
+                        break
+                except Exception as ex:
+                    print(f"[blender_render] Backend {backend} check: {ex}", flush=True)
+    except Exception as e:
+        print(f"[blender_render] GPU check error: {e}", flush=True)
+
+    if not use_gpu_cycles:
+        # Fall back to EEVEE Next (for environments with an active OpenGL/windowing display)
+        engines = [e.identifier for e in bpy.types.RenderSettings.bl_rna.properties["engine"].enum_items]
+        scene.render.engine = "BLENDER_EEVEE_NEXT" if "BLENDER_EEVEE_NEXT" in engines else "BLENDER_EEVEE"
+        if hasattr(scene, "eevee"):
+            scene.eevee.taa_render_samples = 4 if draft else 8
+            if hasattr(scene.eevee, "shadow_resolution_scale"):
+                scene.eevee.shadow_resolution_scale = 0.5 if draft else 1.0
+            if hasattr(scene.eevee, "use_gtao"):
+                scene.eevee.use_gtao = True
+        print(f"[blender_render] Using {scene.render.engine} display engine", flush=True)
 
     scene.render.resolution_x = 540 if draft else 1080
     scene.render.resolution_y = 960 if draft else 1920

@@ -231,9 +231,9 @@ def generate_episode(theme_hint: str = "") -> dict:
     if key2:
         attempts.append(("Gemini Pro Latest (Key 2)", lambda: _call_gemini(user_prompt, key2, "gemini-pro-latest")))
     if key1:
-        attempts.append(("Gemini 2.5 Pro (Key 1)", lambda: _call_gemini(user_prompt, key1, "gemini-2.5-pro")))
+        attempts.append(("Gemini 1.5 Pro (Key 1)", lambda: _call_gemini(user_prompt, key1, "gemini-1.5-pro")))
     if key2:
-        attempts.append(("Gemini 2.5 Pro (Key 2)", lambda: _call_gemini(user_prompt, key2, "gemini-2.5-pro")))
+        attempts.append(("Gemini 1.5 Pro (Key 2)", lambda: _call_gemini(user_prompt, key2, "gemini-1.5-pro")))
 
     # Tier 2: High Intelligence Fallbacks (Real Google Endpoints)
     if key1:

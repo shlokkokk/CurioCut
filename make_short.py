@@ -201,7 +201,7 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
                 update_live_progress(
                     step_title="Launching Blender 3D Engine",
                     percent=50,
-                    details="Spawning Blender 4.3 EEVEE Next GPU renderer..."
+                    details="Spawning Blender 4.3 GPU hardware renderer..."
                 )
             elif "Append frame " in line or "Fra:" in line:
                 m_fr = re.search(r"(?:Append frame |Fra:)(\d+)", line)
@@ -214,7 +214,7 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
                         update_live_progress(
                             step_title="Rendering 3D Scene in Blender",
                             percent=pct,
-                            details=f"Frame {f}/{tot} ({int(f/max(1, tot)*100)}%) • EEVEE Next @ 1080x1920 HD"
+                            details=f"Frame {f}/{tot} ({int(f/max(1, tot)*100)}%) * Hardware GPU @ 1080x1920 HD"
                         )
             elif "[6/6]" in line:
                 update_live_progress(
