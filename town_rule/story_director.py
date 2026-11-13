@@ -225,25 +225,25 @@ def generate_episode(theme_hint: str = "") -> dict:
     groq_key = os.environ.get("GROQ_API_KEY", "").strip()
 
     attempts = []
-    # Tier 1: Peak Human Psychology & Deep Reasoning (Gemini Pro Models with backoff retry)
+    # Tier 1: Frontier Gemini 3.1 Pro Reasoning (Key 1 & Key 2)
+    if key1:
+        attempts.append(("Gemini 3.1 Pro (Key 1)", lambda: _call_gemini(user_prompt, key1, "gemini-3.1-pro-preview")))
+    if key2:
+        attempts.append(("Gemini 3.1 Pro (Key 2)", lambda: _call_gemini(user_prompt, key2, "gemini-3.1-pro-preview")))
     if key1:
         attempts.append(("Gemini Pro Latest (Key 1)", lambda: _call_gemini(user_prompt, key1, "gemini-pro-latest")))
     if key2:
         attempts.append(("Gemini Pro Latest (Key 2)", lambda: _call_gemini(user_prompt, key2, "gemini-pro-latest")))
-    if key1:
-        attempts.append(("Gemini 1.5 Pro (Key 1)", lambda: _call_gemini(user_prompt, key1, "gemini-1.5-pro")))
-    if key2:
-        attempts.append(("Gemini 1.5 Pro (Key 2)", lambda: _call_gemini(user_prompt, key2, "gemini-1.5-pro")))
 
-    # Tier 2: High Intelligence Fallbacks (Real Google Endpoints)
+    # Tier 2: Next-Gen Gemini 3 Architecture (Active 200 OK)
     if key1:
-        attempts.append(("Gemini Flash Latest (Key 1)", lambda: _call_gemini(user_prompt, key1, "gemini-flash-latest")))
+        attempts.append(("Gemini 3 Flash (Key 1)", lambda: _call_gemini(user_prompt, key1, "gemini-3-flash-preview")))
     if key2:
-        attempts.append(("Gemini Flash Lite Latest (Key 2)", lambda: _call_gemini(user_prompt, key2, "gemini-flash-lite-latest")))
+        attempts.append(("Gemini 3 Flash (Key 2)", lambda: _call_gemini(user_prompt, key2, "gemini-3-flash-preview")))
 
-    # Tier 3: Groq High-Speed LPU Fallback
+    # Tier 3: 120-Billion Parameter Flagship Open Architecture on Groq LPU
     if groq_key:
-        attempts.append(("Groq LPU Engine", lambda: _call_groq(user_prompt, groq_key)))
+        attempts.append(("Groq 120B Flagship", lambda: _call_groq(user_prompt, groq_key)))
 
     last_err = None
     for label, fn in attempts:

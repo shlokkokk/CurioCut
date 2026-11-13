@@ -2,5 +2,9 @@
   {
     "title": "The Sinking Seconds",
     "rule_hook": "In this town, every resident is born with a glowing timer on their chest that counts down the exact minutes they have left to live."
+  },
+  {
+    "title": "The Stone Truth",
+    "rule_hook": "In this town, every person is born with a stone statue of themselves in their backyard that moves one step closer every time they tell a lie."
   }
 ]
