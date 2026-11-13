@@ -173,6 +173,7 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
 
         total_render_frames = [2400]
         last_reported_frame = [0]
+        last_reported_time = [0.0]
 
         def on_tr_line(line):
             if "[2/6]" in line:
@@ -208,8 +209,10 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
                 if m_fr:
                     f = int(m_fr.group(1))
                     tot = total_render_frames[0]
-                    if f - last_reported_frame[0] >= 120 or f == 1 or f >= tot:
+                    now = time.time()
+                    if (f - last_reported_frame[0] >= 25) or (now - last_reported_time[0] >= 15.0 and f > last_reported_frame[0]) or f == 1 or f >= tot:
                         last_reported_frame[0] = f
+                        last_reported_time[0] = now
                         pct = min(88, 50 + int((f / max(1, tot)) * 38))
                         update_live_progress(
                             step_title="Rendering 3D Scene in Blender",
