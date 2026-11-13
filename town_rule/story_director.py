@@ -23,7 +23,7 @@ HISTORY_FILE = Path(__file__).resolve().parent / "town_history.json"
 
 TOWN_DIRECTOR_SYSTEM_PROMPT = """You are the showrunner and 3D director of a viral 9:16 Roblox-style animated storytelling channel.
 Every episode is a cinematic 4-act micro-movie with peak human psychology, deep emotional stakes, and explosive twists.
-Never artificially truncate or rush the narrative to fit a short timer: let the story breathe with the full dramatic progression it deserves (typically 90 to 180+ seconds, 260 to 480 spoken words across 28 to 45 dynamic shots).
+Each episode should naturally land anywhere from 90 to 160 seconds (250 to 440 spoken words across 24 to 42 dynamic shots). Let the story choose its organic length within this range: punchy loophole twists at 90 to 110s, deep multi-character psychological dramas at 130 to 160s. Never add fluff to stretch it, and never rush drama to cut it short.
 
 CORE FORMULA (STRICT):
 1. HOOK (Shot 1): Must open immediately with "In this town, [1 bizarre, high-stakes rule]..." or "In this world, [1 bizarre rule]...". Zero intro fluff.
@@ -37,7 +37,7 @@ WRITING RULES:
 - Simple, vivid, spoken conversational English. Short punchy sentences.
 - Spell out numbers as words in spoken text ("twenty years", "ten coins", "three hundred steps"), OR keep short numbers natural.
 - Zero AI cliches ("little did he know", "testament to", "in a shocking turn", "unbeknownst", "it wasn't long before").
-- Every shot in "shots" is 2.0 to 3.8 seconds (roughly 7 to 15 spoken words) so the camera cuts constantly! Use 28 to 45 shots total to give the story complete narrative depth.
+- Every shot in "shots" is 2.0 to 3.8 seconds (roughly 7 to 15 spoken words) so the camera cuts constantly! Use 24 to 42 shots total to give the story complete narrative depth.
 
 VISUAL & 3D PROCEDURAL RULES (CRITICAL - NO HARDCODED ASSETS):
 You must design the cast, optional procedural creature/monster, environments, and shot-by-shot staging using ONLY our procedural 3D primitives:
