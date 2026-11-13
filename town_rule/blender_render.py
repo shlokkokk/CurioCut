@@ -926,13 +926,16 @@ def configure_render(scene, fps: int, draft: bool):
                         scene.cycles.device = "GPU"
                         scene.cycles.samples = 8 if draft else 16
                         scene.cycles.preview_samples = 8
+                        # Peak-quality AI neural denoising accelerated on GPU (Blender 4.1+)
                         scene.cycles.use_denoising = True
                         if hasattr(scene.cycles, "denoiser"):
-                            try:
-                                scene.cycles.denoiser = "OPTIX"
-                                print("[blender_render] Activated hardware OPTIX AI Denoiser on GPU Tensor Cores!", flush=True)
-                            except Exception:
-                                scene.cycles.denoiser = "OPENIMAGEDENOISE"
+                            scene.cycles.denoiser = "OPENIMAGEDENOISE"
+                        if hasattr(scene.cycles, "denoising_use_gpu"):
+                            scene.cycles.denoising_use_gpu = True
+                        if hasattr(scene.cycles, "denoising_prefilter"):
+                            scene.cycles.denoising_prefilter = "FAST"
+                        if hasattr(scene.cycles, "denoising_input_passes"):
+                            scene.cycles.denoising_input_passes = "RGB_ALBEDO_NORMAL"
                         scene.cycles.max_bounces = 4
                         scene.cycles.diffuse_bounces = 2
                         scene.cycles.glossy_bounces = 2
