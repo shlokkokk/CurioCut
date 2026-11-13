@@ -1,488 +1,442 @@
-// CurioCut Topic-Driven 3D Holographic Props Engine for Claude-Desk
-// 100% procedural Three.js holographic models generated dynamically from topic semantics.
-// All props hover majestically in clear air at the Center Hologram Stage (x=0, y=1.75, z=0.0)
-// with zero character clipping or intersection.
+// Dev-Studio Night Studio Environment & 3D Holographic Showcase Props
 import * as THREE from 'three';
 
-const CYAN_NEON = '#00F0FF';
+const CYAN_GLOW = '#00F0FF';
+const AMBER_GLOW = '#FF9800';
+const GOLD = '#F5C518';
 const EMERALD_GREEN = '#10B981';
-const AMBER_GOLD = '#F5B041';
-const CORAL_ACCENT = '#FF6B4A';
-const MAGENTA_NEON = '#FF2A85';
 
-/** 1. Dynamic Floating Glass Code Terminal (For code, agents, tools, git, CLI) */
-export function buildCodeTerminal(line, scriptContext) {
+/** Modern Night Loft Developer Studio with Panoramic City Bokeh Window */
+export function techStudio() {
   const g = new THREE.Group();
-  g.position.set(0, 1.75, 0.0);
 
-  const c = document.createElement('canvas');
-  c.width = 768;
-  c.height = 432;
-  const ctx = c.getContext('2d');
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-
-  // Futuristic curved glass holographic terminal
-  const panelGeo = new THREE.PlaneGeometry(1.4, 0.78);
-  const panelMat = new THREE.MeshBasicMaterial({
-    map: tex,
-    transparent: true,
-    opacity: 0.95,
-    side: THREE.DoubleSide
+  // 1. Dark Studio Floor (Polished Charcoal Concrete)
+  const floorMat = new THREE.MeshStandardMaterial({
+    color: '#0B0F19',
+    roughness: 0.35,
+    metalness: 0.15
   });
-  const panel = new THREE.Mesh(panelGeo, panelMat);
-  g.add(panel);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(36, 36), floorMat);
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = -0.01;
+  floor.receiveShadow = true;
+  g.add(floor);
 
-  // Hologram outer glowing border frame
-  const border = new THREE.LineSegments(
-    new THREE.EdgesGeometry(panelGeo),
-    new THREE.LineBasicMaterial({ color: CYAN_NEON, linewidth: 2 })
+  // 2. Night Sky Background behind window
+  const skyMat = new THREE.MeshBasicMaterial({ color: '#05070E' });
+  const sky = new THREE.Mesh(new THREE.PlaneGeometry(42, 22), skyMat);
+  sky.position.set(0, 9.5, -6.5);
+  g.add(sky);
+
+  // 3. Panoramic Glass Window Frame
+  const frameMat = new THREE.MeshStandardMaterial({ color: '#1E293B', roughness: 0.5, metalness: 0.3 });
+  // Horizontal bars
+  for (let y = 1.2; y <= 16; y += 4.5) {
+    const hBar = new THREE.Mesh(new THREE.BoxGeometry(38, 0.08, 0.1), frameMat);
+    hBar.position.set(0, y, -5.8);
+    g.add(hBar);
+  }
+  // Vertical mullions
+  for (let x = -16; x <= 16; x += 4.8) {
+    const vBar = new THREE.Mesh(new THREE.BoxGeometry(0.1, 18, 0.1), frameMat);
+    vBar.position.set(x, 9, -5.8);
+    g.add(vBar);
+  }
+
+  // 4. Distant Metropolitan Skyline & Architectural Window Lights (Beyond glass)
+  const skylineGroup = new THREE.Group();
+  const bldgMat = new THREE.MeshStandardMaterial({
+    color: '#080C14',
+    roughness: 0.9,
+    metalness: 0.1
+  });
+  const winColors = ['#FDE68A', '#FEF3C7', '#F59E0B', '#38BDF8', '#94A3B8'];
+
+  // Distant building silhouettes
+  const buildings = [
+    { x: -14, w: 5.5, h: 14, z: -7.5 },
+    { x: -8.5, w: 4.8, h: 11, z: -7.2 },
+    { x: -4, w: 4.0, h: 16, z: -8.0 },
+    { x: 1.5, w: 5.2, h: 13, z: -7.4 },
+    { x: 7.2, w: 4.6, h: 17, z: -8.2 },
+    { x: 12.5, w: 5.8, h: 12, z: -7.6 },
+    { x: 18, w: 6.0, h: 15, z: -8.5 }
+  ];
+
+  buildings.forEach(b => {
+    const tower = new THREE.Mesh(new THREE.BoxGeometry(b.w, b.h, 2.0), bldgMat);
+    tower.position.set(b.x, b.h / 2, b.z);
+    skylineGroup.add(tower);
+
+    // Architectural micro-window grid on building face
+    const cols = Math.floor(b.w / 0.45);
+    const rows = Math.floor(b.h / 0.55);
+    for (let r = 2; r < rows - 1; r++) {
+      for (let c = 0; c < cols; c++) {
+        // Randomly lit office windows (35% lit rate)
+        if (Math.random() < 0.35) {
+          const wx = b.x - b.w / 2 + 0.3 + c * 0.45;
+          const wy = 0.5 + r * 0.55;
+          const col = winColors[Math.floor(Math.random() * winColors.length)];
+          const winMesh = new THREE.Mesh(
+            new THREE.PlaneGeometry(0.12, 0.16),
+            new THREE.MeshBasicMaterial({
+              color: col,
+              transparent: true,
+              opacity: 0.25 + Math.random() * 0.55
+            })
+          );
+          winMesh.position.set(wx, wy, b.z + 1.01);
+          skylineGroup.add(winMesh);
+        }
+      }
+    }
+  });
+  g.add(skylineGroup);
+
+  // 5. Solid Walnut Developer Desk (Spanning z = -0.10 to +0.60)
+  const deskMat = new THREE.MeshStandardMaterial({
+    color: '#3B2314', // Rich dark walnut
+    roughness: 0.42,
+    metalness: 0.08
+  });
+  const deskTop = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.08, 0.70), deskMat);
+  deskTop.position.set(0, 0.74, 0.25);
+  deskTop.receiveShadow = true;
+  deskTop.castShadow = true;
+  g.add(deskTop);
+
+  // Desk Legs
+  const legMat = new THREE.MeshStandardMaterial({ color: '#0F172A', metalness: 0.7, roughness: 0.3 });
+  const legL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.74, 0.65), legMat);
+  const legR = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.74, 0.65), legMat);
+  legL.position.set(-1.95, 0.37, 0.25);
+  legR.position.set(1.95, 0.37, 0.25);
+  g.add(legL);
+  g.add(legR);
+
+  // 6. Desk Atmosphere: Ultrawide Laptop / Monitor + Mug (Offset to DevGuy's left so body is visible)
+  const laptopGroup = new THREE.Group();
+  laptopGroup.position.set(-1.18, 0.79, 0.18);
+  laptopGroup.rotation.y = 0.32; // Angled naturally toward developer
+
+  const laptopBase = new THREE.Mesh(
+    new THREE.BoxGeometry(0.70, 0.016, 0.44),
+    new THREE.MeshStandardMaterial({ color: '#64748B', metalness: 0.8, roughness: 0.25 })
   );
-  panel.add(border);
+  laptopGroup.add(laptopBase);
 
-  const headerText = (line.header || 'CLAUDE CODE').toUpperCase();
-  const rawText = line.text || 'Autonomous Agent Execution';
+  const screenGroup = new THREE.Group();
+  screenGroup.position.set(0, 0.01, 0.20);
+  const screenLid = new THREE.Mesh(
+    new THREE.BoxGeometry(0.70, 0.40, 0.014),
+    new THREE.MeshStandardMaterial({ color: '#334155', metalness: 0.7 })
+  );
+  screenLid.position.y = 0.20;
+  screenGroup.add(screenLid);
 
-  g.update = (t) => {
-    ctx.clearRect(0, 0, 768, 432);
+  // Glowing Screen Texture (Facing DevGuy)
+  const scrCanvas = document.createElement('canvas');
+  scrCanvas.width = 512; scrCanvas.height = 320;
+  const sctx = scrCanvas.getContext('2d');
+  sctx.fillStyle = '#090D16'; sctx.fillRect(0, 0, 512, 320);
+  sctx.fillStyle = '#00F0FF'; sctx.font = 'bold 18px monospace';
+  sctx.fillText('$ git clone https://github.com/repo', 24, 40);
+  sctx.fillStyle = '#34D399';
+  sctx.fillText('✓ Connecting to local neural engine...', 24, 75);
+  sctx.fillStyle = '#94A3B8';
+  for (let y = 110; y < 300; y += 26) {
+    sctx.fillText(`> loading model weights layer_${(y-110)/26} [100%]`, 24, y);
+  }
+  const scrTex = new THREE.CanvasTexture(scrCanvas);
+  const scrFace = new THREE.Mesh(new THREE.PlaneGeometry(0.67, 0.37), new THREE.MeshBasicMaterial({ map: scrTex }));
+  scrFace.position.set(0, 0.20, -0.008);
+  screenGroup.add(scrFace);
+  laptopGroup.add(screenGroup);
+  g.add(laptopGroup);
 
-    // Dark glass body with cyber glow
-    ctx.fillStyle = 'rgba(10, 16, 28, 0.92)';
-    ctx.roundRect(8, 8, 752, 416, 18);
-    ctx.fill();
+  // Minimalist Coffee Mug
+  const mug = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.065, 0.055, 0.12, 16),
+    new THREE.MeshStandardMaterial({ color: '#F1F5F9', roughness: 0.3 })
+  );
+  mug.position.set(1.4, 0.85, 0.35);
+  g.add(mug);
 
-    // Top window bar
-    ctx.fillStyle = 'rgba(0, 240, 255, 0.2)';
-    ctx.fillRect(12, 12, 744, 48);
-
-    // Terminal window dots
-    ctx.fillStyle = '#EF4444';
-    ctx.beginPath(); ctx.arc(36, 36, 8, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#F59E0B';
-    ctx.beginPath(); ctx.arc(60, 36, 8, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#10B981';
-    ctx.beginPath(); ctx.arc(84, 36, 8, 0, Math.PI * 2); ctx.fill();
-
-    ctx.fillStyle = '#00F0FF';
-    ctx.font = 'bold 22px monospace';
-    ctx.fillText(`◈ ${headerText.slice(0, 28)} ◈`, 120, 44);
-
-    // Syntax-highlighted code execution
-    ctx.font = 'bold 20px monospace';
-    ctx.fillStyle = '#94A3B8';
-    ctx.fillText('$ claude --dangerously-skip-permissions', 32, 105);
-
-    ctx.fillStyle = '#10B981';
-    ctx.fillText('✔ Initializing autonomous agent swarm...', 32, 145);
-
-    ctx.fillStyle = '#38BDF8';
-    ctx.fillText('> git clone repository --verified', 32, 185);
-
-    ctx.fillStyle = '#F59E0B';
-    ctx.fillText('> auto-fixing dependencies & compiling...', 32, 225);
-
-    // Live blinking cursor and progress
-    const blink = Math.sin(t * 8) > 0;
-    ctx.fillStyle = '#00F0FF';
-    ctx.fillText(`[AGENT ACTIVE] ${blink ? '█' : ' '}`, 32, 280);
-
-    // Action summary pill at bottom
-    ctx.fillStyle = 'rgba(16, 185, 129, 0.25)';
-    ctx.roundRect(32, 320, 704, 76, 12);
-    ctx.fill();
-    ctx.strokeStyle = '#10B981';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 24px Inter, sans-serif';
-    ctx.fillText(rawText.slice(0, 44).toUpperCase(), 48, 368);
-
-    tex.needsUpdate = true;
-    panel.position.y = Math.sin(t * 2.8) * 0.04;
-    panel.rotation.y = Math.sin(t * 1.4) * 0.06;
-  };
+  // Soft floating ambient dust particles
+  const pCount = 50;
+  const posArr = new Float32Array(pCount * 3);
+  for (let i = 0; i < pCount * 3; i += 3) {
+    posArr[i] = (Math.random() - 0.5) * 8;
+    posArr[i + 1] = 0.8 + Math.random() * 3.5;
+    posArr[i + 2] = (Math.random() - 0.5) * 4;
+  }
+  const pGeo = new THREE.BufferGeometry();
+  pGeo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
+  const pMat = new THREE.PointsMaterial({ color: '#38BDF8', size: 0.035, transparent: true, opacity: 0.5 });
+  g.add(new THREE.Points(pGeo, pMat));
 
   return g;
 }
 
-/** 2. Dynamic 3D Speedometer Tachometer (For speed, latency, instant, 4-sec benchmarks) */
-export function buildSpeedGauge(line, scriptContext) {
+/** 2. Dynamic Showcase Props Engine */
+export function createDynamicTopicProp(lineOrType, scriptContext = {}, idx = 0, isLast = false) {
   const g = new THREE.Group();
-  g.position.set(0, 1.75, 0.0);
 
-  const c = document.createElement('canvas');
-  c.width = 640;
-  c.height = 400;
-  const ctx = c.getContext('2d');
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
+  let propType = typeof lineOrType === 'string' ? lineOrType : (lineOrType.prop || '');
+  const lineText = typeof lineOrType === 'object' ? ((lineOrType.text || '') + ' ' + (lineOrType.header || '')).toLowerCase() : '';
+  const toolName = scriptContext.tool_name || scriptContext.title || 'AI Studio';
+  const ctaKw = scriptContext.cta_keyword || 'STUDIO';
 
-  const cardGeo = new THREE.PlaneGeometry(1.3, 0.82);
-  const cardMat = new THREE.MeshBasicMaterial({
-    map: tex,
-    transparent: true,
-    opacity: 0.95,
-    side: THREE.DoubleSide
-  });
-  const card = new THREE.Mesh(cardGeo, cardMat);
-  g.add(card);
+  if (!propType) {
+    if (isLast || lineText.includes('comment') || lineText.includes('send') || lineText.includes('follow')) {
+      propType = 'cta_pill';
+    } else if (lineText.includes('$') || lineText.includes('month') || lineText.includes('paying') || lineText.includes('bill') || idx === 0) {
+      propType = 'subscription_card';
+    } else if (lineText.includes('star') || lineText.includes('github') || lineText.includes('open source') || lineText.includes('repo')) {
+      propType = 'github_stars';
+    } else if (lineText.includes('image') || lineText.includes('video') || lineText.includes('models') || lineText.includes('feature')) {
+      propType = 'feature_badges';
+    } else if (lineText.includes('local') || lineText.includes('computer') || lineText.includes('credit') || lineText.includes('filter')) {
+      propType = 'pc_rig';
+    } else {
+      propType = 'github_stars';
+    }
+  }
 
-  const border = new THREE.LineSegments(
-    new THREE.EdgesGeometry(cardGeo),
-    new THREE.LineBasicMaterial({ color: EMERALD_GREEN })
-  );
-  card.add(border);
-
-  const headerText = (line.header || 'SPEED BENCHMARK').toUpperCase();
-
-  g.update = (t) => {
-    ctx.clearRect(0, 0, 640, 400);
-
-    ctx.fillStyle = 'rgba(11, 19, 32, 0.94)';
-    ctx.roundRect(10, 10, 620, 380, 22);
+  if (propType === 'subscription_card' || propType === 'bill' || propType === 'saas' || propType === 'alert_card' || propType === 'bill_card') {
+    // Dynamic Pain / Alert Card (Pricing, Rate Limits, Overload, or Cloud Paywall)
+    const c = document.createElement('canvas');
+    c.width = 512; c.height = 200;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#0F172A';
+    ctx.roundRect(10, 10, 492, 180, 24);
     ctx.fill();
-
-    // Top Header Badge
-    ctx.fillStyle = '#38BDF8';
-    ctx.font = '900 24px Inter, sans-serif';
-    ctx.fillText(`⚡ ${headerText.slice(0, 26)}`, 36, 52);
-
-    // Tachometer Arc
-    const cx = 320, cy = 250, r = 125;
-    ctx.strokeStyle = '#1E293B';
-    ctx.lineWidth = 26;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, Math.PI, 0);
-    ctx.stroke();
-
-    // Revving animated green arc
-    const rev = Math.min(1, Math.max(0.2, (Math.sin(t * 5) * 0.5 + 0.5)));
-    const grad = ctx.createLinearGradient(cx - r, cy, cx + r, cy);
-    grad.addColorStop(0, '#00F0FF');
-    grad.addColorStop(0.7, '#10B981');
-    grad.addColorStop(1, '#F59E0B');
-    ctx.strokeStyle = grad;
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, Math.PI, Math.PI + rev * Math.PI);
-    ctx.stroke();
-
-    // Digital readout in center
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = '900 78px Inter, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('4 SEC', cx, cy - 22);
-
-    ctx.fillStyle = '#94A3B8';
-    ctx.font = 'bold 22px Inter, sans-serif';
-    ctx.fillText('PROMPT TO COMPLETE APP', cx, cy + 32);
-    ctx.textAlign = 'left';
-
-    tex.needsUpdate = true;
-    card.position.y = Math.sin(t * 3.0) * 0.04;
-    card.rotation.y = Math.sin(t * 1.5) * 0.05;
-  };
-
-  return g;
-}
-
-/** 3. Dynamic 3D Price / Cost Obliterator ($20/mo -> 100% FREE) */
-export function buildPriceSlicer(line, scriptContext) {
-  const g = new THREE.Group();
-  g.position.set(0, 1.75, 0.0);
-
-  const c = document.createElement('canvas');
-  c.width = 640;
-  c.height = 380;
-  const ctx = c.getContext('2d');
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-
-  const cardGeo = new THREE.PlaneGeometry(1.35, 0.8);
-  const cardMat = new THREE.MeshBasicMaterial({
-    map: tex,
-    transparent: true,
-    opacity: 0.95,
-    side: THREE.DoubleSide
-  });
-  const card = new THREE.Mesh(cardGeo, cardMat);
-  g.add(card);
-
-  const border = new THREE.LineSegments(
-    new THREE.EdgesGeometry(cardGeo),
-    new THREE.LineBasicMaterial({ color: AMBER_GOLD })
-  );
-  card.add(border);
-
-  g.update = (t) => {
-    ctx.clearRect(0, 0, 640, 380);
-
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
-    ctx.roundRect(10, 10, 620, 360, 20);
-    ctx.fill();
-
-    // Crossed out paid price
-    ctx.fillStyle = '#94A3B8';
-    ctx.font = '900 46px Inter, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('$20 / MONTH', 320, 110);
-
-    // Red slash line
-    ctx.strokeStyle = '#EF4444';
-    ctx.lineWidth = 10;
-    ctx.beginPath();
-    ctx.moveTo(160, 125);
-    ctx.lineTo(480, 85);
-    ctx.stroke();
-
-    // 100% Free Glowing Banner
-    ctx.fillStyle = 'rgba(16, 185, 129, 0.25)';
-    ctx.roundRect(40, 170, 560, 150, 16);
-    ctx.fill();
-    ctx.strokeStyle = '#10B981';
+    ctx.strokeStyle = '#334155';
     ctx.lineWidth = 4;
     ctx.stroke();
 
-    ctx.fillStyle = '#10B981';
-    ctx.font = '900 72px Inter, sans-serif';
-    ctx.fillText('100% FREE', 320, 248);
+    // Determine dynamic alert headline & details from line text/header
+    let topLabel = 'ALERT DETECTED';
+    let mainMetric = '$49.00 / month';
+    let subtext = 'Renewed automatically';
+    let metricColor = '#F59E0B'; // Amber default
 
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 22px Inter, sans-serif';
-    ctx.fillText('SELF-HOSTED ◈ ZERO SUBSCRIPTION', 320, 296);
-    ctx.textAlign = 'left';
+    const combined = lineText.toLowerCase();
 
-    tex.needsUpdate = true;
-    card.position.y = Math.sin(t * 3.0) * 0.04;
-    card.rotation.y = Math.sin(t * 1.6) * 0.06;
-  };
+    // 1. Specific Dollar Amounts
+    const priceMatch = combined.match(/\$(\d+)/) || combined.match(/(\d+)\s*dollars?/);
+    if (priceMatch) {
+      const amt = priceMatch[1];
+      topLabel = `${toolName.toUpperCase()} SUBSCRIPTION`;
+      mainMetric = `$${amt}.00 / month`;
+      subtext = 'Recurring monthly fee';
+      metricColor = '#EF4444'; // Red
+    } else if (combined.includes('rate limit') || combined.includes('quota') || combined.includes('429')) {
+      topLabel = 'API USAGE NOTICE';
+      mainMetric = 'RATE LIMIT HIT';
+      subtext = 'Quota depleted · 429 Error';
+      metricColor = '#EF4444';
+    } else if (combined.includes('busy') || combined.includes('overload') || combined.includes('503') || combined.includes('down')) {
+      topLabel = 'CLOUD SERVER ALERT';
+      mainMetric = 'MODEL OVERLOADED';
+      subtext = 'Service unavailable · 503';
+      metricColor = '#F59E0B';
+    } else if (combined.includes('censor') || combined.includes('blocked') || combined.includes('ban')) {
+      topLabel = 'PROMPT RESTRICTION';
+      mainMetric = 'CONTENT BLOCKED';
+      subtext = 'Cloud safety filter triggered';
+      metricColor = '#EF4444';
+    } else if (combined.includes('queue') || combined.includes('waiting')) {
+      topLabel = 'GPU QUEUE ESTIMATE';
+      mainMetric = 'QUEUE #458';
+      subtext = 'Estimated wait: 42 minutes';
+      metricColor = '#F59E0B';
+    } else {
+      topLabel = `${toolName.toUpperCase()} CHARGE`;
+      mainMetric = '$29.00 / month';
+      subtext = 'Monthly recurring paywall';
+    }
 
-  return g;
-}
-
-/** 4. Dynamic 3D Neural Network Core & Model Architecture */
-export function buildNeuralCore(line, scriptContext) {
-  const g = new THREE.Group();
-  g.position.set(0, 1.75, 0.0);
-
-  // Rotating quantum core sphere
-  const coreGeo = new THREE.SphereGeometry(0.35, 24, 24);
-  const coreMat = new THREE.MeshStandardMaterial({
-    color: '#00F0FF',
-    emissive: '#007ACC',
-    emissiveIntensity: 0.8,
-    roughness: 0.2,
-    metalness: 0.9
-  });
-  const core = new THREE.Mesh(coreGeo, coreMat);
-  g.add(core);
-
-  // Orbiting synaptic rings
-  const ringGeo = new THREE.TorusGeometry(0.55, 0.02, 16, 48);
-  const ring1 = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: CYAN_NEON }));
-  const ring2 = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: AMBER_GOLD }));
-  g.add(ring1);
-  g.add(ring2);
-
-  // Floating benchmark HUD badge above core
-  const c = document.createElement('canvas');
-  c.width = 512;
-  c.height = 160;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-  ctx.roundRect(8, 8, 496, 144, 16);
-  ctx.fill();
-  ctx.strokeStyle = '#00F0FF';
-  ctx.lineWidth = 3;
-  ctx.stroke();
-
-  ctx.fillStyle = '#00F0FF';
-  ctx.font = 'bold 22px Inter, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('◈ AUTONOMOUS MODEL ARCHITECTURE ◈', 256, 48);
-
-  ctx.fillStyle = '#10B981';
-  ctx.font = '900 48px Inter, sans-serif';
-  ctx.fillText('OUTPERFORMS GPT-4o', 256, 114);
-
-  const tex = new THREE.CanvasTexture(c);
-  const hud = new THREE.Mesh(
-    new THREE.PlaneGeometry(1.2, 0.38),
-    new THREE.MeshBasicMaterial({ map: tex, transparent: true })
-  );
-  hud.position.set(0, 0.65, 0);
-  g.add(hud);
-
-  g.update = (t) => {
-    ring1.rotation.x = t * 2.2;
-    ring1.rotation.y = t * 1.6;
-    ring2.rotation.y = -t * 1.8;
-    ring2.rotation.z = t * 2.4;
-    core.scale.setScalar(1 + Math.sin(t * 5) * 0.08);
-    hud.position.y = 0.65 + Math.sin(t * 3) * 0.03;
-    g.position.y = 1.75 + Math.sin(t * 2.5) * 0.03;
-  };
-
-  return g;
-}
-
-/** 5. Dynamic 3D Quantum Server Rack & Cloud Infrastructure */
-export function buildServerRack(line, scriptContext) {
-  const g = new THREE.Group();
-  g.position.set(0, 1.75, 0.0);
-
-  // Floating sleek server module
-  const rackGeo = new THREE.BoxGeometry(1.2, 0.6, 0.4);
-  const rackMat = new THREE.MeshStandardMaterial({
-    color: '#0F172A',
-    roughness: 0.25,
-    metalness: 0.85
-  });
-  const rack = new THREE.Mesh(rackGeo, rackMat);
-  g.add(rack);
-
-  // Glowing LED rack lines
-  for (let y = -0.2; y <= 0.2; y += 0.1) {
-    const led = new THREE.Mesh(
-      new THREE.BoxGeometry(1.05, 0.03, 0.04),
-      new THREE.MeshBasicMaterial({ color: CYAN_NEON })
-    );
-    led.position.set(0, y, 0.21);
-    rack.add(led);
-  }
-
-  // Floating HUD badge above rack
-  const c = document.createElement('canvas');
-  c.width = 512;
-  c.height = 140;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
-  ctx.roundRect(6, 6, 500, 128, 14);
-  ctx.fill();
-  ctx.strokeStyle = '#10B981';
-  ctx.lineWidth = 3;
-  ctx.stroke();
-
-  ctx.fillStyle = '#10B981';
-  ctx.font = '900 36px Inter, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('1-CLICK CONTAINER DEPLOY', 256, 58);
-
-  ctx.fillStyle = '#94A3B8';
-  ctx.font = 'bold 20px Inter, sans-serif';
-  ctx.fillText('LIGHTWEIGHT ◈ ZERO OVERHEAD', 256, 102);
-
-  const tex = new THREE.CanvasTexture(c);
-  const hud = new THREE.Mesh(
-    new THREE.PlaneGeometry(1.2, 0.33),
-    new THREE.MeshBasicMaterial({ map: tex, transparent: true })
-  );
-  hud.position.set(0, 0.55, 0);
-  g.add(hud);
-
-  g.update = (t) => {
-    rack.position.y = Math.sin(t * 2.8) * 0.04;
-    rack.rotation.y = Math.sin(t * 1.4) * 0.06;
-    hud.position.y = 0.55 + Math.sin(t * 2.8) * 0.04;
-  };
-
-  return g;
-}
-
-/** 6. Dynamic Final CTA Hologram Card */
-export function buildCtaHoloCard(line, scriptContext) {
-  const g = new THREE.Group();
-  g.position.set(0, 1.75, 0.0);
-
-  const keyword = scriptContext.cta_keyword || 'FAST';
-
-  const c = document.createElement('canvas');
-  c.width = 640;
-  c.height = 360;
-  const ctx = c.getContext('2d');
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-
-  const cardGeo = new THREE.PlaneGeometry(1.35, 0.76);
-  const cardMat = new THREE.MeshBasicMaterial({
-    map: tex,
-    transparent: true,
-    opacity: 0.95,
-    side: THREE.DoubleSide
-  });
-  const card = new THREE.Mesh(cardGeo, cardMat);
-  g.add(card);
-
-  const border = new THREE.LineSegments(
-    new THREE.EdgesGeometry(cardGeo),
-    new THREE.LineBasicMaterial({ color: MAGENTA_NEON })
-  );
-  card.add(border);
-
-  g.update = (t) => {
-    ctx.clearRect(0, 0, 640, 360);
-
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
-    ctx.roundRect(10, 10, 620, 340, 22);
-    ctx.fill();
-
-    ctx.fillStyle = '#FF2A85';
-    ctx.font = '900 28px Inter, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('◈ INSTANT ACCESS LINK ◈', 320, 64);
-
-    // Glowing Keyword Pill
-    ctx.fillStyle = '#00F0FF';
-    ctx.roundRect(80, 100, 480, 120, 20);
-    ctx.fill();
-
-    ctx.fillStyle = '#0A0F1D';
-    ctx.font = '900 64px Inter, sans-serif';
-    ctx.fillText(`"${keyword}"`, 320, 185);
-
-    ctx.fillStyle = '#FFFFFF';
+    // Header badge
+    ctx.fillStyle = '#94A3B8';
     ctx.font = 'bold 24px Inter, sans-serif';
-    ctx.fillText(`COMMENT "${keyword}" BELOW FOR LINK`, 320, 275);
+    ctx.fillText(topLabel.slice(0, 28), 40, 64);
 
-    ctx.fillStyle = '#10B981';
-    ctx.font = 'bold 20px Inter, sans-serif';
-    ctx.fillText('⚡ SENT AUTOMATICALLY VIA DM', 320, 312);
+    // Main metric
+    ctx.fillStyle = metricColor;
+    ctx.font = '900 44px Inter, sans-serif';
+    ctx.fillText(mainMetric, 40, 124);
 
-    tex.needsUpdate = true;
-    card.position.y = Math.sin(t * 3.2) * 0.04;
-    card.scale.setScalar(1 + Math.sin(t * 4.5) * 0.02);
-  };
+    // Context subtext
+    ctx.fillStyle = '#64748B';
+    ctx.font = '22px Inter, sans-serif';
+    ctx.fillText(subtext, 40, 164);
 
+    const tex = new THREE.CanvasTexture(c);
+    const cardMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.82, 0.36),
+      new THREE.MeshBasicMaterial({ map: tex, transparent: true })
+    );
+    cardMesh.position.set(0.0, 1.20, 0.20);
+    g.add(cardMesh);
+    return g;
+  }
+
+  if (propType === 'github_stars' || propType === 'repo' || propType === 'stars' || propType === 'star_plaque') {
+    // Dynamic 3D GitHub Star Plaque with real-time extracted star metrics
+    const c = document.createElement('canvas');
+    c.width = 512; c.height = 240;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#0F172A';
+    ctx.roundRect(10, 10, 492, 220, 28);
+    ctx.fill();
+    ctx.strokeStyle = '#38BDF8';
+    ctx.lineWidth = 6;
+    ctx.stroke();
+
+    ctx.fillStyle = '#38BDF8';
+    ctx.font = 'bold 28px Inter, sans-serif';
+    ctx.fillText('OPEN SOURCE REPOSITORY', 40, 58);
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '900 42px Inter, sans-serif';
+    ctx.fillText((toolName || 'AI Studio').slice(0, 20), 40, 118);
+
+    // Extract dynamic star count or fallback gracefully
+    let starLabel = '★ 32.2k stars';
+    const starMatch = lineText.match(/(\d+[\.,]?\d*k?)\s*stars?/) || lineText.match(/(\d+)\s*thousand/);
+    if (starMatch) {
+      const num = starMatch[1];
+      starLabel = `★ ${num}${num.includes('k') ? '' : 'k'} stars`;
+    }
+
+    // Star Pill
+    ctx.fillStyle = '#FEF08A';
+    ctx.beginPath();
+    ctx.roundRect(40, 146, 260, 60, 30);
+    ctx.fill();
+    ctx.fillStyle = '#854D0E';
+    ctx.font = '900 34px Inter, sans-serif';
+    ctx.fillText(starLabel, 60, 189);
+
+    const tex = new THREE.CanvasTexture(c);
+    const mesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.82, 0.38),
+      new THREE.MeshBasicMaterial({ map: tex, transparent: true })
+    );
+    mesh.position.set(0.0, 1.20, 0.20);
+    g.add(mesh);
+    return g;
+  }
+
+  if (propType === 'feature_badges' || propType === 'badges' || propType === 'features') {
+    // Floating Glossy Feature Badges ([Image], [Video], [Local])
+    const features = ['Image', 'Video', 'Uncensored', 'Local 0$'];
+    const colOffsets = [-0.30, -0.10, 0.10, 0.30];
+    features.forEach((feat, i) => {
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 140;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#1E293B';
+      ctx.roundRect(8, 8, 240, 124, 20);
+      ctx.fill();
+      ctx.strokeStyle = i % 2 === 0 ? '#38BDF8' : '#F59E0B';
+      ctx.lineWidth = 6;
+      ctx.stroke();
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 36px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(feat, 128, 80);
+
+      const tex = new THREE.CanvasTexture(c);
+      const bMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.34, 0.20),
+        new THREE.MeshBasicMaterial({ map: tex, transparent: true })
+      );
+      bMesh.position.set(colOffsets[i], 1.22 + (i % 2 === 0 ? 0.08 : -0.04), 0.20);
+      g.add(bMesh);
+    });
+    return g;
+  }
+
+  if (propType === 'pc_rig' || propType === 'local' || propType === 'hardware') {
+    // 3D Glass Desktop Gaming/Local PC Tower with rotating illuminated RGB fans
+    const towerGeo = new THREE.BoxGeometry(0.48, 0.72, 0.48);
+    const towerMat = new THREE.MeshStandardMaterial({ color: '#0F172A', metalness: 0.8, roughness: 0.2 });
+    const tower = new THREE.Mesh(towerGeo, towerMat);
+    tower.position.set(0, 1.15, 0.20);
+    g.add(tower);
+
+    // Glass Front/Side Panel
+    const glassMat = new THREE.MeshPhysicalMaterial({
+      color: '#00F0FF',
+      transparent: true,
+      opacity: 0.35,
+      roughness: 0.05,
+      metalness: 0.1
+    });
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 0.70), glassMat);
+    glass.position.set(0, 1.15, 0.45);
+    g.add(glass);
+
+    // 2 Illuminated Glowing Cooling Fans
+    const fanMat = new THREE.MeshBasicMaterial({ color: CYAN_GLOW });
+    const fan1 = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.02, 16, 24), fanMat);
+    const fan2 = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.02, 16, 24), fanMat);
+    fan1.position.set(0, 1.30, 0.40);
+    fan2.position.set(0, 1.00, 0.40);
+    g.add(fan1);
+    g.add(fan2);
+
+    return g;
+  }
+
+  if (propType === 'cta_pill' || propType === 'comment_pill' || propType === 'cta') {
+    // Floating Interactive Comment Bar: "[ STUDIO  ⬆ ]"
+    const kw = (toolName || 'STUDIO').toUpperCase();
+    const c = document.createElement('canvas');
+    c.width = 512; c.height = 140;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#0F172A';
+    ctx.roundRect(10, 10, 492, 120, 30);
+    ctx.fill();
+    ctx.strokeStyle = '#F59E0B';
+    ctx.lineWidth = 5;
+    ctx.stroke();
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '900 48px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Comment "${kw}" 🚀`, 256, 82);
+
+    const tex = new THREE.CanvasTexture(c);
+    const mesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.84, 0.28),
+      new THREE.MeshBasicMaterial({ map: tex, transparent: true })
+    );
+    mesh.position.set(0, 1.20, 0.20);
+    g.add(mesh);
+    return g;
+  }
+
+  // Default clean floating card fallback - compact, hovering cleanly at chest level between characters
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 200;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#0F172A';
+  ctx.roundRect(10, 10, 492, 180, 24);
+  ctx.fill();
+  ctx.strokeStyle = '#38BDF8';
+  ctx.lineWidth = 5;
+  ctx.stroke();
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = 'bold 42px Inter, sans-serif';
+  ctx.fillText(toolName || 'Open Source', 40, 110);
+  const tex = new THREE.CanvasTexture(c);
+  const dMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.80, 0.32), new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
+  dMesh.position.set(0, 1.20, 0.20);
+  g.add(dMesh);
   return g;
-}
-
-/** Master Dynamic Topic Prop Selector */
-export function createDynamicTopicProp(line, scriptContext, index, isLast) {
-  if (isLast) {
-    return buildCtaHoloCard(line, scriptContext);
-  }
-
-  const h = (line.header || '').toUpperCase();
-  const txt = (line.text || '').toUpperCase();
-  const comb = h + ' ' + txt;
-
-  if (comb.includes('SPEED') || comb.includes('FAST') || comb.includes('SECOND') || comb.includes('MINUTE') || comb.includes('INSTANT') || comb.includes('BENCHMARK')) {
-    return buildSpeedGauge(line, scriptContext);
-  }
-
-  if (comb.includes('FREE') || comb.includes('PRICE') || comb.includes('COST') || comb.includes('$') || comb.includes('PAY') || comb.includes('DOLLAR')) {
-    return buildPriceSlicer(line, scriptContext);
-  }
-
-  if (comb.includes('SERVER') || comb.includes('CLOUD') || comb.includes('DASHBOARD') || comb.includes('DOCKER') || comb.includes('HOST') || comb.includes('PANEL')) {
-    return buildServerRack(line, scriptContext);
-  }
-
-  if (comb.includes('MODEL') || comb.includes('NEURAL') || comb.includes('AI') || comb.includes('WEIGHT') || comb.includes('REASON') || comb.includes('INTELLIGENCE')) {
-    return buildNeuralCore(line, scriptContext);
-  }
-
-  // Default to interactive code / agent terminal
-  return buildCodeTerminal(line, scriptContext);
 }
