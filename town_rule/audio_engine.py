@@ -228,7 +228,28 @@ def _gen_music_bed(total_dur: float, mood: str) -> np.ndarray:
     t = np.linspace(0, total_dur, n, endpoint=False)
     bed = np.zeros(n, dtype=np.float32)
 
-    if mood in ("emotional", "sad"):
+    if mood in ("music_box", "nostalgic"):
+        # Wistful music box and glockenspiel arpeggio (Radiohead No Surprises style innocent chimes)
+        # Gentle chord patterns: C major, A minor, F major, G major with high bell harmonics
+        pattern = [
+            523.25, 659.25, 783.99, 1046.50, # C5, E5, G5, C6
+            440.00, 523.25, 659.25, 880.00,  # A4, C5, E5, A5
+            349.23, 440.00, 523.25, 698.46,  # F4, A4, C5, F5
+            392.00, 493.88, 587.33, 783.99   # G4, B4, D5, G5
+        ]
+        step = 0.34
+        for idx in range(int(total_dur / step) + 1):
+            f = pattern[idx % len(pattern)]
+            s_i = int(idx * step * SR)
+            e_i = min(n, s_i + int(1.2 * SR))
+            if s_i >= n:
+                break
+            lt = np.linspace(0, (e_i - s_i) / SR, e_i - s_i, endpoint=False)
+            # Bell envelope with rapid attack and crystalline sparkle
+            env = np.exp(-3.2 * lt) * (1 - np.exp(-120 * lt))
+            chime = (np.sin(2 * np.pi * f * lt) + 0.35 * np.sin(4 * np.pi * f * lt) + 0.12 * np.sin(6 * np.pi * f * lt))
+            bed[s_i:e_i] += (chime * env).astype(np.float32)
+    elif mood in ("emotional", "sad"):
         # Gentle slow piano-like sine+harmonic chord progression (Am - F - C - G)
         chords = [
             [220.0, 261.63, 329.63],

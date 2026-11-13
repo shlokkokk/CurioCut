@@ -664,6 +664,9 @@ def build_environments(scene):
     win_mat = make_mat("env_win", (0.72, 0.85, 0.96, 1.0), roughness=0.15, emission=(1.0, 0.80, 0.42, 1.0), emission_strength=1.1)
     lamp_glow = make_mat("env_lamp_gl", (1.0, 0.88, 0.55, 1.0), emission=(1.0, 0.82, 0.40, 1.0), emission_strength=6.5)
     pole_mat = make_textured_mat("env_pole", (0.24, 0.16, 0.10, 1.0), (0.34, 0.23, 0.14, 1.0), scale=5.0, roughness=0.88, bump_strength=0.22)
+    car_paint = make_mat("env_car_pt", (0.18, 0.38, 0.55, 1.0), metallic=0.85, roughness=0.25)
+    metal_bike = make_mat("env_bike_m", (0.82, 0.18, 0.22, 1.0), metallic=0.75, roughness=0.35)
+    mailbox_red = make_mat("env_mb_flag", (0.90, 0.12, 0.12, 1.0), roughness=0.4)
 
     # 1. SUBURBAN STREET
     c_sub = make_col("set_suburban_street")
@@ -722,6 +725,39 @@ def build_environments(scene):
             # Stylized Tree + Bushes in yard
             add_tree(f"sub_tr_{side}_{hy}", side * 6.0, hy - 4.3, c_sub, pole_mat, leaf_mat1, leaf_mat2, scale=0.95 + (idx_h % 2) * 0.2)
             add_env_box(f"sub_bsh_{side}_{hy}", (0.95, 1.3, 0.65), (face_x - side * 0.4, hy + 2.4, 0.35), leaf_mat2, c_sub, bevel=0.14)
+
+            # Curbside Mailbox on wood post with red flag
+            mb_x = side * 4.9
+            mb_y = hy - 1.1
+            add_env_cyl(f"sub_mb_post_{side}_{hy}", 0.05, 1.05, (mb_x, mb_y, 0.52), pole_mat, c_sub, verts=8)
+            add_env_box(f"sub_mb_box_{side}_{hy}", (0.28, 0.52, 0.28), (mb_x, mb_y, 1.10), trim_white, c_sub, bevel=0.03)
+            add_env_box(f"sub_mb_flag_{side}_{hy}", (0.04, 0.14, 0.08), (mb_x + side * 0.16, mb_y + 0.12, 1.18), mailbox_red, c_sub, bevel=0.01)
+
+            # Porch Rocking Chair
+            ch_x = px - side * 0.25
+            ch_y = hy - 1.0
+            add_env_box(f"sub_ch_seat_{side}_{hy}", (0.65, 0.65, 0.06), (ch_x, ch_y, 0.52), pole_mat, c_sub, bevel=0.01)
+            add_env_box(f"sub_ch_back_{side}_{hy}", (0.06, 0.62, 0.75), (ch_x - side * 0.30, ch_y, 0.88), pole_mat, c_sub, bevel=0.01)
+
+            # Kid's Bicycle (every other house)
+            if idx_h % 2 == 1:
+                bx_pos = side * 5.6
+                by_pos = hy + 1.8
+                for w_i, wy_off in enumerate((-0.42, 0.42)):
+                    add_env_cyl(f"sub_bike_w_{side}_{hy}_{w_i}", 0.24, 0.05, (bx_pos, by_pos + wy_off, 0.24), iron_mat, c_sub, rot=(0, math.radians(90), 0), verts=12)
+                add_env_box(f"sub_bike_fr_{side}_{hy}", (0.06, 0.80, 0.10), (bx_pos, by_pos, 0.30), metal_bike, c_sub, bevel=0.01)
+                add_env_box(f"sub_bike_hb_{side}_{hy}", (0.35, 0.06, 0.06), (bx_pos, by_pos - 0.38, 0.52), metal_bike, c_sub, bevel=0.01)
+
+            # Parked Pickup Truck in driveway (every 3rd house)
+            if idx_h % 3 == 0:
+                cx = side * 8.6
+                cy = hy - 4.2
+                add_env_box(f"sub_car_cab_{side}_{hy}", (2.1, 1.9, 1.1), (cx, cy, 0.95), car_paint, c_sub, bevel=0.05)
+                add_env_box(f"sub_car_bed_{side}_{hy}", (2.0, 1.8, 0.65), (cx, cy + 1.8, 0.72), car_paint, c_sub, bevel=0.03)
+                add_env_box(f"sub_car_hood_{side}_{hy}", (1.9, 1.4, 0.62), (cx, cy - 1.6, 0.70), car_paint, c_sub, bevel=0.04)
+                for wx_off in (-1.05, 1.05):
+                    for wy_off in (-1.3, 1.3):
+                        add_env_cyl(f"sub_car_wh_{side}_{hy}_{wx_off}_{wy_off}", 0.34, 0.22, (cx + wx_off, cy + wy_off, 0.34), iron_mat, c_sub, rot=(0, math.radians(90), 0), verts=14)
 
             # Tall Iron Streetlamp along curb
             lx = side * 3.45
@@ -1039,6 +1075,9 @@ def _set_socket_const(sock, frame: int, val):
 def apply_lighting_key(bg, sun_data, lighting: str, f0: int):
     presets = {
         "day": ((0.35, 0.65, 0.95, 1.0), 1.0, (1.0, 0.98, 0.92), 3.4),
+        "wistful_pastel": ((0.62, 0.68, 0.88, 1.0), 0.95, (1.0, 0.90, 0.78), 3.0),
+        "golden_hour": ((0.98, 0.58, 0.28, 1.0), 1.05, (1.0, 0.78, 0.45), 3.6),
+        "blue_hour": ((0.08, 0.12, 0.26, 1.0), 0.60, (0.55, 0.70, 0.95), 1.6),
         "sunset": ((0.92, 0.42, 0.16, 1.0), 0.9, (1.0, 0.65, 0.35), 2.5),
         "fog_orange": ((0.75, 0.36, 0.12, 1.0), 0.75, (0.95, 0.55, 0.25), 1.8),
         "night": ((0.03, 0.05, 0.12, 1.0), 0.45, (0.45, 0.58, 0.85), 1.1),
@@ -1128,9 +1167,11 @@ def main():
     for m_spec in ep.get("creatures", []):
         rigs[m_spec["id"]] = ProceduralCreature(m_spec, cast_col)
 
-    # Camera
+    # Camera with shallow cinematic depth of field
     cam_data = bpy.data.cameras.new("MainCam")
-    cam_data.lens = 34.0
+    cam_data.lens = 38.0
+    cam_data.dof.use_dof = True
+    cam_data.dof.aperture_fstop = 2.4
     cam_obj = bpy.data.objects.new("MainCam", cam_data)
     scene.collection.objects.link(cam_obj)
     scene.camera = cam_obj
@@ -1208,6 +1249,15 @@ def main():
         elif cam_type == "ots_right":
             off0 = Vector((1.6, -3.0 * dist_scale, 0.2))
             off1 = Vector((1.2, -2.6 * dist_scale, 0.2))
+        elif cam_type == "rooftop_voyeur":
+            off0 = Vector((-3.2, -14.0 * dist_scale, 6.2))
+            off1 = Vector((-2.6, -11.5 * dist_scale, 5.4))
+        elif cam_type == "porch_voyeur":
+            off0 = Vector((2.4, -4.8 * dist_scale, 1.4 - target_pos.z))
+            off1 = Vector((1.8, -3.8 * dist_scale, 1.3 - target_pos.z))
+        elif cam_type == "dutch_angle_tension":
+            off0 = Vector((1.2, -3.6 * dist_scale, 0.45))
+            off1 = Vector((0.8, -2.8 * dist_scale, 0.35))
         elif cam_type == "crowd_march":
             off0 = Vector((3.5, -8.5 * dist_scale, 4.2 - target_pos.z))
             off1 = Vector((2.5, -6.5 * dist_scale, 3.6 - target_pos.z))
@@ -1222,13 +1272,26 @@ def main():
 
         cam_obj.location = p0
         point_camera_at(cam_obj, target_pos)
+        if cam_type == "dutch_angle_tension":
+            cam_obj.rotation_euler.y += math.radians(6.5)
         cam_obj.keyframe_insert(data_path="location", frame=f0)
         cam_obj.keyframe_insert(data_path="rotation_euler", frame=f0)
 
+        # Cinematic Depth of Field tracking
+        dist0 = (p0 - target_pos).length
+        cam_data.dof.focus_distance = dist0
+        cam_data.dof.keyframe_insert(data_path="focus_distance", frame=f0)
+
         cam_obj.location = p1
         point_camera_at(cam_obj, target_pos_end)
+        if cam_type == "dutch_angle_tension":
+            cam_obj.rotation_euler.y += math.radians(5.0)
         cam_obj.keyframe_insert(data_path="location", frame=f1)
         cam_obj.keyframe_insert(data_path="rotation_euler", frame=f1)
+
+        dist1 = (p1 - target_pos_end).length
+        cam_data.dof.focus_distance = dist1
+        cam_data.dof.keyframe_insert(data_path="focus_distance", frame=f1)
 
     # Render animation
     out_path = Path(args.out).resolve()
