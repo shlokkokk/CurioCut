@@ -1,8 +1,12 @@
 # Cloud runner for rendering and uploading on Kaggle GPU
 import os
 import sys
+import time
 import shutil
 import subprocess
+import json
+import urllib.request
+import threading
 from pathlib import Path
 
 # Force unbuffered streaming & completely non-interactive package execution
@@ -27,15 +31,15 @@ print("="*70 + "\n", flush=True)
 try:
     smi = subprocess.run(["nvidia-smi"], capture_output=True, text=True, timeout=15)
     if smi.returncode == 0:
-        print("🚀 NVIDIA Hardware GPU Detected:", flush=True)
+        print("[GPU] NVIDIA Hardware GPU Detected:", flush=True)
         for line in smi.stdout.splitlines()[2:9]:
             print(f"   {line}", flush=True)
         os.environ["GPU_ACCEL"] = "1"
         os.environ["NVIDIA_DRIVER_CAPABILITIES"] = "compute,utility,graphics"
     else:
-        print("ℹ️ Running in High-Speed Multi-Core Cloud CPU mode.", flush=True)
+        print("[INFO] Running in High-Speed Multi-Core Cloud CPU mode.", flush=True)
 except Exception as e:
-    print(f"ℹ️ GPU detection notice: {e}", flush=True)
+    print(f"[INFO] GPU detection notice: {e}", flush=True)
 
 WORKSPACE = Path("/kaggle/working/CurioCut")
 
@@ -158,25 +162,95 @@ try:
 except Exception:
     pass
 
-cmd = [sys.executable, "make_short.py", "--style", style_arg, "--upload", "--privacy", "public"]
-res = subprocess.run(cmd)
+LOG_RELAY_URL = "https://curiocut-corn.pcgpt00.workers.dev/api/logs"
 
-if res.returncode == 0:
+# Reset log buffer at start of new run
+try:
+    req_reset = urllib.request.Request(f"{LOG_RELAY_URL}?reset=1", data=b"", method="POST")
+    urllib.request.urlopen(req_reset, timeout=5)
+except Exception:
+    pass
+
+cmd = [sys.executable, "-u", "make_short.py", "--style", style_arg, "--upload", "--privacy", "public"]
+proc = subprocess.Popen(
+    cmd,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.STDOUT,
+    text=True,
+    bufsize=1
+)
+
+def _watchdog_loop(target_proc):
+    while target_proc.poll() is None:
+        time.sleep(5)
+        try:
+            req_check = urllib.request.Request(f"{LOG_RELAY_URL}?check_stop=1", headers={"User-Agent": "CurioCut-Watchdog"})
+            with urllib.request.urlopen(req_check, timeout=4) as chk_resp:
+                chk_data = json.loads(chk_resp.read().decode("utf-8"))
+                if chk_data.get("should_stop"):
+                    sys.stderr.write("\n[STOP SIGNAL] Watchdog detected stop signal from Discord. Forcing termination...\n")
+                    sys.stderr.flush()
+                    try:
+                        target_proc.kill()
+                    except Exception:
+                        pass
+                    os._exit(0)
+        except Exception:
+            pass
+
+watchdog = threading.Thread(target=_watchdog_loop, args=(proc,), daemon=True)
+watchdog.start()
+
+log_buffer = []
+last_log_post = time.time()
+
+for line in iter(proc.stdout.readline, ""):
+    sys.stdout.write(line)
+    sys.stdout.flush()
+    log_buffer.append(line)
+    now = time.time()
+    if (len(log_buffer) >= 20 or now - last_log_post >= 6.0) and log_buffer:
+        chunk = "".join(log_buffer).encode("utf-8")
+        log_buffer.clear()
+        last_log_post = now
+        try:
+            req_post = urllib.request.Request(LOG_RELAY_URL, data=chunk, method="POST", headers={"Content-Type": "text/plain; charset=utf-8"})
+            with urllib.request.urlopen(req_post, timeout=5) as resp_post:
+                resp_json = json.loads(resp_post.read().decode("utf-8"))
+                if resp_json.get("should_stop"):
+                    print("\n[STOP SIGNAL] User confirmed termination from Discord. Stopping GPU engine to save weekly quota...", flush=True)
+                    proc.terminate()
+                    sys.exit(0)
+        except Exception:
+            pass
+
+proc.wait()
+if log_buffer:
+    chunk = "".join(log_buffer).encode("utf-8")
+    try:
+        req_post = urllib.request.Request(LOG_RELAY_URL, data=chunk, method="POST", headers={"Content-Type": "text/plain; charset=utf-8"})
+        urllib.request.urlopen(req_post, timeout=5)
+    except Exception:
+        pass
+
+ret_code = proc.returncode
+
+if ret_code == 0:
     print("\n" + "="*70, flush=True)
-    print("🎉 SHORT SUCCESSFULLY CREATED AND PUBLISHED TO CLOUD!", flush=True)
+    print("SHORT SUCCESSFULLY CREATED AND PUBLISHED TO CLOUD!", flush=True)
     print("="*70 + "\n", flush=True)
     # Note: Instagram Comment-to-DM is handled 24/7 in real-time by Cloudflare Edge Webhooks
 else:
-    print(f"\nWorker exited with error code {res.returncode}", flush=True)
+    print(f"\nWorker exited with error code {ret_code}", flush=True)
     try:
         from discord_notifier import notify_error, update_live_progress
         update_live_progress(
             step_title="Cloud Worker Failed",
             percent=0,
-            details=f"Pipeline aborted on cloud runner (exit code {res.returncode}). Check logs for details.",
+            details=f"Pipeline aborted on cloud runner (exit code {ret_code}). Check logs for details.",
             is_error=True
         )
-        notify_error("Cloud Runner", f"Worker stopped with code {res.returncode}")
+        notify_error("Cloud Runner", f"Worker stopped with code {ret_code}")
     except Exception:
         pass
-    sys.exit(res.returncode)
+    sys.exit(ret_code)

@@ -32,6 +32,18 @@ def get_status(version=None):
         return {"error": str(e)}
 
 def get_logs(tail_lines=60, version=None):
+    # If checking live run, try the direct edge stream relay first
+    if version is None:
+        try:
+            edge_url = f"https://curiocut-corn.pcgpt00.workers.dev/api/logs?tail={tail_lines}"
+            req_edge = urllib.request.Request(edge_url, headers={"User-Agent": "CurioCut-Log-Client"})
+            with urllib.request.urlopen(req_edge, timeout=8) as resp_edge:
+                edge_text = resp_edge.read().decode("utf-8")
+                if edge_text and not edge_text.startswith("No active run logs"):
+                    return [l for l in edge_text.splitlines() if l.strip()]
+        except Exception:
+            pass
+
     url = f"https://www.kaggle.com/api/v1/kernels/output?userName={USER}&kernelSlug={SLUG}"
     if version:
         url += f"&versionNumber={version}"

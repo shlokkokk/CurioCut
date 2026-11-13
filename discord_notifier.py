@@ -50,11 +50,22 @@ def make_button(label, url, style=5):
         "url": str(url).strip()
     }
 
+def make_interactive_button(label, custom_id, style=4):
+    """Creates a Discord Interactive Button component (Style 4 = Danger/Red, Style 1 = Primary/Blurple)."""
+    if not custom_id:
+        return None
+    return {
+        "type": 2,
+        "style": style,
+        "label": str(label)[:80],
+        "custom_id": str(custom_id).strip()
+    }
+
 def make_action_row(buttons):
     """Wraps valid buttons into a Discord Action Row (type 1)."""
     if not buttons:
         return []
-    valid = [b for b in buttons if isinstance(b, dict) and b.get("url")]
+    valid = [b for b in buttons if isinstance(b, dict) and (b.get("url") or b.get("custom_id"))]
     if not valid:
         return []
     return [{
@@ -181,7 +192,7 @@ def notify_engine(title, description, fields=None, color=0x38BDF8, button_label=
 def notify_alert(title, details, severity="warning", button_label=None, button_url=None):
     """Sends warnings to #alerts with actionable links."""
     embed = {
-        "title": f"⚠️ {title}",
+        "title": f"[ALERT] {title}",
         "description": details,
         "color": 0xF59E0B, # Amber
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -190,6 +201,29 @@ def notify_alert(title, details, severity="warning", button_label=None, button_u
     components = None
     if button_label and button_url:
         components = make_action_row([make_button(button_label, button_url)])
+    return send_embed("alerts", embed, components=components)
+
+def notify_long_run_alert(elapsed_seconds, kernel_url=None):
+    """Sends a Quota Guardian health check alert to Discord #alerts with Open Kaggle & Stop buttons."""
+    hrs = elapsed_seconds / 3600.0
+    embed = {
+        "title": f"GPU Run Health Check ({hrs:.1f} Hours Elapsed)",
+        "description": "Cloud GPU engine is still active. If normal (such as dense scene rendering), you can let it proceed. If stuck or hung, click Stop GPU Engine to abort and protect your weekly quota.",
+        "color": 0xF59E0B,
+        "fields": [
+            {"name": "Elapsed Time", "value": f"{int(elapsed_seconds // 60)} minutes ({hrs:.2f} hours)", "inline": True},
+            {"name": "Safety Action", "value": "Click Stop GPU Engine to open confirmation modal", "inline": True}
+        ],
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "footer": {"text": "CurioCut Quota Guardian"}
+    }
+    buttons = []
+    if kernel_url:
+        buttons.append(make_button("Open Kaggle Runner", kernel_url))
+    buttons.append(make_button("Live Web Logs", "https://curiocut-corn.pcgpt00.workers.dev/api/logs?tail=80"))
+    buttons.append(make_interactive_button("Stop GPU Engine", "request_stop_engine", style=4))
+    
+    components = make_action_row(buttons)
     return send_embed("alerts", embed, components=components)
 
 def notify_error(context, error_msg, stack_trace=None, button_label=None, button_url=None):

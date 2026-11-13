@@ -109,13 +109,13 @@ def push_kernel(enable_gpu=True):
         v_num = res.get("versionNumber")
         base_url = (res.get("url") or f"https://www.kaggle.com/code/{KAGGLE_USER}/{KERNEL_SLUG}").split("?")[0]
         latest_kernel_url = f"{base_url}?versionNumber={v_num}" if v_num else base_url
-        print(f"🚀 Job accepted by Kaggle cloud API (Version #{v_num})!")
+        print(f"[OK] Job accepted by Kaggle cloud API (Version #{v_num})!")
         print(f"URL: {latest_kernel_url}")
         try:
             from discord_notifier import notify_engine
             notify_engine(
                 title=f"Autonomous Video Pipeline Triggered (v{v_num})" if v_num else "Autonomous Video Pipeline Triggered",
-                description=f"CurioCut dispatched **{secrets_to_pass['CURIO_SLOT'].upper()}** to Kaggle Cloud GPU runner.\n\n[▶ Open Kaggle Run v{v_num}]({latest_kernel_url})",
+                description=f"CurioCut dispatched **{secrets_to_pass['CURIO_SLOT'].upper()}** to Kaggle Cloud GPU runner.\n\n[Open Kaggle Run v{v_num}]({latest_kernel_url})",
                 fields=[
                     {"name": "Slot", "value": secrets_to_pass["CURIO_SLOT"].upper(), "inline": True},
                     {"name": "Hardware", "value": "NVIDIA GPU (T4/P100)" if "GPU" in mode_str else "Cloud CPU", "inline": True},
@@ -147,13 +147,34 @@ out_url = f"https://www.kaggle.com/api/v1/kernels/output?userName={KAGGLE_USER}&
 
 print("\nMonitoring Cloud execution...")
 start_t = time.time()
-max_wait = 7200  # 120 minutes unbreakable ceiling
+max_wait = 21600  # 360 minutes (6 hours) unbreakable ceiling
 queued_start = time.time()
+has_alerted_2h = False
+has_alerted_2_5h = False
 
 while time.time() - start_t < max_wait:
     time.sleep(10)
     elapsed = int(time.time() - start_t)
     
+    # 2-hour and 2.5-hour Quota Guardian check-in
+    if elapsed >= 7200 and not has_alerted_2h:
+        has_alerted_2h = True
+        print(f"  [ALERT] 2 hours elapsed on GPU worker. Dispatching Quota Guardian check to Discord...")
+        try:
+            from discord_notifier import notify_long_run_alert
+            notify_long_run_alert(elapsed, latest_kernel_url)
+        except Exception as ex:
+            print(f"  Notice: Long run alert dispatch: {ex}")
+
+    if elapsed >= 9000 and not has_alerted_2_5h:
+        has_alerted_2_5h = True
+        print(f"  [ALERT] 2.5 hours elapsed on GPU worker. Dispatching follow-up Quota Guardian check...")
+        try:
+            from discord_notifier import notify_long_run_alert
+            notify_long_run_alert(elapsed, latest_kernel_url)
+        except Exception as ex:
+            print(f"  Notice: Long run alert dispatch: {ex}")
+
     try:
         req_st = urllib.request.Request(status_url, headers={"Authorization": f"Bearer {KAGGLE_TOKEN}"})
         with urllib.request.urlopen(req_st, timeout=20) as resp:
@@ -174,7 +195,7 @@ while time.time() - start_t < max_wait:
 
             # Keep waiting for GPU (Kaggle batch GPU queue normally takes 2-8 minutes, ceiling 30 mins)
             if gpu_requested and st == "queued" and (time.time() - queued_start) > 1800:
-                print("\n⚠️ GPU queue reached 30-minute wait ceiling. Auto-switching to Cloud Compute...")
+                print("\n[WARNING] GPU queue reached 30-minute wait ceiling. Auto-switching to Cloud Compute...")
                 gpu_requested = False
                 push_kernel(enable_gpu=False)
                 queued_start = time.time()
@@ -182,7 +203,7 @@ while time.time() - start_t < max_wait:
 
             if st == "complete":
                 print("\n" + "="*70)
-                print("🎉 VIDEO SUCCESSFULLY RENDERED & PUBLISHED!")
+                print("VIDEO SUCCESSFULLY RENDERED & PUBLISHED!")
                 print("="*70)
                 # Fetch output logs
                 try:
@@ -197,7 +218,7 @@ while time.time() - start_t < max_wait:
                     pass
                 sys.exit(0)
             elif st == "error":
-                print(f"\n❌ Cloud Execution Error: {fail_msg}")
+                print(f"\n[ERROR] Cloud Execution Error: {fail_msg}")
                 try:
                     req_out = urllib.request.Request(out_url, headers={"Authorization": f"Bearer {KAGGLE_TOKEN}"})
                     with urllib.request.urlopen(req_out, timeout=15) as resp_out:

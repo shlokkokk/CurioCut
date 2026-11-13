@@ -40,6 +40,32 @@ async function clearSlotSkipped() {
   }
 }
 
+const STOP_SIGNAL_URL = "https://curiocut.internal/engine-stop-signal";
+
+async function isEngineStopSignaled() {
+  try {
+    const res = await caches.default.match(STOP_SIGNAL_URL);
+    return !!res;
+  } catch {
+    return false;
+  }
+}
+
+async function setEngineStopSignal(active = true) {
+  try {
+    if (active) {
+      const res = new Response(JSON.stringify({ stop: true, timestamp: Date.now() }), {
+        headers: { "Content-Type": "application/json", "Cache-Control": "max-age=3600" }
+      });
+      await caches.default.put(STOP_SIGNAL_URL, res);
+    } else {
+      await caches.default.delete(STOP_SIGNAL_URL);
+    }
+  } catch (e) {
+    console.error("Stop signal error:", e);
+  }
+}
+
 async function sha256Hex(str) {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
@@ -150,6 +176,55 @@ export default {
     const urlObj = new URL(request.url);
     const path = urlObj.pathname.toLowerCase();
 
+    // Live Cloud GPU execution log bridge (accessible via /api/logs or /logs)
+    if (path === "/api/logs" || path === "/logs") {
+      const CACHE_LOGS_URL = "https://curiocut.internal/live-run-logs";
+      if (urlObj.searchParams.get("check_stop") === "1") {
+        const shouldStop = await isEngineStopSignaled();
+        return Response.json({ should_stop: shouldStop });
+      }
+      if (request.method === "POST") {
+        const chunk = await request.text();
+        const isReset = urlObj.searchParams.get("reset") === "1";
+        if (isReset) {
+          await setEngineStopSignal(false);
+        }
+        let newContent = chunk;
+        if (!isReset) {
+          try {
+            const oldRes = await caches.default.match(CACHE_LOGS_URL);
+            if (oldRes) {
+              const oldText = await oldRes.text();
+              newContent = oldText + chunk;
+              if (newContent.length > 5 * 1024 * 1024) {
+                newContent = newContent.slice(-4 * 1024 * 1024);
+              }
+            }
+          } catch {}
+        }
+        const cacheRes = new Response(newContent, {
+          headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "max-age=86400" }
+        });
+        await caches.default.put(CACHE_LOGS_URL, cacheRes);
+        const shouldStop = await isEngineStopSignaled();
+        return Response.json({ ok: true, length: newContent.length, should_stop: shouldStop });
+      } else {
+        const cached = await caches.default.match(CACHE_LOGS_URL);
+        const fullLogs = cached ? await cached.text() : "No active run logs recorded yet.";
+        const tail = urlObj.searchParams.get("tail");
+        if (tail && fullLogs) {
+          const lines = fullLogs.split("\n");
+          const n = parseInt(tail, 10) || 50;
+          return new Response(lines.slice(-n).join("\n"), {
+            headers: { "Content-Type": "text/plain; charset=utf-8" }
+          });
+        }
+        return new Response(fullLogs, {
+          headers: { "Content-Type": "text/plain; charset=utf-8" }
+        });
+      }
+    }
+
     // 1. Handle Discord Bot Button, Modal & Slash Command Interactions
     if (request.method === "POST" && (path.includes("interactions") || request.headers.get("x-signature-ed25519"))) {
       const rawBody = await request.text();
@@ -230,6 +305,30 @@ export default {
 
       // Discord Modal Submit (Type 5)
       if (body.type === 5) {
+        const modalCustomId = body.data?.custom_id;
+        if (modalCustomId === "modal_confirm_stop_engine") {
+          const confirmText = (body.data?.components?.[0]?.components?.[0]?.value || "").trim().toUpperCase();
+          if (confirmText === "STOP") {
+            await setEngineStopSignal(true);
+            await cancelActiveRuns(env.GITHUB_TOKEN);
+            return Response.json({
+              type: 4,
+              data: {
+                content: "Cancellation confirmed. Stop signal sent to GPU worker; Kaggle container will terminate within 6 seconds to preserve weekly quota.",
+                flags: 64
+              }
+            });
+          } else {
+            return Response.json({
+              type: 4,
+              data: {
+                content: `Cancellation aborted. You entered "${confirmText}" instead of "STOP". The active run continues uninterrupted.`,
+                flags: 64
+              }
+            });
+          }
+        }
+
         const topic = body.data?.components?.[0]?.components?.[0]?.value || "Random Topic";
         const style = body.data?.components?.[1]?.components?.[0]?.value || "dev-studio";
 
@@ -247,6 +346,34 @@ export default {
       // Discord Component / Button Click (Type 3)
       if (body.type === 3) {
         const customId = body.data?.custom_id;
+
+        // Confirmation modal popup for emergency GPU cancellation
+        if (customId === "request_stop_engine") {
+          return Response.json({
+            type: 9, // Native Discord Modal Dialog
+            data: {
+              title: "Confirm Abort & Stop GPU",
+              custom_id: "modal_confirm_stop_engine",
+              components: [
+                {
+                  type: 1,
+                  components: [
+                    {
+                      type: 4,
+                      custom_id: "input_confirm_stop",
+                      label: "Type STOP to confirm killing GPU instance",
+                      style: 1,
+                      min_length: 4,
+                      max_length: 10,
+                      placeholder: "STOP",
+                      required: true
+                    }
+                  ]
+                }
+              ]
+            }
+          });
+        }
 
         // Open Modal for custom short
         if (customId === "open_modal_create") {

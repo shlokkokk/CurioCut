@@ -152,6 +152,8 @@ def main():
         "-i", str(mix_path),
         "-vf", f"ass='{ass_escaped}'",
         "-c:v", "libx264", "-preset", "fast", "-crf", "19",
+        "-pix_fmt", "yuv420p",
+        "-movflags", "+faststart",
         "-c:a", "aac", "-b:a", "192k",
         "-shortest",
         str(final_out),
