@@ -100,7 +100,12 @@ else:
     style_arg = "auto"
 
 if style_arg == "town-rule":
-    # Configure NVIDIA EGL and GLX hardware acceleration for headless GPU rendering
+    # Configure NVIDIA EGL headless hardware acceleration for Tesla T4 GPU
+    os.environ["NVIDIA_VISIBLE_DEVICES"] = "all"
+    os.environ["NVIDIA_DRIVER_CAPABILITIES"] = "all"
+    os.environ["EGL_PLATFORM"] = "surfaceless"
+    os.environ["EGL_DRIVER"] = "nvidia"
+    os.environ["__EGL_VENDOR_LIBRARY_DIRS"] = "/usr/share/glvnd/egl_vendor.d"
     for nvidia_json in [
         "/usr/share/glvnd/egl_vendor.d/10_nvidia.json",
         "/etc/glvnd/egl_vendor.d/10_nvidia.json",
@@ -110,15 +115,6 @@ if style_arg == "town-rule":
             os.environ["__NV_PRIME_RENDER_OFFLOAD"] = "1"
             os.environ["__GLX_VENDOR_LIBRARY_NAME"] = "nvidia"
             break
-
-    # Ensure Xvfb and required Linux graphics libraries are available
-    if not shutil.which("xvfb-run"):
-        print("[3a/4] Installing Xvfb and graphics libraries for headless GPU rendering...", flush=True)
-        nonint_env = dict(os.environ, DEBIAN_FRONTEND="noninteractive", NEEDRESTART_MODE="a", NEEDRESTART_SUSPEND="1")
-        subprocess.run(["apt-get", "update", "-y", "-q"] + apt_flags, env=nonint_env, check=False)
-        subprocess.run(["apt-get", "install", "-y", "-q"] + apt_flags + [
-            "xvfb", "libsm6", "libxext6", "libxrender1", "libxi6", "libxkbcommon0", "libgl1", "libglu1-mesa", "libxxf86vm1"
-        ], env=nonint_env, check=False)
 
     if not shutil.which("blender"):
         blender_dir = Path("/kaggle/working/blender")
@@ -137,7 +133,8 @@ if style_arg == "town-rule":
             nonint_env = dict(os.environ, DEBIAN_FRONTEND="noninteractive", NEEDRESTART_MODE="a", NEEDRESTART_SUSPEND="1")
             subprocess.run(["apt-get", "update", "-y", "-q"] + apt_flags, env=nonint_env, check=False)
             subprocess.run(["apt-get", "install", "-y", "-q"] + apt_flags + [
-                "xvfb", "libsm6", "libxext6", "libxrender1", "libxi6", "libxkbcommon0", "libgl1", "libglu1-mesa", "libxxf86vm1"
+                "libgl1", "libegl1", "libgles2", "libglvnd0", "libglvnd-dev",
+                "libsm6", "libxext6", "libxrender1", "libxi6", "libxkbcommon0", "libxxf86vm1"
             ], env=nonint_env, check=False)
         os.environ["BLENDER_EXE"] = str(blender_bin)
         os.environ["PATH"] = f"{blender_bin.parent}:{os.environ.get('PATH', '')}"

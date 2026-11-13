@@ -34,6 +34,12 @@ parser.add_argument("--max-frames", type=int, default=0, help="Optional cap on r
 parser.add_argument("--faces-dir", default=str(Path(__file__).resolve().parent / "assets" / "faces"))
 args = parser.parse_args(argv)
 
+try:
+    import gpu
+    print(f"[blender_render] Active GPU: {gpu.platform.device_type_get()} | Vendor: {gpu.platform.vendor_get()} | Renderer: {gpu.platform.renderer_get()}", flush=True)
+except Exception as e:
+    print(f"[blender_render] GPU detection notice: {e}", flush=True)
+
 
 def hex_to_rgba(h: str, a: float = 1.0):
     h = (h or "#CCCCCC").lstrip("#")

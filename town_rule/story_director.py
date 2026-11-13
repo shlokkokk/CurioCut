@@ -142,6 +142,7 @@ def save_history(title: str, rule_hook: str):
 
 
 def _call_gemini(prompt: str, api_key: str, model: str) -> dict:
+    import time
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
     payload = {
         "systemInstruction": {"parts": [{"text": TOWN_DIRECTOR_SYSTEM_PROMPT}]},
@@ -157,28 +158,39 @@ def _call_gemini(prompt: str, api_key: str, model: str) -> dict:
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=180) as resp:
-        data = json.loads(resp.read().decode("utf-8"))
-        text = data["candidates"][0]["content"]["parts"][0]["text"]
-        return json.loads(text)
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=180) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                text = data["candidates"][0]["content"]["parts"][0]["text"]
+                return json.loads(text)
+        except urllib.error.HTTPError as he:
+            if he.code == 429 and attempt < 2:
+                wait_sec = 12 * (attempt + 1)
+                print(f"[story_director] {model} hit burst rate limit (429), pausing {wait_sec}s for quota reset...")
+                time.sleep(wait_sec)
+                continue
+            raise
 
 
 def _call_groq(prompt: str, api_key: str) -> dict:
     from groq import Groq
     client = Groq(api_key=api_key)
     last = None
+    json_prompt = f"{prompt}\n\nIMPORTANT: Return ONLY a valid JSON object strictly matching the schema. No thoughts, no explanations."
     for model in ["openai/gpt-oss-120b", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"]:
         try:
             resp = client.chat.completions.create(
                 model=model,
                 messages=[
                     {"role": "system", "content": TOWN_DIRECTOR_SYSTEM_PROMPT},
-                    {"role": "user", "content": prompt},
+                    {"role": "user", "content": json_prompt},
                 ],
                 temperature=0.85,
                 response_format={"type": "json_object"},
             )
-            return json.loads(resp.choices[0].message.content)
+            raw = resp.choices[0].message.content.strip()
+            return json.loads(raw)
         except Exception as e:
             print(f"[story_director] Groq {model} failed: {e}")
             last = e
@@ -211,20 +223,25 @@ def generate_episode(theme_hint: str = "") -> dict:
     groq_key = os.environ.get("GROQ_API_KEY", "").strip()
 
     attempts = []
+    # Tier 1: Peak Human Psychology & Deep Reasoning (Gemini Pro Models with backoff retry)
     if key1:
         attempts.append(("Gemini Pro Latest (Key 1)", lambda: _call_gemini(user_prompt, key1, "gemini-pro-latest")))
     if key2:
-        attempts.append(("Gemini 3.1 Pro (Key 2)", lambda: _call_gemini(user_prompt, key2, "gemini-3.1-pro-preview")))
+        attempts.append(("Gemini Pro Latest (Key 2)", lambda: _call_gemini(user_prompt, key2, "gemini-pro-latest")))
     if key1:
-        attempts.append(("Gemini 3.5 Flash (Key 1)", lambda: _call_gemini(user_prompt, key1, "gemini-3.5-flash")))
+        attempts.append(("Gemini 2.5 Pro (Key 1)", lambda: _call_gemini(user_prompt, key1, "gemini-2.5-pro")))
     if key2:
-        attempts.append(("Gemini 3.8 Flash (Key 2)", lambda: _call_gemini(user_prompt, key2, "gemini-3.8-flash")))
+        attempts.append(("Gemini 2.5 Pro (Key 2)", lambda: _call_gemini(user_prompt, key2, "gemini-2.5-pro")))
+
+    # Tier 2: High Intelligence Fallbacks (Real Google Endpoints)
     if key1:
         attempts.append(("Gemini Flash Latest (Key 1)", lambda: _call_gemini(user_prompt, key1, "gemini-flash-latest")))
     if key2:
         attempts.append(("Gemini Flash Lite Latest (Key 2)", lambda: _call_gemini(user_prompt, key2, "gemini-flash-lite-latest")))
+
+    # Tier 3: Groq High-Speed LPU Fallback
     if groq_key:
-        attempts.append(("Groq Fallback", lambda: _call_groq(user_prompt, groq_key)))
+        attempts.append(("Groq LPU Engine", lambda: _call_groq(user_prompt, groq_key)))
 
     last_err = None
     for label, fn in attempts:

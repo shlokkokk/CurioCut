@@ -70,7 +70,10 @@ os.environ["DISCORD_WEBHOOK_LIVE_PROGRESS"] = {repr(secrets_to_pass["DISCORD_WEB
 
 full_worker_code = injected_header + worker_code
 
+latest_kernel_url = f"https://www.kaggle.com/code/{KAGGLE_USER}/{KERNEL_SLUG}"
+
 def push_kernel(enable_gpu=True):
+    global latest_kernel_url
     mode_str = "NVIDIA Tesla T4 GPU (16 GB VRAM)" if enable_gpu else "High-Speed 4-Core Cloud Compute"
     print(f"\nDispatching kernel: {KAGGLE_USER}/{KERNEL_SLUG} [{mode_str}]...")
     
@@ -103,21 +106,24 @@ def push_kernel(enable_gpu=True):
         if res.get("hasError") or res.get("error"):
             err_msg = res.get("error") or res.get("errorNullable") or "Unknown Kaggle API error"
             raise RuntimeError(f"Kaggle API Error: {err_msg}")
-        print(f"🚀 Job accepted by Kaggle cloud API!")
-        print(f"URL: https://www.kaggle.com/code/{KAGGLE_USER}/{KERNEL_SLUG}")
+        v_num = res.get("versionNumber")
+        base_url = (res.get("url") or f"https://www.kaggle.com/code/{KAGGLE_USER}/{KERNEL_SLUG}").split("?")[0]
+        latest_kernel_url = f"{base_url}?versionNumber={v_num}" if v_num else base_url
+        print(f"🚀 Job accepted by Kaggle cloud API (Version #{v_num})!")
+        print(f"URL: {latest_kernel_url}")
         try:
             from discord_notifier import notify_engine
             notify_engine(
-                title="Autonomous Video Pipeline Triggered",
-                description=f"CurioCut dispatched **{secrets_to_pass['CURIO_SLOT'].upper()}** to Kaggle Cloud GPU runner.",
+                title=f"Autonomous Video Pipeline Triggered (v{v_num})" if v_num else "Autonomous Video Pipeline Triggered",
+                description=f"CurioCut dispatched **{secrets_to_pass['CURIO_SLOT'].upper()}** to Kaggle Cloud GPU runner.\n\n[▶ Open Kaggle Run v{v_num}]({latest_kernel_url})",
                 fields=[
                     {"name": "Slot", "value": secrets_to_pass["CURIO_SLOT"].upper(), "inline": True},
                     {"name": "Hardware", "value": "NVIDIA GPU (T4/P100)" if "GPU" in mode_str else "Cloud CPU", "inline": True},
-                    {"name": "Status", "value": "Autonomous Worker Dispatched", "inline": True}
+                    {"name": "Kernel Version", "value": f"Version #{v_num}" if v_num else "Latest", "inline": True}
                 ],
                 color=0x38BDF8,
-                button_label="View Cloud Runner on Kaggle",
-                button_url=f"https://www.kaggle.com/code/{KAGGLE_USER}/{KERNEL_SLUG}"
+                button_label=f"View Run v{v_num} on Kaggle" if v_num else "View Cloud Runner on Kaggle",
+                button_url=latest_kernel_url
             )
         except Exception:
             pass
@@ -154,6 +160,9 @@ while time.time() - start_t < max_wait:
             data = json.loads(resp.read().decode("utf-8"))
             st = data.get("status", "unknown")
             fail_msg = data.get("failureMessage", "")
+            script_v_id = data.get("scriptVersionId") or data.get("versionId") or data.get("id")
+            if script_v_id:
+                latest_kernel_url = f"https://www.kaggle.com/code/{KAGGLE_USER}/{KERNEL_SLUG}?scriptVersionId={script_v_id}"
             
             print(f"  [{elapsed}s] Cloud Worker Status: {st.upper()}")
             
