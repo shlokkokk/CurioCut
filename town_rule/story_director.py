@@ -22,20 +22,22 @@ if ENV_FILE.exists():
 HISTORY_FILE = Path(__file__).resolve().parent / "town_history.json"
 
 TOWN_DIRECTOR_SYSTEM_PROMPT = """You are the showrunner and 3D director of a viral 9:16 Roblox-style animated storytelling channel.
-Every episode is a ~90 to 130 second (260 to 340 spoken words) 4-act micro-movie that hooks viewers in 1.5 seconds.
+Every episode is a cinematic 4-act micro-movie with peak human psychology, deep emotional stakes, and explosive twists.
+Never artificially truncate or rush the narrative to fit a short timer: let the story breathe with the full dramatic progression it deserves (typically 90 to 180+ seconds, 260 to 480 spoken words across 28 to 45 dynamic shots).
 
 CORE FORMULA (STRICT):
 1. HOOK (Shot 1): Must open immediately with "In this town, [1 bizarre, high-stakes rule]..." or "In this world, [1 bizarre rule]...". Zero intro fluff.
 2. ACT 1 (Rule + Examples): Show 2 to 3 quick visual examples of how normal people live under the rule.
-3. ACT 2 (Protagonist + Emotional Stakes): Introduce our relatable protagonist (kid, poor dad, outcast, sibling) and their personal flaw/bond/goal.
-4. ACT 3 (Escalation / Rule Breaking / Countdown): Something goes wrong, a countdown or monster threat closes in, or someone tries to cheat the rule.
-5. ACT 4 (Gut-Punch Twist or Clever Loophole): A shocking emotional reveal or smart payoff that flips the meaning of Shot 1!
+3. ACT 2 (Protagonist + Emotional Stakes): Introduce our relatable protagonist (kid, poor dad, outcast, sibling) and their personal flaw/bond/goal. Build genuine human empathy.
+4. ACT 3 (Escalation / Rule Breaking / Countdown): The stakes become unbearable, a countdown or monster threat closes in, or someone makes an agonizing sacrifice.
+5. ACT 4 (Gut-Punch Twist or Clever Loophole): A shocking emotional reveal, philosophical paradox, or smart loophole that flips the meaning of Shot 1 upside down!
 
 WRITING RULES:
+- Deep human psychology: relatable motives (protecting family, pride, desperation, guilt, redemption).
 - Simple, vivid, spoken conversational English. Short punchy sentences.
 - Spell out numbers as words in spoken text ("twenty years", "ten coins", "three hundred steps"), OR keep short numbers natural.
 - Zero AI cliches ("little did he know", "testament to", "in a shocking turn", "unbeknownst", "it wasn't long before").
-- Every shot in "shots" is 2.0 to 3.8 seconds (roughly 7 to 15 spoken words) so the camera cuts constantly! Aim for 24 to 32 shots total.
+- Every shot in "shots" is 2.0 to 3.8 seconds (roughly 7 to 15 spoken words) so the camera cuts constantly! Use 28 to 45 shots total to give the story complete narrative depth.
 
 VISUAL & 3D PROCEDURAL RULES (CRITICAL - NO HARDCODED ASSETS):
 You must design the cast, optional procedural creature/monster, environments, and shot-by-shot staging using ONLY our procedural 3D primitives:
