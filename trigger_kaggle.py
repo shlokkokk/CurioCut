@@ -175,6 +175,20 @@ while time.time() - start_t < max_wait:
         except Exception as ex:
             print(f"  Notice: Long run alert dispatch: {ex}")
 
+    # Check if user triggered emergency stop via Discord
+    try:
+        req_chk = urllib.request.Request(
+            "https://curiocut-corn.pcgpt00.workers.dev/api/logs?check_stop=1",
+            headers={"User-Agent": "Mozilla/5.0 CurioCut-Runner/1.0"}
+        )
+        with urllib.request.urlopen(req_chk, timeout=4) as resp_chk:
+            chk_d = json.loads(resp_chk.read().decode("utf-8"))
+            if chk_d.get("should_stop"):
+                print("\n[STOP SIGNAL] User requested termination via Discord. Exiting Cloud dispatcher...")
+                sys.exit(0)
+    except Exception:
+        pass
+
     try:
         req_st = urllib.request.Request(status_url, headers={"Authorization": f"Bearer {KAGGLE_TOKEN}"})
         with urllib.request.urlopen(req_st, timeout=20) as resp:

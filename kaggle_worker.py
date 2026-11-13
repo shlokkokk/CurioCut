@@ -180,6 +180,22 @@ proc = subprocess.Popen(
     bufsize=1
 )
 
+def force_emergency_shutdown(target_proc):
+    sys.stderr.write("\n[STOP SIGNAL] Emergency stop confirmed from Discord. Terminating GPU engine to preserve weekly quota...\n")
+    sys.stderr.flush()
+    try:
+        target_proc.kill()
+    except Exception:
+        pass
+    if sys.platform != "win32":
+        try:
+            os.system("pkill -9 -f blender 2>/dev/null || true")
+            os.system("pkill -9 -f ffmpeg 2>/dev/null || true")
+            os.system("pkill -9 -f make_short 2>/dev/null || true")
+        except Exception:
+            pass
+    os._exit(0)
+
 def _watchdog_loop(target_proc):
     while target_proc.poll() is None:
         time.sleep(5)
@@ -188,13 +204,7 @@ def _watchdog_loop(target_proc):
             with urllib.request.urlopen(req_check, timeout=4) as chk_resp:
                 chk_data = json.loads(chk_resp.read().decode("utf-8"))
                 if chk_data.get("should_stop"):
-                    sys.stderr.write("\n[STOP SIGNAL] Watchdog detected stop signal from Discord. Forcing termination...\n")
-                    sys.stderr.flush()
-                    try:
-                        target_proc.kill()
-                    except Exception:
-                        pass
-                    os._exit(0)
+                    force_emergency_shutdown(target_proc)
         except Exception:
             pass
 
@@ -226,9 +236,7 @@ for line in iter(proc.stdout.readline, ""):
             with urllib.request.urlopen(req_post, timeout=5) as resp_post:
                 resp_json = json.loads(resp_post.read().decode("utf-8"))
                 if resp_json.get("should_stop"):
-                    print("\n[STOP SIGNAL] User confirmed termination from Discord. Stopping GPU engine to save weekly quota...", flush=True)
-                    proc.terminate()
-                    sys.exit(0)
+                    force_emergency_shutdown(proc)
         except Exception:
             pass
 

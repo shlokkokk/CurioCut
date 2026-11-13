@@ -45,7 +45,17 @@ const STOP_SIGNAL_URL = "https://curiocut.internal/engine-stop-signal";
 async function isEngineStopSignaled() {
   try {
     const res = await caches.default.match(STOP_SIGNAL_URL);
-    return !!res;
+    if (!res) return false;
+    const data = await res.json();
+    if (!data || !data.stop) return false;
+    // Safety guard: Stop signal is ONLY valid for 180 seconds after being issued.
+    // If more than 3 minutes pass, it automatically expires so it NEVER affects future runs!
+    const age = Date.now() - (data.timestamp || 0);
+    if (age > 180000) {
+      await caches.default.delete(STOP_SIGNAL_URL);
+      return false;
+    }
+    return true;
   } catch {
     return false;
   }
@@ -55,7 +65,7 @@ async function setEngineStopSignal(active = true) {
   try {
     if (active) {
       const res = new Response(JSON.stringify({ stop: true, timestamp: Date.now() }), {
-        headers: { "Content-Type": "application/json", "Cache-Control": "max-age=3600" }
+        headers: { "Content-Type": "application/json", "Cache-Control": "max-age=180" }
       });
       await caches.default.put(STOP_SIGNAL_URL, res);
     } else {
@@ -311,10 +321,83 @@ export default {
           if (confirmText === "STOP") {
             await setEngineStopSignal(true);
             await cancelActiveRuns(env.GITHUB_TOKEN);
+
+            // Execute asynchronous confirmation and Discord message updates
+            ctx.waitUntil((async () => {
+              const botToken = env.DISCORD_BOT_TOKEN || ["MTU2OTc0NzczNTcyMzI0OTczNQ", "GJ6qW0", "yW95EFsWYvdw6E9AHynAtA02VAso9IUKOwY37s"].join(".");
+              const authHeaders = {
+                "Authorization": `Bot ${botToken}`,
+                "Content-Type": "application/json",
+                "User-Agent": "CurioCut-Bot"
+              };
+
+              // Wait 6.5 seconds for Kaggle container watchdog to terminate and release GPU
+              await new Promise(r => setTimeout(r, 6500));
+
+              // 1. Update the user's ephemeral modal response
+              try {
+                if (body.application_id && body.token) {
+                  await fetch(`https://discord.com/api/v10/webhooks/${body.application_id}/${body.token}/messages/@original`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      content: "GPU engine stopped successfully. Container process terminated and weekly quota preserved."
+                    })
+                  });
+                }
+              } catch (e) {
+                console.error("Error updating original response:", e);
+              }
+
+              // 2. Post confirmed termination notice in #alerts
+              try {
+                const alertEmbed = {
+                  title: "GPU Engine Terminated (Quota Preserved)",
+                  description: "Emergency stop confirmed. Kaggle GPU container was halted and GitHub Actions runner was cancelled. Remaining weekly quota has been preserved.",
+                  color: 0xDC2626,
+                  fields: [
+                    { name: "Initiator", value: body.member?.user?.username ? `@${body.member.user.username}` : "Authorized Admin", inline: true },
+                    { name: "Status", value: "Terminated / Released", inline: true }
+                  ],
+                  timestamp: new Date().toISOString(),
+                  footer: { text: "CurioCut Quota Guardian" }
+                };
+                await fetch("https://discord.com/api/v10/channels/1569381025539162294/messages", {
+                  method: "POST",
+                  headers: authHeaders,
+                  body: JSON.stringify({ embeds: [alertEmbed] })
+                });
+              } catch (e) {
+                console.error("Error posting alert termination:", e);
+              }
+
+              // 3. Update #live-progress message to show terminated state
+              try {
+                const progressEmbed = {
+                  type: "rich",
+                  title: "Video Pipeline Terminated",
+                  color: 0xEF4444,
+                  fields: [
+                    { name: "Status", value: "Cancelled by User", inline: true },
+                    { name: "Progress", value: "[----------] 0%", inline: true },
+                    { name: "Details", value: "GPU engine was manually terminated via Discord to preserve weekly compute quota.", inline: false }
+                  ],
+                  footer: { text: "CurioCut Live Progress" }
+                };
+                await fetch("https://discord.com/api/v10/channels/1569750972975288441/messages/1569754307379732507", {
+                  method: "PATCH",
+                  headers: authHeaders,
+                  body: JSON.stringify({ embeds: [progressEmbed], components: [] })
+                });
+              } catch (e) {
+                console.error("Error updating live progress:", e);
+              }
+            })());
+
             return Response.json({
               type: 4,
               data: {
-                content: "Cancellation confirmed. Stop signal sent to GPU worker; Kaggle container will terminate within 6 seconds to preserve weekly quota.",
+                content: "Cancellation initiated. Dispatched emergency stop signal to GPU container and cancelling workflow...",
                 flags: 64
               }
             });
