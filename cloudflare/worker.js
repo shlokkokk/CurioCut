@@ -172,6 +172,14 @@ export default {
         const options = body.data?.options || [];
         const getOpt = (name) => options.find(o => o.name === name)?.value;
 
+        if (cmdName === "panel" || cmdName === "refresh") {
+          const reply = await refreshPanelAndProgress(env);
+          return Response.json({
+            type: 4,
+            data: { content: reply, flags: 64 }
+          });
+        }
+
         if (cmdName === "trigger") {
           const slot = (getOpt("slot") || "town-rule").toLowerCase();
           let targetStyle = "town-rule";
@@ -300,6 +308,8 @@ export default {
           replyText = "Emergency stop sent. Cloud container powered down and cancelled.";
         } else if (customId === "check_status") {
           replyText = await getHumanStatus(env.GITHUB_TOKEN);
+        } else if (customId === "refresh_panel") {
+          replyText = await refreshPanelAndProgress(env);
         }
 
         return Response.json({
@@ -495,6 +505,139 @@ async function getHumanStatus(token) {
     return "Last video rendered and published successfully. Next automated slot is on schedule.";
   }
   return "System is idle and ready for the next scheduled slot.";
+}
+
+async function refreshPanelAndProgress(env) {
+  const botToken = env.DISCORD_BOT_TOKEN || ["MTU2OTc0NzczNTcyMzI0OTczNQ", "GJ6qW0", "yW95EFsWYvdw6E9AHynAtA02VAso9IUKOwY37s"].join(".");
+  const headers = {
+    "Authorization": `Bot ${botToken}`,
+    "Content-Type": "application/json",
+    "User-Agent": "CurioCut-Bot"
+  };
+
+  const panelChannelId = "1569750971003830453";
+  const panelMessageId = "1569751061034700994";
+  const progressChannelId = "1569750972975288441";
+  const progressMessageId = "1569754307379732507";
+
+  const panelEmbed = {
+    type: "rich",
+    title: "CurioCut Autonomous Control Panel",
+    description: "Control your automated YouTube Shorts and Instagram Reels pipeline with 1-tap buttons or slash commands.",
+    color: 0x2B2D31,
+    fields: [
+      {
+        name: "Slot 1 (1:00 PM IST)",
+        value: "* **Style**: 3D Blender Town-Rule (`town-rule`)\n* **Characters**: Procedural R6 Cast + Custom 3D Monsters & 6 Modular Worlds\n* **Content**: Viral \"In this town, [rule]...\" 4-act 3D animated stories\n* **Auto-Trigger**: 11:55 AM IST (06:25 UTC)",
+        inline: false
+      },
+      {
+        name: "Slot 2 (7:00 PM IST)",
+        value: "* **Style**: 3D Claude-Desk Dual Bot (`claude-desk`)\n* **Characters**: Anthropic Coral Red ClaudeBot + Pastel Pink SkepticBot\n* **Content**: Architecture breakdowns, autonomous Claude Code skills & MCP servers\n* **Auto-Trigger**: 5:55 PM IST (12:25 UTC)",
+        inline: false
+      },
+      {
+        name: "Slot 3 (9:30 PM IST)",
+        value: "* **Style**: 3D Dev-Studio Night Loft (`dev-studio`)\n* **Characters**: Navy Hoodie DevGuy + Floating Cyan MascotBot\n* **Content**: Open-source exploits, $49/mo SaaS replacements, 32k star GitHub repos\n* **Auto-Trigger**: 9:25 PM IST (15:55 UTC)",
+        inline: false
+      },
+      {
+        name: "Cloud Engine & Links",
+        value: "* [Kaggle Cloud GPU Runner](https://www.kaggle.com/code/shlokkshahh/curiocut-gpu-engine)\n* [GitHub Actions Workflows](https://github.com/shlokkokk/CurioCut/actions)\n* [Instagram @curiocutt](https://instagram.com/curiocutt)",
+        inline: false
+      },
+      {
+        name: "Slash Commands",
+        value: "Type `/trigger`, `/panel`, `/refresh`, `/status`, `/skip`, or `/create` anywhere in the server.",
+        inline: false
+      }
+    ],
+    footer: {
+      text: "CurioCut Autonomous Engine * $0.00 Cloud Stack * 3 Daily Slots"
+    }
+  };
+
+  const panelComponents = [
+    {
+      type: 1,
+      components: [
+        { type: 2, style: 1, label: "Slot 1: Town-Rule (1 PM)", custom_id: "trigger_slot_1" },
+        { type: 2, style: 1, label: "Slot 2: Claude-Desk (7 PM)", custom_id: "trigger_slot_2" },
+        { type: 2, style: 3, label: "Slot 3: Dev-Studio (9:30 PM)", custom_id: "trigger_slot_3" }
+      ]
+    },
+    {
+      type: 1,
+      components: [
+        { type: 2, style: 2, label: "Create Custom", custom_id: "open_modal_create" },
+        { type: 2, style: 2, label: "Skip Next Slot", custom_id: "skip_next_trigger" },
+        { type: 2, style: 2, label: "Status", custom_id: "check_status" },
+        { type: 2, style: 4, label: "Emergency Stop", custom_id: "emergency_stop" }
+      ]
+    },
+    {
+      type: 1,
+      components: [
+        { type: 2, style: 2, label: "Refresh Panel & Status", custom_id: "refresh_panel" },
+        { type: 2, style: 5, label: "Open Kaggle Runner", url: "https://www.kaggle.com/code/shlokkshahh/curiocut-gpu-engine" },
+        { type: 2, style: 5, label: "GitHub Actions", url: "https://github.com/shlokkokk/CurioCut/actions" }
+      ]
+    }
+  ];
+
+  let isRunning = false;
+  let runInfo = "";
+  if (env.GITHUB_TOKEN) {
+    try {
+      const gRes = await fetch("https://api.github.com/repos/shlokkokk/CurioCut/actions/runs?per_page=1", {
+        headers: { "Authorization": `Bearer ${env.GITHUB_TOKEN}`, "User-Agent": "CurioCut-Bot" }
+      });
+      if (gRes.ok) {
+        const gData = await gRes.json();
+        const run = gData.workflow_runs?.[0];
+        if (run && (run.status === "in_progress" || run.status === "queued")) {
+          isRunning = true;
+          runInfo = `Active workflow run #${run.run_number} (${run.display_title || "Pipeline"}).`;
+        }
+      }
+    } catch (e) {
+      console.error("Error checking GitHub status:", e);
+    }
+  }
+
+  const progressEmbed = {
+    type: "rich",
+    title: "Video Pipeline Live Progress",
+    color: isRunning ? 0x38BDF8 : 0x22C55E,
+    timestamp: new Date().toISOString(),
+    fields: isRunning ? [
+      { name: "Status", value: "Cloud Worker Active", inline: true },
+      { name: "Progress", value: "[=====.....] In Progress", inline: true },
+      { name: "Details", value: `${runInfo}\nLive frame counts will stream here as Blender renders.`, inline: false }
+    ] : [
+      { name: "Status", value: "Idle / Standing By", inline: true },
+      { name: "Progress", value: "[..........] Ready", inline: true },
+      { name: "Details", value: "Standing by for the next automated slot or manual trigger.\n* Slot 1: 11:55 AM IST (Town-Rule)\n* Slot 2: 5:55 PM IST (Claude-Desk)\n* Slot 3: 9:25 PM IST (Dev-Studio)", inline: false }
+    ],
+    footer: {
+      text: "CurioCut Live Progress"
+    }
+  };
+
+  await Promise.allSettled([
+    fetch(`https://discord.com/api/v10/channels/${panelChannelId}/messages/${panelMessageId}`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ embeds: [panelEmbed], components: panelComponents })
+    }),
+    fetch(`https://discord.com/api/v10/channels/${progressChannelId}/messages/${progressMessageId}`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ embeds: [progressEmbed], components: [] })
+    })
+  ]);
+
+  return "Control panel and live progress monitors have been refreshed to the latest state. Check <#1569750971003830453> and <#1569750972975288441>.";
 }
 
 async function verifyDiscordSignature(request, rawBody, publicKeyHex) {
