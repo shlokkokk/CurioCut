@@ -1,6 +1,6 @@
 # CurioCut
 
-A fully autonomous short-form video pipeline that runs on a $0 stack. Every day it picks a topic, generates a script, renders a 3D animated scene, voices it with Kokoro TTS, and uploads the finished video to YouTube Shorts and Instagram Reels — all without touching a single button.
+A fully autonomous short-form video pipeline that runs on a $0 stack. Every day it picks a topic, generates a script, renders a 3D animated scene, voices it with Kokoro TTS, and uploads the finished video to YouTube Shorts and Instagram Reels, all without touching a single button.
 
 ---
 
@@ -12,7 +12,7 @@ Three cron slots fire daily (1 PM, 7 PM, and 9:30 PM IST). Each slot:
 2. GitHub Actions triggers `trigger_kaggle.py`, which queues the job on a Kaggle GPU notebook
 3. Kaggle pulls the repo, generates the script and dialogue, renders the video in headless Chrome with WebGL, and uploads to YouTube + Instagram
 4. Live render progress streams to Discord in real-time via the bot. Post notifications with direct action buttons arrive in `#youtube-posts` and `#instagram-posts`
-5. Instagram comments matching the CTA keyword (`MCPSER`, `TOOL`, etc.) get an auto-reply and a DM with the resource link — handled 24/7 by Cloudflare Edge, not Kaggle
+5. Instagram comments matching the CTA keyword (`MCPSER`, `TOOL`, etc.) get an auto-reply and a DM with the resource link: handled 24/7 by Cloudflare Edge, not Kaggle
 
 Total monthly cost: $0.
 
@@ -80,10 +80,10 @@ The pipeline has two modes. `claude-desk` is the flagship 3D style; the rest rot
 
 Each animation style is a self-contained Three.js scene running in headless Chrome via Puppeteer. The capture pipeline:
 
-- `tools/capture.mjs` — drives Chrome DevTools Protocol, captures frames at 1080×1920 (9:16), pipes raw frames to FFmpeg
-- `tools/mix.py` — blends the Kokoro voiceover, procedural sound cues, and music bed into `data/mix.wav`
-- `scripts/words.py` — runs faster-whisper on the audio to get word-level timestamps for the caption system
-- `scripts/voice.py` — single-speaker Kokoro TTS for non-dialogue styles
+- `tools/capture.mjs`: drives Chrome DevTools Protocol, captures frames at 1080x1920 (9:16), pipes raw frames to FFmpeg
+- `tools/mix.py`: blends the Kokoro voiceover, procedural sound cues, and music bed into `data/mix.wav`
+- `scripts/words.py`: runs faster-whisper on the audio to get word-level timestamps for the caption system
+- `scripts/voice.py`: single-speaker Kokoro TTS for non-dialogue styles
 
 For `claude-desk`, `dual_voice.py` runs first to alternate between Guide (`am_fenrir`) and Skeptic (`af_bella`) voices and produce `data/lines.json` with per-line speaker + timing data that `shots.js` reads to drive cinematic speaker cuts.
 
@@ -190,5 +190,5 @@ All three slots can also be manually triggered from Discord `#panel` or via GitH
 
 ## License
 
-MIT. The Three.js vendor files in `faceless-shorts-skill/` are MIT licensed separately — see `vendor/LICENSE-three.txt` in each style directory.
+MIT. The Three.js vendor files in `faceless-shorts-skill/` are MIT licensed separately (see `vendor/LICENSE-three.txt` in each style directory).
 

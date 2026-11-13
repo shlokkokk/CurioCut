@@ -125,8 +125,8 @@ def synthesize_dialogue(project_dir, pair_name="default"):
             if not raw_text.endswith("?") and not raw_text.endswith("!"):
                 if re.search(r'^(wait|hold on|what|how|why|is that|can you|and|okay but|so)\b', raw_text, re.IGNORECASE):
                     raw_text = raw_text.rstrip(".") + "?"
-            # Natural thinking beat after conversational openers ("Wait—", "Hold on—")
-            raw_text = re.sub(r'^(wait|hold on|okay|look)[,\s]+', r'\1— ', raw_text, flags=re.IGNORECASE)
+            # Natural thinking beat after conversational openers ("Wait,", "Hold on,")
+            raw_text = re.sub(r'^(wait|hold on|okay|look)[,\s]+', r'\1, ', raw_text, flags=re.IGNORECASE)
         else:
             # Guide: assertive, natural cadence without run-ons
             raw_text = re.sub(r'\b(yep|yeah|look|see)[,\s]+', r'\1. ', raw_text, flags=re.IGNORECASE)

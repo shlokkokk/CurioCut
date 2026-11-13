@@ -327,7 +327,7 @@ def generate_dialogue_script(story_info=None, style="claude-desk"):
                     },
                     {
                         "speaker": "skeptic",
-                        "text": "Wait— what do you mean? How else am I supposed to use it?",
+                        "text": "Wait, what do you mean? How else am I supposed to use it?",
                         "header": "HOW ELSE CAN I USE IT?",
                         "prop": "glowing_orb"
                     },
@@ -339,7 +339,7 @@ def generate_dialogue_script(story_info=None, style="claude-desk"):
                     },
                     {
                         "speaker": "skeptic",
-                        "text": "Hold on— don't you need a ten thousand dollar supercomputer for that?",
+                        "text": "Hold on, don't you need a ten thousand dollar supercomputer for that?",
                         "header": "DO I NEED A SUPERCOMPUTER?",
                         "prop": "terminal_desk"
                     },

@@ -394,8 +394,8 @@ export function createDynamicTopicProp(lineOrType, scriptContext = {}, idx = 0, 
   }
 
   if (propType === 'cta_pill' || propType === 'comment_pill' || propType === 'cta') {
-    // Floating Interactive Comment Bar: "[ STUDIO  ⬆ ]"
-    const kw = (toolName || 'STUDIO').toUpperCase();
+    // Floating Interactive Comment Bar: "[ STUDIO  ^ ]"
+    const kw = (ctaKw || 'STUDIO').toUpperCase();
     const c = document.createElement('canvas');
     c.width = 512; c.height = 140;
     const ctx = c.getContext('2d');
@@ -409,7 +409,7 @@ export function createDynamicTopicProp(lineOrType, scriptContext = {}, idx = 0, 
     ctx.fillStyle = '#FFFFFF';
     ctx.font = '900 48px Inter, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`Comment "${kw}" 🚀`, 256, 82);
+    ctx.fillText(`Comment "${kw}"`, 256, 82);
 
     const tex = new THREE.CanvasTexture(c);
     const mesh = new THREE.Mesh(

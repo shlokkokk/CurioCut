@@ -31,13 +31,13 @@ EVERGREEN_VAULT = [
         "niche": "spicy_drama",
         "style": "night-file",
         "title": "The Billionaire Who Put Everything in His Mother's Name",
-        "premise": "During a bitter high-profile divorce, a wealthy star discovers his wife is demanding 50 percent of his entire $70 million fortune. In court, the judge investigates his bank accounts only to discover he owns zero houses, zero cars, and zero bank accounts in his name—every single luxury estate, yacht, and paycheck was legally registered to his mother since day one. His ex-wife walked away with nothing."
+        "premise": "During a bitter high-profile divorce, a wealthy star discovers his wife is demanding 50 percent of his entire $70 million fortune. In court, the judge investigates his bank accounts only to discover he owns zero houses, zero cars, and zero bank accounts in his name: every single luxury estate, yacht, and paycheck was legally registered to his mother since day one. His ex-wife walked away with nothing."
     },
     {
         "niche": "spicy_drama",
         "style": "night-file",
         "title": "The Hidden Nanny Cam Confession",
-        "premise": "A wife suspected her husband of lying about his late-night business trips. She placed a tiny voice recorder inside the master bedroom headboard. When she listened to the audio, she didn't just hear infidelity—she heard her husband and her own sister plotting how to drain her trust fund. She quietly transferred the funds, filed an emergency restraining order, and left the audio playing on repeat in the empty house."
+        "premise": "A wife suspected her husband of lying about his late-night business trips. She placed a tiny voice recorder inside the master bedroom headboard. When she listened to the audio, she didn't just hear infidelity, she heard her husband and her own sister plotting how to drain her trust fund. She quietly transferred the funds, filed an emergency restraining order, and left the audio playing on repeat in the empty house."
     },
     {
         "niche": "spicy_drama",
@@ -50,7 +50,7 @@ EVERGREEN_VAULT = [
         "niche": "real_heists",
         "style": "tall-tale",
         "title": "The Bartender Who Found an Infinite ATM Glitch",
-        "premise": "In 2011, Australian bartender Dan Saunders went to an ATM at 1 AM. Network maintenance disconnected the ATM from the bank ledger, letting him withdraw unlimited cash. Over four months, he withdrew $1.6 million, chartered private jets, and threw lavish parties. When guilt took over, he called the bank to confess—and they hung up because they were too embarrassed to admit it."
+        "premise": "In 2011, Australian bartender Dan Saunders went to an ATM at 1 AM. Network maintenance disconnected the ATM from the bank ledger, letting him withdraw unlimited cash. Over four months, he withdrew $1.6 million, chartered private jets, and threw lavish parties. When guilt took over, he called the bank to confess, and they hung up because they were too embarrassed to admit it."
     },
     {
         "niche": "real_heists",
@@ -94,7 +94,7 @@ EVERGREEN_VAULT = [
         "niche": "science_body",
         "style": "deep-dive",
         "title": "What Happens If You Hold Your Breath Too Long",
-        "premise": "What actually happens to your body when you hold your breath as long as you can? For the first 30 seconds, nothing much happens and your lungs are full of oxygen. But then carbon dioxide starts building up in your bloodstream. That panic you feel isn't lack of oxygen—it is CO2 toxicity forcing your diaphragm to spasm. If you push further, your heart slows down, and your brain pulls the emergency plug and knocks you out cold."
+        "premise": "What actually happens to your body when you hold your breath as long as you can? For the first 30 seconds, nothing much happens and your lungs are full of oxygen. But then carbon dioxide starts building up in your bloodstream. That panic you feel isn't lack of oxygen, it is CO2 toxicity forcing your diaphragm to spasm. If you push further, your heart slows down, and your brain pulls the emergency plug and knocks you out cold."
     },
     {
         "niche": "science_body",

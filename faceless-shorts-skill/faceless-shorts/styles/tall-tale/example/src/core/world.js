@@ -3,7 +3,7 @@
 //   mainStreet(E, opts) -> { scene, sun, people: [...] }      a small-town street with shops, poles, wires, hills
 //   interior(E, opts)  -> { scene, sun, counter, window }      a wallpapered shop/office room with a counter and a window
 //   meadow(E, opts)    -> { scene, sun }                       grass, hills, fence, trees, flowers (day or sunset)
-// Textures: planks, wallpaper, brick, dirt, grass, siding, facade(name, ...), sign(text) — all drawn in code.
+// Textures: planks, wallpaper, brick, dirt, grass, siding, facade(name, ...), sign(text): all drawn in code.
 import * as THREE from 'three';
 import { lightRig } from './engine.js';
 import { Toon } from './toon.js';

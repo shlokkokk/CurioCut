@@ -721,6 +721,9 @@ export class MascotBot {
   }
 }
 
-// Aliases for drop-in shot compatibility
+// Aliases for drop-in shot and tool compatibility
 export const ClaudeBot = DevGuy;
 export const SkepticBot = MascotBot;
+export const Toon = DevGuy;
+export const drawToon = () => {};
+export const PROPS = {};
