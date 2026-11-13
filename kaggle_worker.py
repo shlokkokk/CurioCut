@@ -166,7 +166,7 @@ LOG_RELAY_URL = "https://curiocut-corn.pcgpt00.workers.dev/api/logs"
 
 # Reset log buffer at start of new run
 try:
-    req_reset = urllib.request.Request(f"{LOG_RELAY_URL}?reset=1", data=b"", method="POST")
+    req_reset = urllib.request.Request(f"{LOG_RELAY_URL}?reset=1", data=b"", method="POST", headers={"User-Agent": "Mozilla/5.0 CurioCut-Runner/1.0"})
     urllib.request.urlopen(req_reset, timeout=5)
 except Exception:
     pass
@@ -184,7 +184,7 @@ def _watchdog_loop(target_proc):
     while target_proc.poll() is None:
         time.sleep(5)
         try:
-            req_check = urllib.request.Request(f"{LOG_RELAY_URL}?check_stop=1", headers={"User-Agent": "CurioCut-Watchdog"})
+            req_check = urllib.request.Request(f"{LOG_RELAY_URL}?check_stop=1", headers={"User-Agent": "Mozilla/5.0 CurioCut-Runner/1.0"})
             with urllib.request.urlopen(req_check, timeout=4) as chk_resp:
                 chk_data = json.loads(chk_resp.read().decode("utf-8"))
                 if chk_data.get("should_stop"):
@@ -214,7 +214,15 @@ for line in iter(proc.stdout.readline, ""):
         log_buffer.clear()
         last_log_post = now
         try:
-            req_post = urllib.request.Request(LOG_RELAY_URL, data=chunk, method="POST", headers={"Content-Type": "text/plain; charset=utf-8"})
+            req_post = urllib.request.Request(
+                LOG_RELAY_URL,
+                data=chunk,
+                method="POST",
+                headers={
+                    "Content-Type": "text/plain; charset=utf-8",
+                    "User-Agent": "Mozilla/5.0 CurioCut-Runner/1.0"
+                }
+            )
             with urllib.request.urlopen(req_post, timeout=5) as resp_post:
                 resp_json = json.loads(resp_post.read().decode("utf-8"))
                 if resp_json.get("should_stop"):
@@ -228,7 +236,15 @@ proc.wait()
 if log_buffer:
     chunk = "".join(log_buffer).encode("utf-8")
     try:
-        req_post = urllib.request.Request(LOG_RELAY_URL, data=chunk, method="POST", headers={"Content-Type": "text/plain; charset=utf-8"})
+        req_post = urllib.request.Request(
+            LOG_RELAY_URL,
+            data=chunk,
+            method="POST",
+            headers={
+                "Content-Type": "text/plain; charset=utf-8",
+                "User-Agent": "Mozilla/5.0 CurioCut-Runner/1.0"
+            }
+        )
         urllib.request.urlopen(req_post, timeout=5)
     except Exception:
         pass
