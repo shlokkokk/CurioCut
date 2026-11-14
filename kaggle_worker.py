@@ -7,6 +7,7 @@ import subprocess
 import json
 import urllib.request
 import threading
+import re
 from pathlib import Path
 
 # Force unbuffered streaming & completely non-interactive package execution
@@ -22,6 +23,163 @@ try:
     (needrestart_dir / "override.conf").write_text("$nrconf{restart} = 'l';\n$nrconf{ui} = 'NeedRestart::UI::stdio';\n", encoding="utf-8")
 except Exception:
     pass
+
+LOG_RELAY_URL = "https://curiocut-corn.pcgpt00.workers.dev/api/logs"
+RUN_MESSAGE_ID = os.environ.get("DISCORD_RUN_MESSAGE_ID", "").strip()
+worker_boot_time = time.time()
+active_subprocesses = set()
+active_subprocesses_lock = threading.Lock()
+
+class CloudLogStreamer:
+    """Buffers stdout/stderr in memory and tees to original stdout/stderr for Kaggle execution logs."""
+    def __init__(self):
+        self.all_logs = []
+        self.lock = threading.Lock()
+        self.orig_stdout = sys.__stdout__
+        self.orig_stderr = sys.__stderr__
+
+    def write(self, s, is_stderr=False):
+        if not s:
+            return
+        target = self.orig_stderr if is_stderr else self.orig_stdout
+        target.write(s)
+        target.flush()
+        with self.lock:
+            self.all_logs.append(s)
+            # Cap in-memory history to ~8 MB (approx 70,000 lines)
+            if len(self.all_logs) > 70000:
+                self.all_logs = self.all_logs[-50000:]
+
+    def flush(self):
+        pass
+
+    def get_full_log(self):
+        with self.lock:
+            return "".join(self.all_logs)
+
+class StdoutTee:
+    def __init__(self, streamer, is_stderr=False):
+        self._s = streamer
+        self._err = is_stderr
+    def write(self, s):
+        self._s.write(s, self._err)
+    def flush(self):
+        self._s.flush()
+    def fileno(self):
+        return (self._s.orig_stderr if self._err else self._s.orig_stdout).fileno()
+
+streamer = CloudLogStreamer()
+sys.stdout = StdoutTee(streamer, is_stderr=False)
+sys.stderr = StdoutTee(streamer, is_stderr=True)
+
+def force_emergency_shutdown(target_proc=None):
+    sys.stderr.write("\n[STOP SIGNAL] Emergency stop confirmed from Discord. Terminating GPU engine to preserve weekly quota...\n")
+    sys.stderr.flush()
+    if target_proc:
+        try:
+            target_proc.kill()
+        except Exception:
+            pass
+    with active_subprocesses_lock:
+        for p in list(active_subprocesses):
+            try:
+                p.kill()
+            except Exception:
+                pass
+    if sys.platform != "win32":
+        try:
+            os.system("pkill -9 -f blender 2>/dev/null || true")
+            os.system("pkill -9 -f ffmpeg 2>/dev/null || true")
+            os.system("pkill -9 -f make_short 2>/dev/null || true")
+        except Exception:
+            pass
+    os._exit(0)
+
+def run_command_logged(cmd, check=True, timeout=None, env=None, cwd=None):
+    """Executes a subprocess and streams all lines live through the cloud logger."""
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+        env=env,
+        cwd=cwd
+    )
+    with active_subprocesses_lock:
+        active_subprocesses.add(proc)
+    try:
+        for line in iter(proc.stdout.readline, ""):
+            sys.stdout.write(line)
+            sys.stdout.flush()
+        proc.wait(timeout=timeout)
+    finally:
+        with active_subprocesses_lock:
+            active_subprocesses.discard(proc)
+    if check and proc.returncode != 0:
+        raise subprocess.CalledProcessError(proc.returncode, cmd)
+    return proc.returncode
+
+def _detect_phase_from_log(log_text):
+    checks = [
+        (("[GPU] NVIDIA", "AUTONOMOUS CLOUD EXECUTION WORKER"), "BOOTING CONTAINER"),
+        (("[1/4]", "Cloning", "Updating CurioCut"), "SYNCING REPOSITORY"),
+        (("[2/4]", "Verifying Google Chrome", "official Google Chrome"), "INSTALLING CHROME"),
+        (("[3/4]", "Installing Python dependencies", "pip install"), "INSTALLING PACKAGES"),
+        (("[3b/4]", "Installing portable Blender", "portable Blender", "Linux libraries for Blender"), "CONFIGURING BLENDER GPU"),
+        (("[4/4]", "Starting 3D short generation", "Cloud Video Engine Booted"), "INITIALIZING ENGINE"),
+        (("[1/5]", "Writing viral script", "Generating 2-character dialogue"), "WRITING SCRIPT"),
+        (("[2/6]", "Generating fresh AI story", "Generating episode"), "GENERATING STORY"),
+        (("[3/6]", "Synthesizing narration", "Synthesizing Speech"), "SYNTHESIZING AUDIO"),
+        (("[5/6]", "Launching Blender", "Rendering 3D"), "STARTING RENDER"),
+        (("Append frame ", "Fra:"), "RENDERING FRAMES"),
+        (("[6/6]", "Muxing audio", "Burning Captions"), "FINALIZING VIDEO"),
+        (("Uploading to YouTube", "Uploading to Instagram", "Publishing to"), "UPLOADING"),
+    ]
+    latest = (-1, "RUNNING")
+    for markers, phase in checks:
+        idx = max((log_text.rfind(m) for m in markers), default=-1)
+        if idx > latest[0]:
+            latest = (idx, phase)
+    return latest[1]
+
+def _worker_background_heartbeat():
+    last_discord_update = 0
+    while True:
+        time.sleep(20)
+        try:
+            req_check = urllib.request.Request(f"{LOG_RELAY_URL}?check_stop=1", headers={"User-Agent": "Mozilla/5.0 CurioCut-Runner/1.0"})
+            with urllib.request.urlopen(req_check, timeout=4) as chk_resp:
+                chk_data = json.loads(chk_resp.read().decode("utf-8"))
+                if chk_data.get("should_stop"):
+                    force_emergency_shutdown()
+        except Exception:
+            pass
+
+        now = time.time()
+        if RUN_MESSAGE_ID and (now - last_discord_update >= 50):
+            try:
+                from discord_notifier import update_run_log
+                current_log = streamer.get_full_log()
+                slot_name = os.environ.get("CURIO_SLOT", "auto").upper()
+                phase = _detect_phase_from_log(current_log)
+                title_match = re.search(r"(?:Final Title:|Generated)\s*['\"]?([^'\"\n]+)", current_log, re.IGNORECASE)
+                update_run_log(
+                    RUN_MESSAGE_ID,
+                    None,
+                    slot_name,
+                    None,
+                    phase,
+                    now - worker_boot_time,
+                    log_text=current_log,
+                    title=title_match.group(1).strip() if title_match else None
+                )
+                last_discord_update = now
+            except Exception:
+                pass
+
+heartbeat_thread = threading.Thread(target=_worker_background_heartbeat, daemon=True)
+heartbeat_thread.start()
 
 print("\n" + "="*70, flush=True)
 print("   CURIO CUT - AUTONOMOUS CLOUD EXECUTION WORKER   ", flush=True)
@@ -46,12 +204,14 @@ WORKSPACE = Path("/kaggle/working/CurioCut")
 # Step 1: Clone or pull repo
 if not WORKSPACE.exists():
     print("\n[1/4] Cloning CurioCut repository...", flush=True)
-    subprocess.run(["git", "clone", "https://github.com/shlokkokk/CurioCut.git", str(WORKSPACE)], check=True, timeout=300)
+    run_command_logged(["git", "clone", "https://github.com/shlokkokk/CurioCut.git", str(WORKSPACE)], check=True, timeout=300)
 else:
     print("\n[1/4] Updating CurioCut repository...", flush=True)
-    subprocess.run(["git", "-C", str(WORKSPACE), "pull"], check=False, timeout=300)
+    run_command_logged(["git", "-C", str(WORKSPACE), "pull"], check=False, timeout=300)
 
 os.chdir(WORKSPACE)
+if str(WORKSPACE) not in sys.path:
+    sys.path.insert(0, str(WORKSPACE))
 
 # Step 2: Ensure Google Chrome is installed non-interactively
 print("\n[2/4] Verifying Google Chrome...", flush=True)
@@ -61,9 +221,9 @@ apt_flags = ["-o", "Dpkg::Options::=--force-confdef", "-o", "Dpkg::Options::=--f
 if not chrome_path:
     print("Downloading and installing official Google Chrome stable deb...", flush=True)
     try:
-        subprocess.run(["wget", "-q", "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"], check=True, timeout=120)
-        subprocess.run(["apt-get", "update", "-y"] + apt_flags, check=False, timeout=120)
-        subprocess.run(["apt-get", "install", "-y"] + apt_flags + ["./google-chrome-stable_current_amd64.deb", "libegl1", "libgles2"], check=True, timeout=300)
+        run_command_logged(["wget", "-q", "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"], check=True, timeout=120)
+        run_command_logged(["apt-get", "update", "-y"] + apt_flags, check=False, timeout=120)
+        run_command_logged(["apt-get", "install", "-y"] + apt_flags + ["./google-chrome-stable_current_amd64.deb", "libegl1", "libgles2"], check=True, timeout=300)
     except Exception as e:
         print(f"Chrome install notice: {e}", flush=True)
     chrome_path = shutil.which("google-chrome") or "/usr/bin/google-chrome"
@@ -72,7 +232,7 @@ print(f"Browser ready: {chrome_path}", flush=True)
 
 # Step 3: Install Python Dependencies
 print("\n[3/4] Installing Python dependencies...", flush=True)
-subprocess.run([
+run_command_logged([
     sys.executable, "-m", "pip", "install", "--quiet",
     "-r", "requirements.txt",
     "kokoro-onnx", "faster-whisper", "groq", "requests"
@@ -127,16 +287,16 @@ if style_arg == "town-rule":
             print("[3b/4] Installing portable Blender 4.3.2 for Linux GPU rendering...", flush=True)
             blender_dir.mkdir(parents=True, exist_ok=True)
             tar_path = blender_dir / "blender-4.3.2-linux-x64.tar.xz"
-            subprocess.run(["curl", "-L", "-s", "https://download.blender.org/release/Blender4.3/blender-4.3.2-linux-x64.tar.xz", "-o", str(tar_path)], check=True)
-            subprocess.run(["tar", "-xf", str(tar_path), "-C", str(blender_dir)], check=True)
+            run_command_logged(["curl", "-L", "-s", "https://download.blender.org/release/Blender4.3/blender-4.3.2-linux-x64.tar.xz", "-o", str(tar_path)], check=True)
+            run_command_logged(["tar", "-xf", str(tar_path), "-C", str(blender_dir)], check=True)
             tar_path.unlink(missing_ok=True)
         subprocess.run(["chmod", "+x", str(blender_bin)], check=False)
         test_res = subprocess.run([str(blender_bin), "--version"], capture_output=True, text=True)
         if test_res.returncode != 0:
             print(f"Installing missing Linux libraries for Blender: {test_res.stderr.strip()}", flush=True)
             nonint_env = dict(os.environ, DEBIAN_FRONTEND="noninteractive", NEEDRESTART_MODE="a", NEEDRESTART_SUSPEND="1")
-            subprocess.run(["apt-get", "update", "-y", "-q"] + apt_flags, env=nonint_env, check=False)
-            subprocess.run(["apt-get", "install", "-y", "-q"] + apt_flags + [
+            run_command_logged(["apt-get", "update", "-y", "-q"] + apt_flags, env=nonint_env, check=False)
+            run_command_logged(["apt-get", "install", "-y", "-q"] + apt_flags + [
                 "libgl1", "libegl1", "libgles2", "libglvnd0", "libglvnd-dev",
                 "libsm6", "libxext6", "libxrender1", "libxi6", "libxkbcommon0", "libxxf86vm1"
             ], env=nonint_env, check=False)
@@ -162,110 +322,35 @@ try:
 except Exception:
     pass
 
-LOG_RELAY_URL = "https://curiocut-corn.pcgpt00.workers.dev/api/logs"
-
-# Reset log buffer at start of new run
-try:
-    req_reset = urllib.request.Request(f"{LOG_RELAY_URL}?reset=1", data=b"", method="POST", headers={"User-Agent": "Mozilla/5.0 CurioCut-Runner/1.0"})
-    urllib.request.urlopen(req_reset, timeout=5)
-except Exception:
-    pass
-
 cmd = [sys.executable, "-u", "make_short.py", "--style", style_arg, "--upload", "--privacy", "public"]
-proc = subprocess.Popen(
-    cmd,
-    stdout=subprocess.PIPE,
-    stderr=subprocess.STDOUT,
-    text=True,
-    bufsize=1
-)
-
-def force_emergency_shutdown(target_proc):
-    sys.stderr.write("\n[STOP SIGNAL] Emergency stop confirmed from Discord. Terminating GPU engine to preserve weekly quota...\n")
-    sys.stderr.flush()
-    try:
-        target_proc.kill()
-    except Exception:
-        pass
-    if sys.platform != "win32":
-        try:
-            os.system("pkill -9 -f blender 2>/dev/null || true")
-            os.system("pkill -9 -f ffmpeg 2>/dev/null || true")
-            os.system("pkill -9 -f make_short 2>/dev/null || true")
-        except Exception:
-            pass
-    os._exit(0)
-
-def _watchdog_loop(target_proc):
-    while target_proc.poll() is None:
-        time.sleep(5)
-        try:
-            req_check = urllib.request.Request(f"{LOG_RELAY_URL}?check_stop=1", headers={"User-Agent": "Mozilla/5.0 CurioCut-Runner/1.0"})
-            with urllib.request.urlopen(req_check, timeout=4) as chk_resp:
-                chk_data = json.loads(chk_resp.read().decode("utf-8"))
-                if chk_data.get("should_stop"):
-                    force_emergency_shutdown(target_proc)
-        except Exception:
-            pass
-
-watchdog = threading.Thread(target=_watchdog_loop, args=(proc,), daemon=True)
-watchdog.start()
-
-log_buffer = []
-last_log_post = time.time()
-
-for line in iter(proc.stdout.readline, ""):
-    sys.stdout.write(line)
-    sys.stdout.flush()
-    log_buffer.append(line)
-    now = time.time()
-    if (len(log_buffer) >= 20 or now - last_log_post >= 6.0) and log_buffer:
-        chunk = "".join(log_buffer).encode("utf-8")
-        log_buffer.clear()
-        last_log_post = now
-        try:
-            req_post = urllib.request.Request(
-                LOG_RELAY_URL,
-                data=chunk,
-                method="POST",
-                headers={
-                    "Content-Type": "text/plain; charset=utf-8",
-                    "User-Agent": "Mozilla/5.0 CurioCut-Runner/1.0"
-                }
-            )
-            with urllib.request.urlopen(req_post, timeout=5) as resp_post:
-                resp_json = json.loads(resp_post.read().decode("utf-8"))
-                if resp_json.get("should_stop"):
-                    force_emergency_shutdown(proc)
-        except Exception:
-            pass
-
-proc.wait()
-if log_buffer:
-    chunk = "".join(log_buffer).encode("utf-8")
-    try:
-        req_post = urllib.request.Request(
-            LOG_RELAY_URL,
-            data=chunk,
-            method="POST",
-            headers={
-                "Content-Type": "text/plain; charset=utf-8",
-                "User-Agent": "Mozilla/5.0 CurioCut-Runner/1.0"
-            }
-        )
-        urllib.request.urlopen(req_post, timeout=5)
-    except Exception:
-        pass
-
-ret_code = proc.returncode
+ret_code = run_command_logged(cmd, check=False)
 
 if ret_code == 0:
     print("\n" + "="*70, flush=True)
     print("SHORT SUCCESSFULLY CREATED AND PUBLISHED TO CLOUD!", flush=True)
     print("="*70 + "\n", flush=True)
-    # Note: Instagram Comment-to-DM is handled 24/7 in real-time by Cloudflare Edge Webhooks
+    if RUN_MESSAGE_ID:
+        try:
+            from discord_notifier import update_run_log
+            update_run_log(
+                RUN_MESSAGE_ID, None, slot.upper(), None,
+                "COMPLETED", time.time() - worker_boot_time,
+                log_text=streamer.get_full_log()
+            )
+        except Exception:
+            pass
 else:
     print(f"\nWorker exited with error code {ret_code}", flush=True)
+    if RUN_MESSAGE_ID:
+        try:
+            from discord_notifier import update_run_log
+            update_run_log(
+                RUN_MESSAGE_ID, None, slot.upper(), None,
+                "FAILED", time.time() - worker_boot_time,
+                log_text=streamer.get_full_log()
+            )
+        except Exception:
+            pass
     try:
         from discord_notifier import notify_error, update_live_progress
         update_live_progress(

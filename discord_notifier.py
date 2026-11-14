@@ -36,8 +36,11 @@ CHANNELS = {
     "ig_posts": "1569382175185305601",
     "ig_errors": "1569382586101403768",
     "dms_sent": "1569750975189876858",
-    "live_progress": "1569750972975288441"
+    "live_progress": "1569750972975288441",
+    "run_logs": "1571083155803345008"
 }
+
+RUN_LOGS_CHANNEL_ID = CHANNELS["run_logs"]
 
 def make_button(label, url, style=5):
     """Creates a Discord Link Button component (Style 5 = Link Button)."""
@@ -189,6 +192,89 @@ def notify_engine(title, description, fields=None, color=0x38BDF8, button_label=
 
     return send_embed("engine_logs", embed, components=components)
 
+def _run_log_embed(version, slot, status, elapsed_seconds, title=None, color=0x38BDF8):
+    elapsed = max(0, int(elapsed_seconds))
+    elapsed_text = f"{elapsed // 3600:02d}:{(elapsed % 3600) // 60:02d}:{elapsed % 60:02d}"
+    fields = [
+        {"name": "Status", "value": str(status)[:1024], "inline": True},
+        {"name": "Slot / Style", "value": str(slot or "auto").upper()[:1024], "inline": True},
+        {"name": "Elapsed", "value": elapsed_text, "inline": True},
+    ]
+    if title:
+        fields.insert(0, {"name": "Episode", "value": str(title)[:1024], "inline": False})
+    return {
+        "title": f"CurioCut Run · v{version}" if version else "CurioCut Run",
+        "description": "Live Kaggle execution log. This card updates during the run.",
+        "color": color,
+        "fields": fields,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "footer": {"text": "CurioCut · per-run execution log"}
+    }
+
+def create_run_log(version, slot, kernel_url):
+    """Create one persistent #run-logs card for a Kaggle kernel version."""
+    token = get_discord_bot_token()
+    if not token:
+        return None
+    payload = {
+        "embeds": [_run_log_embed(version, slot, "BOOTING", 0)],
+        "components": make_action_row([make_button(f"Open Kaggle v{version}" if version else "Open Kaggle Run", kernel_url)])
+    }
+    req = urllib.request.Request(
+        f"https://discord.com/api/v10/channels/{RUN_LOGS_CHANNEL_ID}/messages",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Authorization": f"Bot {token}", "Content-Type": "application/json", "User-Agent": "CurioCut-Bot"},
+        method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            return json.loads(resp.read().decode("utf-8")).get("id")
+    except Exception as e:
+        print(f"Notice: Could not create #run-logs card: {e}")
+        return None
+
+def update_run_log(message_id, version, slot, kernel_url, status, elapsed_seconds,
+                   log_text="", title=None):
+    """Refresh a run card and replace its attached log file in place."""
+    token = get_discord_bot_token()
+    if not token or not message_id:
+        return False
+    final = status.upper() in {"COMPLETED", "FAILED", "CANCELLED", "TIMED OUT", "DISPATCH FAILED"}
+    color = 0x10B981 if status.upper() == "COMPLETED" else (0xEF4444 if final else 0x38BDF8)
+    filename = f"run_v{version}.log" if version else "run.log"
+    # Leave ample room under Discord's standard upload limit while retaining the newest diagnostics.
+    content = (log_text or "Waiting for the Kaggle execution log…").encode("utf-8", errors="replace")
+    if len(content) > 7_000_000:
+        content = b"[Earlier log output omitted; showing the latest 7 MB.]\n" + content[-6_999_900:]
+    if not content.endswith(b"\n"):
+        content += b"\n"
+    boundary = "----CurioCutRunLog" + str(int(time.time() * 1000))
+    embed = _run_log_embed(version, slot, status, elapsed_seconds, title=title, color=color)
+    payload = {
+        "embeds": [embed],
+        "components": make_action_row([make_button(f"Open Kaggle v{version}" if version else "Open Kaggle Run", kernel_url)]),
+        "attachments": [{"id": 0, "filename": filename, "description": "Latest captured Kaggle stdout and stderr"}]
+    }
+    parts = [
+        f"--{boundary}\r\nContent-Disposition: form-data; name=\"payload_json\"\r\nContent-Type: application/json\r\n\r\n".encode(),
+        json.dumps(payload).encode("utf-8"),
+        f"\r\n--{boundary}\r\nContent-Disposition: form-data; name=\"files[0]\"; filename=\"{filename}\"\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n".encode(),
+        content,
+        f"\r\n--{boundary}--\r\n".encode()
+    ]
+    req = urllib.request.Request(
+        f"https://discord.com/api/v10/channels/{RUN_LOGS_CHANNEL_ID}/messages/{message_id}",
+        data=b"".join(parts),
+        headers={"Authorization": f"Bot {token}", "Content-Type": f"multipart/form-data; boundary={boundary}", "User-Agent": "CurioCut-Bot"},
+        method="PATCH"
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=25) as resp:
+            return resp.status == 200
+    except Exception as e:
+        print(f"Notice: Could not update #run-logs card: {e}")
+        return False
+
 def notify_alert(title, details, severity="warning", button_label=None, button_url=None):
     """Sends warnings to #alerts with actionable links."""
     embed = {
@@ -206,10 +292,18 @@ def notify_alert(title, details, severity="warning", button_label=None, button_u
 def notify_long_run_alert(elapsed_seconds, kernel_url=None):
     """Sends a Quota Guardian health check alert to Discord #alerts with Open Kaggle & Stop buttons."""
     hrs = elapsed_seconds / 3600.0
+    is_critical = hrs >= 2.8
+    color = 0xEF4444 if is_critical else 0xF59E0B
+    severity_prefix = "[CRITICAL] " if is_critical else ""
+    desc = (
+        "Cloud GPU engine has been running for 3 hours (10% of weekly quota). If this is unexpected, strongly recommend clicking Stop GPU Engine immediately to protect remaining quota."
+        if is_critical else
+        "Cloud GPU engine is still active. If normal (such as dense scene rendering), you can let it proceed. If stuck or hung, click Stop GPU Engine to abort and protect your weekly quota."
+    )
     embed = {
-        "title": f"GPU Run Health Check ({hrs:.1f} Hours Elapsed)",
-        "description": "Cloud GPU engine is still active. If normal (such as dense scene rendering), you can let it proceed. If stuck or hung, click Stop GPU Engine to abort and protect your weekly quota.",
-        "color": 0xF59E0B,
+        "title": f"{severity_prefix}GPU Run Health Check ({hrs:.1f} Hours Elapsed)",
+        "description": desc,
+        "color": color,
         "fields": [
             {"name": "Elapsed Time", "value": f"{int(elapsed_seconds // 60)} minutes ({hrs:.2f} hours)", "inline": True},
             {"name": "Safety Action", "value": "Click Stop GPU Engine to open confirmation modal", "inline": True}
@@ -220,7 +314,6 @@ def notify_long_run_alert(elapsed_seconds, kernel_url=None):
     buttons = []
     if kernel_url:
         buttons.append(make_button("Open Kaggle Runner", kernel_url))
-    buttons.append(make_button("Live Web Logs", "https://curiocut-corn.pcgpt00.workers.dev/api/logs?tail=80"))
     buttons.append(make_interactive_button("Stop GPU Engine", "request_stop_engine", style=4))
     
     components = make_action_row(buttons)

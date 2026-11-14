@@ -11,7 +11,7 @@ Three cron slots fire daily (1 PM, 7 PM, and 9:30 PM IST). Each slot:
 1. Cloudflare Edge Worker wakes up and fires a `repository_dispatch` event to GitHub Actions
 2. GitHub Actions triggers `trigger_kaggle.py`, which queues the job on a Kaggle GPU notebook
 3. Kaggle pulls the repo, generates the script and dialogue, renders the video in headless Chrome with WebGL, and uploads to YouTube + Instagram
-4. Live render progress streams to Discord in real-time via the bot. Post notifications with direct action buttons arrive in `#youtube-posts` and `#instagram-posts`
+4. Live render progress streams to Discord in real-time via the bot. Every Kaggle version also gets its own updating card and `run_v{version}.log` attachment in `#run-logs`. Post notifications with direct action buttons arrive in `#youtube-posts` and `#instagram-posts`.
 5. Instagram comments matching the CTA keyword (`MCPSER`, `TOOL`, etc.) get an auto-reply and a DM with the resource link: handled 24/7 by Cloudflare Edge, not Kaggle
 
 Total monthly cost: $0.
@@ -94,6 +94,8 @@ For `claude-desk`, `dual_voice.py` runs first to alternate between Guide (`am_fe
 The `#panel` channel has buttons to trigger any slot on demand, create a custom topic, skip the next slot, or emergency stop. All button interactions are handled by the Cloudflare worker (no server needed).
 
 The `#live-progress` channel shows a single message that edits in real-time as frames render, with a progress bar and frame counter. Buttons for YouTube and Instagram appear once the upload is done.
+
+The `#run-logs` channel keeps a separate message for every Kaggle version. The dispatcher refreshes its status card and replaces the attached `run_v{version}.log` snapshot about once a minute while the job runs, then writes a final snapshot for completed, failed, cancelled, or timed-out jobs. Each card links directly to its Kaggle version. Logs are capped to the newest 7 MB per attachment to stay within Discord's upload limit.
 
 ---
 

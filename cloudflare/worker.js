@@ -198,29 +198,56 @@ export default {
         const isReset = urlObj.searchParams.get("reset") === "1";
         if (isReset) {
           await setEngineStopSignal(false);
+          if (env && env.REELS_KV) {
+            ctx.waitUntil(env.REELS_KV.put("live:logs", "", { expirationTtl: 86400 }));
+          }
+          try { await caches.default.delete(CACHE_LOGS_URL); } catch {}
+          return Response.json({ ok: true, length: 0, reset: true, should_stop: false });
         }
         let newContent = chunk;
         if (!isReset) {
-          try {
-            const oldRes = await caches.default.match(CACHE_LOGS_URL);
-            if (oldRes) {
-              const oldText = await oldRes.text();
-              newContent = oldText + chunk;
-              if (newContent.length > 5 * 1024 * 1024) {
-                newContent = newContent.slice(-4 * 1024 * 1024);
+          if (env && env.REELS_KV) {
+            try {
+              const kvOld = await env.REELS_KV.get("live:logs");
+              if (kvOld) newContent = kvOld + chunk;
+            } catch {}
+          }
+          if (newContent === chunk) {
+            try {
+              const oldRes = await caches.default.match(CACHE_LOGS_URL);
+              if (oldRes) {
+                const oldText = await oldRes.text();
+                newContent = oldText + chunk;
               }
-            }
-          } catch {}
+            } catch {}
+          }
+          if (newContent.length > 5 * 1024 * 1024) {
+            newContent = newContent.slice(-4 * 1024 * 1024);
+          }
         }
         const cacheRes = new Response(newContent, {
           headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "max-age=86400" }
         });
         await caches.default.put(CACHE_LOGS_URL, cacheRes);
+        if (env && env.REELS_KV) {
+          ctx.waitUntil(env.REELS_KV.put("live:logs", newContent, { expirationTtl: 86400 }));
+        }
         const shouldStop = await isEngineStopSignaled();
         return Response.json({ ok: true, length: newContent.length, should_stop: shouldStop });
       } else {
-        const cached = await caches.default.match(CACHE_LOGS_URL);
-        const fullLogs = cached ? await cached.text() : "No active run logs recorded yet.";
+        let fullLogs = null;
+        if (env && env.REELS_KV) {
+          try {
+            fullLogs = await env.REELS_KV.get("live:logs");
+          } catch {}
+        }
+        if (!fullLogs) {
+          try {
+            const cached = await caches.default.match(CACHE_LOGS_URL);
+            if (cached) fullLogs = await cached.text();
+          } catch {}
+        }
+        if (!fullLogs) fullLogs = "No active run logs recorded yet.";
         const tail = urlObj.searchParams.get("tail");
         if (tail && fullLogs) {
           const lines = fullLogs.split("\n");
