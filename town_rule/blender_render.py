@@ -31,6 +31,7 @@ parser.add_argument("--out", required=True)
 parser.add_argument("--fps", type=int, default=30)
 parser.add_argument("--draft", action="store_true", help="Fast 540x960 preview render")
 parser.add_argument("--max-frames", type=int, default=0, help="Optional cap on rendered frames for quick QA")
+parser.add_argument("--still-frame", type=int, default=0, help="Render a single still snapshot frame and exit")
 parser.add_argument("--faces-dir", default=str(Path(__file__).resolve().parent / "assets" / "faces"))
 args = parser.parse_args(argv)
 
@@ -56,7 +57,7 @@ def clear_scene():
     bpy.ops.wm.read_factory_settings(use_empty=True)
 
 
-def make_mat(name: str, color=(0.8, 0.8, 0.8, 1.0), roughness=0.65, metallic=0.0, emission=None, emission_strength=0.0, alpha=1.0):
+def make_mat(name: str, color=(0.8, 0.8, 0.8, 1.0), roughness=0.65, metallic=0.0, emission=None, emission_strength=0.0, alpha=1.0, transmission=0.0, ior=1.45):
     mat = bpy.data.materials.new(name=name)
     mat.use_nodes = True
     nt = mat.node_tree
@@ -69,6 +70,13 @@ def make_mat(name: str, color=(0.8, 0.8, 0.8, 1.0), roughness=0.65, metallic=0.0
         bsdf.inputs["Emission Strength"].default_value = emission_strength
     if alpha < 1.0:
         bsdf.inputs["Alpha"].default_value = alpha
+    if transmission > 0.0:
+        if "Transmission Weight" in bsdf.inputs:
+            bsdf.inputs["Transmission Weight"].default_value = transmission
+        elif "Transmission" in bsdf.inputs:
+            bsdf.inputs["Transmission"].default_value = transmission
+        if "IOR" in bsdf.inputs:
+            bsdf.inputs["IOR"].default_value = ior
     return mat
 
 
@@ -160,8 +168,8 @@ def make_face_mat(name: str, img_path: Path):
     return mat
 
 
-def add_box(name, size, loc=(0, 0, 0), mat=None, parent=None, bevel=0.02):
-    bpy.ops.mesh.primitive_cube_add(size=1.0, location=loc)
+def add_box(name, size, loc=(0, 0, 0), rot=(0, 0, 0), mat=None, parent=None, bevel=0.02):
+    bpy.ops.mesh.primitive_cube_add(size=1.0, location=loc, rotation=rot)
     obj = bpy.context.active_object
     obj.name = name
     obj.scale = size
@@ -198,8 +206,8 @@ def add_cone(name, r1, r2, depth, loc=(0, 0, 0), rot=(0, 0, 0), mat=None, parent
     return obj
 
 
-def add_sphere(name, radius, loc=(0, 0, 0), scale=(1, 1, 1), mat=None, parent=None):
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=18, ring_count=12, radius=radius, location=loc)
+def add_sphere(name, radius, loc=(0, 0, 0), scale=(1, 1, 1), rot=(0, 0, 0), mat=None, parent=None):
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=18, ring_count=12, radius=radius, location=loc, rotation=rot)
     obj = bpy.context.active_object
     obj.name = name
     obj.scale = scale
@@ -372,6 +380,7 @@ class R6Rig:
         pack_m = make_mat(f"{self.id}_pack", (0.88, 0.42, 0.10, 1.0), roughness=0.6)
         glow_m = make_mat(f"{self.id}_glow", (1.0, 0.85, 0.4, 1.0), emission=(1.0, 0.75, 0.25, 1.0), emission_strength=6.0)
         wood_m = make_mat(f"{self.id}_wood", (0.45, 0.28, 0.14, 1.0), roughness=0.8)
+        glass_m = make_mat(f"{self.id}_glass", (0.82, 0.90, 0.96, 1.0), roughness=0.15)
 
         # Backpack on torso back (+Y)
         bp = add_box(f"{self.id}_p_backpack", (0.58, 0.28, 0.62), loc=(0, 0.32, 0.40), mat=pack_m, parent=self.body_pivot, bevel=0.03)
@@ -398,6 +407,133 @@ class R6Rig:
         nt = add_box(f"{self.id}_p_letter", (0.26, 0.03, 0.32), loc=(0, -0.22, -0.64), mat=make_mat(f"{self.id}_pap", (0.96, 0.94, 0.88, 1.0)), parent=self.arm_r, bevel=0.005)
         nt.scale = (0, 0, 0)
         self.props["letter"] = nt
+
+        # Jigsaw Puzzle Piece in right hand (held up proudly, facing camera)
+        puz_root = bpy.data.objects.new(f"{self.id}_p_puzzle", None)
+        puz_root.location = (0, -0.28, -0.56)
+        # Face angled flat toward camera, fully visible
+        puz_root.rotation_euler = (math.radians(150), math.radians(-30), 0)
+        bpy.context.scene.collection.objects.link(puz_root)
+        puz_root.parent = self.arm_r
+        puz_m = make_mat(f"{self.id}_puz_m", (0.10, 0.78, 0.85, 1.0), metallic=0.75, roughness=0.20, emission=(0.08, 0.65, 0.75, 1.0), emission_strength=2.2)
+        puz_trim = make_mat(f"{self.id}_puz_tr", (0.95, 0.85, 0.35, 1.0), metallic=0.9, roughness=0.15)
+        # Main square tile
+        add_box(f"{self.id}_puz_body", (0.34, 0.34, 0.06), loc=(0, 0, 0), mat=puz_m, parent=puz_root, bevel=0.015)
+        # Interlocking circular tabs (top and right)
+        add_cyl(f"{self.id}_puz_tab_top", 0.085, 0.065, loc=(0, 0.18, 0), mat=puz_m, parent=puz_root, verts=16)
+        add_cyl(f"{self.id}_puz_tab_rt", 0.085, 0.065, loc=(0.18, 0, 0), mat=puz_m, parent=puz_root, verts=16)
+        # Gold emblem center ring
+        add_cyl(f"{self.id}_puz_emb", 0.055, 0.072, loc=(0, 0, 0.005), mat=puz_trim, parent=puz_root, verts=12)
+        puz_root.scale = (0, 0, 0)
+        self.props["puzzle"] = puz_root
+        self.props["puzzle_piece"] = puz_root
+
+        # Perched Bird (Raven/Crow) on right forearm/wrist
+        bird_root = bpy.data.objects.new(f"{self.id}_p_bird", None)
+        bird_root.location = (0, -0.26, -0.68)
+        bird_root.rotation_euler = (math.radians(72), 0, math.radians(-25))
+        bpy.context.scene.collection.objects.link(bird_root)
+        bird_root.parent = self.arm_r
+        raven_m = make_mat(f"{self.id}_p_rav", (0.08, 0.08, 0.10, 1.0), roughness=0.6)
+        beak_m = make_mat(f"{self.id}_p_bk", (0.85, 0.60, 0.10, 1.0), roughness=0.4)
+        add_sphere(f"{self.id}_p_bbod", 0.12, loc=(0, 0, 0.10), scale=(0.7, 1.2, 0.7), mat=raven_m, parent=bird_root)
+        add_sphere(f"{self.id}_p_bhd", 0.075, loc=(0, -0.10, 0.19), mat=raven_m, parent=bird_root)
+        add_cone(f"{self.id}_p_bbk", 0.04, 0.005, 0.11, loc=(0, -0.19, 0.18), rot=(math.radians(90), 0, 0), mat=beak_m, parent=bird_root, verts=6)
+        eye_m = make_mat(f"{self.id}_p_beye", (1.0, 1.0, 1.0, 1.0), emission=(1.0, 1.0, 1.0, 1.0), emission_strength=2.0)
+        add_sphere(f"{self.id}_p_beL", 0.015, loc=(-0.05, -0.14, 0.22), mat=eye_m, parent=bird_root)
+        add_sphere(f"{self.id}_p_beR", 0.015, loc=(0.05, -0.14, 0.22), mat=eye_m, parent=bird_root)
+        add_box(f"{self.id}_p_bwL", (0.025, 0.24, 0.13), loc=(-0.09, 0.02, 0.10), mat=raven_m, parent=bird_root, bevel=0.005)
+        add_box(f"{self.id}_p_bwR", (0.025, 0.24, 0.13), loc=(0.09, 0.02, 0.10), mat=raven_m, parent=bird_root, bevel=0.005)
+        add_box(f"{self.id}_p_btail", (0.07, 0.20, 0.02), loc=(0, 0.18, 0.07), rot=(math.radians(-25), 0, 0), mat=raven_m, parent=bird_root, bevel=0.005)
+        bird_root.scale = (0, 0, 0)
+        self.props["bird"] = bird_root
+        self.props["perched_bird"] = bird_root
+
+        # Ornate Skeleton Key held beside shoulder/chest (unobscured face)
+        key_root = bpy.data.objects.new(f"{self.id}_p_key", None)
+        key_root.location = (0.10, -0.28, -0.60)
+        key_root.rotation_euler = (math.radians(85), math.radians(18), math.radians(-35))
+        bpy.context.scene.collection.objects.link(key_root)
+        key_root.parent = self.arm_r
+        add_cyl(f"{self.id}_p_kshaft", 0.03, 0.48, loc=(0, 0, 0.05), mat=gold_m, parent=key_root, verts=10)
+        # Vertical ornate bow ring facing camera
+        add_cyl(f"{self.id}_p_kbow", 0.12, 0.035, loc=(0, 0, 0.32), rot=(0, math.radians(90), 0), mat=gold_m, parent=key_root, verts=16)
+        add_cyl(f"{self.id}_p_kbow_in", 0.065, 0.038, loc=(0, 0, 0.32), rot=(0, math.radians(90), 0), mat=make_mat(f"{self.id}_kbow_in", (0.35, 0.25, 0.05, 1.0), metallic=0.9), parent=key_root, verts=14)
+        # Jagged antique bit teeth protruding outward clearly into light
+        add_box(f"{self.id}_p_kbit1", (0.025, 0.11, 0.08), loc=(0, 0.06, -0.12), mat=gold_m, parent=key_root, bevel=0.005)
+        add_box(f"{self.id}_p_kbit2", (0.025, 0.08, 0.05), loc=(0, 0.05, -0.02), mat=gold_m, parent=key_root, bevel=0.005)
+        add_box(f"{self.id}_p_kbit3", (0.025, 0.06, 0.05), loc=(0, 0.04, -0.17), mat=gold_m, parent=key_root, bevel=0.005)
+        key_root.scale = (0, 0, 0)
+        self.props["key"] = key_root
+
+        # Crystal Relic Orb with Refractive Shell & Glowing Core
+        orb_root = bpy.data.objects.new(f"{self.id}_p_orb", None)
+        orb_root.location = (0, -0.28, -0.54)
+        # Upright claw cradle cupping the orb vertically in world space
+        orb_root.rotation_euler = (math.radians(60), math.radians(-30), 0)
+        bpy.context.scene.collection.objects.link(orb_root)
+        orb_root.parent = self.arm_r
+        # Three-claw antique bronze/silver cradle
+        cradle_m = make_mat(f"{self.id}_p_crad", (0.75, 0.65, 0.40, 1.0), metallic=0.85, roughness=0.25)
+        add_cyl(f"{self.id}_p_crbase", 0.08, 0.04, loc=(0, 0, -0.14), mat=cradle_m, parent=orb_root, verts=12)
+        for c_ang in (0, 2.094, 4.188):
+            cx = math.cos(c_ang) * 0.13
+            cy = math.sin(c_ang) * 0.13
+            add_cone(f"{self.id}_p_claw_{c_ang:.1f}", 0.022, 0.005, 0.18, loc=(cx, cy, -0.03), rot=(math.radians(18), 0, c_ang), mat=cradle_m, parent=orb_root, verts=4)
+        # Outer transparent crystal glass sphere with high transmission & refraction
+        cryst_glass = make_mat(f"{self.id}_p_cryst_g", (0.80, 0.94, 1.0, 0.15), roughness=0.03, transmission=0.96, ior=1.52)
+        add_sphere(f"{self.id}_p_orbsph", 0.15, loc=(0, 0, 0), mat=cryst_glass, parent=orb_root)
+        # Inner glowing arcane core
+        core_m = make_mat(f"{self.id}_p_core_m", (0.15, 0.88, 1.0, 1.0), emission=(0.15, 0.88, 1.0, 1.0), emission_strength=1.8)
+        add_sphere(f"{self.id}_p_core", 0.065, loc=(0, 0, 0), mat=core_m, parent=orb_root)
+        orb_root.scale = (0, 0, 0)
+        self.props["orb"] = orb_root
+        self.props["crystal_orb"] = orb_root
+
+        # Antique Running Hourglass with Brass Pillars and Glowing Sand
+        # Positioned cleanly on top of the palm fingers (no clipping into the hand!)
+        hg_root = bpy.data.objects.new(f"{self.id}_p_hourglass", None)
+        hg_root.location = (0, -0.30, -0.48)
+        # Upright orientation in world space
+        hg_root.rotation_euler = (math.radians(60), math.radians(-30), 0)
+        bpy.context.scene.collection.objects.link(hg_root)
+        hg_root.parent = self.arm_r
+        add_cyl(f"{self.id}_p_hg_top", 0.10, 0.035, loc=(0, 0, 0.18), mat=wood_m, parent=hg_root, verts=14)
+        add_cyl(f"{self.id}_p_hg_bot", 0.10, 0.035, loc=(0, 0, -0.18), mat=wood_m, parent=hg_root, verts=14)
+        # 3 slender wood/brass support pillars
+        for hg_ang in (0, 2.094, 4.188):
+            px = math.cos(hg_ang) * 0.085
+            py = math.sin(hg_ang) * 0.085
+            add_cyl(f"{self.id}_p_hg_col_{hg_ang:.1f}", 0.010, 0.35, loc=(px, py, 0), mat=wood_m, parent=hg_root, verts=8)
+        # Clear transmission glass bulbs
+        hg_glass = make_mat(f"{self.id}_hg_glass", (0.90, 0.95, 1.0, 0.20), roughness=0.03, transmission=0.95, ior=1.45)
+        add_cone(f"{self.id}_p_hg_g1", 0.085, 0.015, 0.16, loc=(0, 0, 0.08), rot=(math.radians(180), 0, 0), mat=hg_glass, parent=hg_root, verts=14)
+        add_cone(f"{self.id}_p_hg_g2", 0.085, 0.015, 0.16, loc=(0, 0, -0.08), mat=hg_glass, parent=hg_root, verts=14)
+        # Glowing amber falling sand
+        sand_glow = make_mat(f"{self.id}_p_sand_m", (1.0, 0.76, 0.18, 1.0), roughness=0.35, emission=(1.0, 0.72, 0.15, 1.0), emission_strength=2.8)
+        add_cone(f"{self.id}_p_hg_sand_top", 0.065, 0.01, 0.09, loc=(0, 0, 0.05), rot=(math.radians(180), 0, 0), mat=sand_glow, parent=hg_root, verts=10)
+        add_cyl(f"{self.id}_p_hg_sand_stream", 0.007, 0.14, loc=(0, 0, 0), mat=sand_glow, parent=hg_root, verts=6)
+        add_cone(f"{self.id}_p_hg_sand_bot", 0.07, 0.01, 0.08, loc=(0, 0, -0.12), mat=sand_glow, parent=hg_root, verts=10)
+        hg_root.scale = (0, 0, 0)
+        self.props["hourglass"] = hg_root
+
+        # Antique Pocket Watch with Top Winding Crown & Loop
+        clock_root = bpy.data.objects.new(f"{self.id}_p_clock", None)
+        clock_root.location = (0, -0.28, -0.54)
+        # Face angled directly toward the camera (normal: -Y, stem: +Z)
+        clock_root.rotation_euler = (math.radians(150), math.radians(-30), 0)
+        bpy.context.scene.collection.objects.link(clock_root)
+        clock_root.parent = self.arm_r
+        add_cyl(f"{self.id}_p_ck_case", 0.145, 0.035, loc=(0, 0, 0), mat=gold_m, parent=clock_root, verts=24)
+        add_cyl(f"{self.id}_p_ck_dial", 0.125, 0.038, loc=(0, 0, 0.002), mat=make_mat(f"{self.id}_p_dial", (0.97, 0.95, 0.90, 1.0), roughness=0.3), parent=clock_root, verts=24)
+        hand_m = make_mat(f"{self.id}_p_hnd", (0.05, 0.05, 0.05, 1.0), metallic=0.5)
+        add_box(f"{self.id}_p_ck_handH", (0.012, 0.060, 0.042), loc=(0, 0.028, 0.006), mat=hand_m, parent=clock_root)
+        add_box(f"{self.id}_p_ck_handM", (0.009, 0.090, 0.042), loc=(0.038, 0.018, 0.006), rot=(0, 0, math.radians(-55)), mat=hand_m, parent=clock_root)
+        add_cyl(f"{self.id}_p_ck_pin", 0.016, 0.044, loc=(0, 0, 0.007), mat=gold_m, parent=clock_root, verts=8)
+        add_cyl(f"{self.id}_p_ck_stem", 0.024, 0.045, loc=(0, 0.165, 0), rot=(math.radians(90), 0, 0), mat=gold_m, parent=clock_root, verts=8)
+        add_cyl(f"{self.id}_p_ck_loop", 0.048, 0.018, loc=(0, 0.210, 0), mat=gold_m, parent=clock_root, verts=16)
+        clock_root.scale = (0, 0, 0)
+        self.props["clock"] = clock_root
 
     def set_shot(self, actor_state: dict, f0: int, f1: int, fps: int):
         pos = actor_state.get("pos", [0, 0, 0])
@@ -445,6 +581,7 @@ class R6Rig:
         # Animation cycles across [f0, f1]
         anim = actor_state.get("anim", "idle")
         self.shot_end_pos = (bx, by, bz)
+
         # Reset body/head/limbs at f0
         set_key(self.body_pivot, "location", f0, (0, 0, 0.78), "LINEAR")
         set_key(self.body_pivot, "rotation_euler", f0, (0, 0, 0), "LINEAR")
@@ -468,7 +605,8 @@ class R6Rig:
                 set_key(self.leg_l, "rotation_euler", f, (s, 0, 0), "LINEAR")
                 set_key(self.leg_r, "rotation_euler", f, (-s, 0, 0), "LINEAR")
                 set_key(self.arm_l, "rotation_euler", f, (-s * 0.9, 0, 0), "LINEAR")
-                set_key(self.arm_r, "rotation_euler", f, (s * 0.9, 0, 0), "LINEAR")
+                if active_prop in ("none", "backpack"):
+                    set_key(self.arm_r, "rotation_euler", f, (s * 0.9, 0, 0), "LINEAR")
                 set_key(self.body_pivot, "location", f, (0, 0, 0.78 + abs(math.cos(phase)) * (0.09 if anim == "run" else 0.05)), "LINEAR")
         elif anim == "wave":
             set_key(self.leg_l, "rotation_euler", f0, (0, 0, 0), "LINEAR")
@@ -490,6 +628,16 @@ class R6Rig:
             set_key(self.leg_r, "rotation_euler", f0, (0, 0, 0), "CONSTANT")
             set_key(self.arm_l, "rotation_euler", f0, (-0.8, 0, 0.5), "CONSTANT")
             set_key(self.arm_r, "rotation_euler", f0, (-0.8, 0, -0.5), "CONSTANT")
+        elif anim in ("lie", "sleep", "bed"):
+            # Hospital patient propped up comfortably in adjustable bed (~22 deg incline):
+            # Head and chest elevated so facial expressions are clearly visible to camera/visitor
+            set_key(self.root, "rotation_euler", f0, (math.radians(-68), 0, rot_z), "CONSTANT")
+            set_key(self.root, "location", f0, (bx, by - 0.72, bz + 0.16), "CONSTANT")
+            set_key(self.leg_l, "rotation_euler", f0, (0, 0, 0), "CONSTANT")
+            set_key(self.leg_r, "rotation_euler", f0, (0, 0, 0), "CONSTANT")
+            set_key(self.arm_l, "rotation_euler", f0, (-0.35, 0, 0.22), "CONSTANT")
+            set_key(self.arm_r, "rotation_euler", f0, (-0.35, 0, -0.22), "CONSTANT")
+            set_key(self.head_pivot, "rotation_euler", f0, (0.26, 0, 0), "CONSTANT")
         elif anim == "sit":
             set_key(self.root, "location", f0, (bx, by, bz - 0.35), "CONSTANT")
             set_key(self.leg_l, "rotation_euler", f0, (-1.45, 0, 0), "CONSTANT")
@@ -517,6 +665,15 @@ class R6Rig:
             # Gentle breathing bob
             set_key(self.body_pivot, "location", f1, (0, 0, 0.80), "LINEAR")
 
+        # Raise right arm naturally to showcase and inspect handheld props in front of torso
+        if active_prop not in ("none", "backpack"):
+            if active_prop in ("bird", "perched_bird"):
+                # Forward falconer pose: forearm extended forward in front of right shoulder, fully framed in 9:16
+                set_key(self.arm_r, "rotation_euler", f0, (math.radians(-65), math.radians(10), math.radians(-10)), "CONSTANT")
+            elif anim in ("idle", "talk", "stand", "walk", "run"):
+                # Present / examine held prop in front of chest
+                set_key(self.arm_r, "rotation_euler", f0, (math.radians(-62), math.radians(15), math.radians(-28)), "CONSTANT")
+
 
 # ---------------------------------------------------------------------------
 # Procedural Creature / Monster Builder
@@ -524,9 +681,32 @@ class R6Rig:
 class ProceduralCreature:
     def __init__(self, spec: dict, collection):
         self.id = spec["id"]
-        arch = spec.get("archetype", "fur_giant")
+        raw_arch = str(spec.get("archetype", "")).lower()
+        cid = str(spec.get("id", "")).lower()
+        feats = " ".join(str(f) for f in spec.get("features", [])).lower()
+        combined = f"{raw_arch} {cid} {feats}"
+
+        # Semantic Archetype Classifier: maps ANY arbitrary name/keyword to the best procedural body
+        if any(w in combined for w in ("bird", "wing", "fly", "raven", "crow", "owl", "hawk", "feather", "sky", "bat", "gargoyle", "dragon", "avian", "phoenix")):
+            arch = "winged_beast"
+        elif any(w in combined for w in ("shadow", "stalker", "demon", "creep", "crawler", "horror", "spooky", "phantom", "ghost", "dark", "spider", "ghoul", "wraith", "lurker", "watcher", "wendigo", "slender", "tall", "night", "nightmare")):
+            arch = "shadow_stalker"
+        elif any(w in combined for w in ("pet", "tiny", "small", "cute", "spirit", "fairy", "cat", "dog", "baby", "little", "mini", "axolotl")):
+            arch = "tiny_pet"
+        else:
+            arch = "fur_giant"
+
+        self.arch = arch
         sc = float(spec.get("scale", 2.6))
-        self.focus_height = (0.50 * sc) if arch == "tiny_pet" else (1.42 * sc)
+        if arch in ("tiny_pet", "pet"):
+            self.focus_height = 0.45 * sc
+        elif arch in ("winged_beast", "giant_bird", "bird"):
+            self.focus_height = 0.65 * sc
+        elif arch in ("shadow_stalker", "scary_monster"):
+            self.focus_height = 1.55 * sc
+        else:
+            self.focus_height = 1.25 * sc
+
         pcol = hex_to_rgba(spec.get("primary_color", "#141418"))
         scol = hex_to_rgba(spec.get("secondary_color", "#F2EAD8"))
 
@@ -539,7 +719,7 @@ class ProceduralCreature:
         gum_mat = make_mat(f"{self.id}_gmat", (0.32, 0.12, 0.14, 1.0), roughness=0.6)
         glow_eye_mat = make_mat(f"{self.id}_emat", (1.0, 0.08, 0.08, 1.0), emission=(1.0, 0.08, 0.08, 1.0), emission_strength=9.0)
 
-        if arch == "tiny_pet":
+        if arch in ("tiny_pet", "pet"):
             # Cute round potato-axolotl creature
             add_sphere(f"{self.id}_body", 0.45, loc=(0, 0, 0.45), scale=(1.08, 1.0, 0.92), mat=body_mat, parent=self.root)
             add_sphere(f"{self.id}_fL", 0.13, loc=(-0.22, -0.1, 0.10), mat=body_mat, parent=self.root)
@@ -547,13 +727,96 @@ class ProceduralCreature:
             if "horns" in spec.get("features", []):
                 add_cone(f"{self.id}_hrnL", 0.07, 0.02, 0.24, loc=(-0.18, 0, 0.88), rot=(0, -0.2, 0), mat=make_mat(f"{self.id}_hm", scol), parent=self.root)
                 add_cone(f"{self.id}_hrnR", 0.07, 0.02, 0.24, loc=(0.18, 0, 0.88), rot=(0, 0.2, 0), mat=make_mat(f"{self.id}_hm2", scol), parent=self.root)
-            # Big cute eyes + buckteeth
             eye_w = make_mat(f"{self.id}_ew", (0.04, 0.04, 0.05, 1.0))
             add_sphere(f"{self.id}_eL", 0.09, loc=(-0.16, -0.40, 0.52), mat=eye_w, parent=self.root)
             add_sphere(f"{self.id}_eR", 0.09, loc=(0.16, -0.40, 0.52), mat=eye_w, parent=self.root)
             add_box(f"{self.id}_bt", (0.10, 0.04, 0.10), loc=(0, -0.44, 0.33), mat=teeth_mat, parent=self.root, bevel=0.01)
+
+        elif arch in ("winged_beast", "giant_bird", "bird"):
+            # Majestic & Terrifying Giant Bird / Winged Beast
+            beak_col = (0.95, 0.70, 0.15, 1.0)
+            beak_mat = make_mat(f"{self.id}_beak", beak_col, roughness=0.35)
+            # Forward-leaning aerodynamic predator body
+            add_sphere(f"{self.id}_btorso", 0.44, loc=(0, 0, 0.65), scale=(0.70, 1.45, 0.58), rot=(math.radians(18), 0, 0), mat=body_mat, parent=self.root)
+            # Extended predatory neck & skull pitched forward in raptor dive
+            add_sphere(f"{self.id}_bneck", 0.18, loc=(0, -0.38, 0.68), scale=(0.8, 1.25, 0.8), rot=(math.radians(20), 0, 0), mat=body_mat, parent=self.root)
+            add_sphere(f"{self.id}_bhead", 0.22, loc=(0, -0.66, 0.72), scale=(0.80, 1.15, 0.82), mat=body_mat, parent=self.root)
+            # Swept-back feathered crest spikes
+            for ci, (cdy, cdz, crx) in enumerate([(0.10, 0.12, -35), (0.18, 0.15, -45), (0.26, 0.17, -55)]):
+                add_cone(f"{self.id}_bcrest_{ci}", 0.06, 0.01, 0.28, loc=(0, -0.66 + cdy, 0.72 + cdz), rot=(math.radians(crx), 0, 0), mat=body_mat, parent=self.root, verts=4)
+            # Deep hooked raptor beak pointing forward and curved down
+            add_cone(f"{self.id}_bbeak_base", 0.11, 0.04, 0.28, loc=(0, -0.88, 0.68), rot=(math.radians(88), 0, 0), mat=beak_mat, parent=self.root, verts=6)
+            add_cone(f"{self.id}_bbeak_tip", 0.05, 0.008, 0.20, loc=(0, -1.02, 0.58), rot=(math.radians(115), 0, 0), mat=beak_mat, parent=self.root, verts=4)
+            # Glowing predatory eyes with angled brow glare looking at camera
+            eye_mat = glow_eye_mat if spec.get("eye_type") != "none" else make_mat(f"{self.id}_bew", (0.9, 0.1, 0.1, 1.0), emission=(0.9, 0.1, 0.1, 1.0), emission_strength=4.0)
+            add_sphere(f"{self.id}_beL", 0.045, loc=(-0.14, -0.72, 0.76), mat=eye_mat, parent=self.root)
+            add_sphere(f"{self.id}_beR", 0.045, loc=(0.14, -0.72, 0.76), mat=eye_mat, parent=self.root)
+            add_box(f"{self.id}_bbrowL", (0.08, 0.18, 0.03), loc=(-0.14, -0.72, 0.81), rot=(math.radians(14), math.radians(22), 0), mat=body_mat, parent=self.root)
+            add_box(f"{self.id}_bbrowR", (0.08, 0.18, 0.03), loc=(0.14, -0.72, 0.81), rot=(math.radians(14), math.radians(-22), 0), mat=body_mat, parent=self.root)
+            # Tail feather fan (+Y)
+            for ti in (-0.16, 0.0, 0.16):
+                add_box(f"{self.id}_btail_{ti}", (0.18, 0.85, 0.04), loc=(ti, 0.80, 0.68), rot=(math.radians(-16), ti * 0.5, 0), mat=body_mat, parent=self.root, bevel=0.01)
+
+            # Articulated Wing Pivots
+            self.wing_L_pivot = bpy.data.objects.new(f"{self.id}_wL_pivot", None)
+            self.wing_L_pivot.location = (-0.30, 0, 0.75)
+            collection.objects.link(self.wing_L_pivot)
+            self.wing_L_pivot.parent = self.root
+
+            self.wing_R_pivot = bpy.data.objects.new(f"{self.id}_wR_pivot", None)
+            self.wing_R_pivot.location = (0.30, 0, 0.75)
+            collection.objects.link(self.wing_R_pivot)
+            self.wing_R_pivot.parent = self.root
+
+            # Seamless layered flight feathers with arched dihedral
+            for wi in range(4):
+                w_len = 0.65 + wi * 0.12
+                w_w = 0.32 - wi * 0.03
+                add_box(f"{self.id}_wL_{wi}", (w_w, w_len, 0.035), loc=(-0.16 - wi * 0.20, 0.05 + wi * 0.04, -0.03 * wi), rot=(math.radians(6), math.radians(-10), math.radians(10 * wi)), mat=body_mat, parent=self.wing_L_pivot, bevel=0.01)
+                add_box(f"{self.id}_wR_{wi}", (w_w, w_len, 0.035), loc=(0.16 + wi * 0.20, 0.05 + wi * 0.04, -0.03 * wi), rot=(math.radians(6), math.radians(10), math.radians(-10 * wi)), mat=body_mat, parent=self.wing_R_pivot, bevel=0.01)
+
+            # In-flight tucked predatory talons
+            talon_mat = make_mat(f"{self.id}_talon", (0.15, 0.14, 0.12, 1.0), roughness=0.5)
+            for tx in (-0.18, 0.18):
+                add_cyl(f"{self.id}_tleg_{tx}", 0.05, 0.38, loc=(tx, 0.22, 0.42), rot=(math.radians(-55), 0, 0), mat=body_mat, parent=self.root, verts=8)
+                add_cyl(f"{self.id}_tfoot_{tx}", 0.035, 0.22, loc=(tx, 0.15, 0.24), rot=(math.radians(35), 0, 0), mat=talon_mat, parent=self.root, verts=6)
+                for cl_i, cl_dx in enumerate((-0.05, 0.0, 0.05)):
+                    add_cone(f"{self.id}_tclaw_{tx}_{cl_i}", 0.018, 0.004, 0.14, loc=(tx + cl_dx, 0.06, 0.15), rot=(math.radians(75), 0, 0), mat=talon_mat, parent=self.root, verts=4)
+
+        elif arch in ("shadow_stalker", "scary_monster"):
+            # Disturbingly tall, gaunt, elongated shadow nightmare entity
+            scol_rgba = hex_to_rgba(spec.get("secondary_color", "#8B0000"))
+            tendril_mat = make_mat(f"{self.id}_tendril", scol_rgba, emission=scol_rgba, emission_strength=4.5)
+            # Slender gaunt forward-hunched predatory spine/torso
+            add_box(f"{self.id}_stor", (0.52, 0.38, 1.45), loc=(0, -0.15, 1.48), rot=(math.radians(24), 0, 0), mat=body_mat, parent=self.root, bevel=0.04)
+            # Narrow hollow skull head angled downward at camera
+            self.stalker_head = add_box(f"{self.id}_shead", (0.38, 0.44, 0.48), loc=(0, -0.42, 2.18), rot=(math.radians(35), 0, 0), mat=body_mat, parent=self.root, bevel=0.03)
+            # Multiple piercing glowing needle eyes (3 pairs!)
+            for ei, (ex, ez) in enumerate([(-0.11, 2.26), (0.11, 2.26), (-0.08, 2.18), (0.08, 2.18), (-0.05, 2.10), (0.05, 2.10)]):
+                add_sphere(f"{self.id}_meye_{ei}", 0.034, loc=(ex, -0.65, ez), mat=glow_eye_mat, parent=self.root)
+            # Gaping jaw lined with needle fangs
+            add_box(f"{self.id}_jaw_bg", (0.28, 0.16, 0.35), loc=(0, -0.58, 1.95), mat=gum_mat, parent=self.root, bevel=0.01)
+            for fangi in range(8):
+                fx = -0.10 + (fangi % 4) * 0.065
+                fz = 2.06 if fangi < 4 else 1.85
+                frot = math.radians(180) if fangi < 4 else 0
+                add_cone(f"{self.id}_fang_{fangi}", 0.025, 0.005, 0.14, loc=(fx, -0.66, fz), rot=(frot, 0, 0), mat=teeth_mat, parent=self.root, verts=4)
+            # Long spindly double-jointed arms reaching forward and down
+            for arm_side, ax in ((-1, -0.42), (1, 0.42)):
+                add_box(f"{self.id}_armU_{arm_side}", (0.14, 0.14, 0.95), loc=(ax, -0.20, 1.45), rot=(math.radians(35), 0, math.radians(-12 * arm_side)), mat=body_mat, parent=self.root, bevel=0.02)
+                add_box(f"{self.id}_armL_{arm_side}", (0.12, 0.12, 1.10), loc=(ax * 1.25, -0.48, 0.55), rot=(math.radians(45), 0, math.radians(8 * arm_side)), mat=body_mat, parent=self.root, bevel=0.02)
+                # Needle claw fingers reaching toward camera
+                for fgi in range(3):
+                    add_cone(f"{self.id}_claw_{arm_side}_{fgi}", 0.022, 0.003, 0.24, loc=(ax * 1.25 + (fgi - 1) * 0.05, -0.68, 0.05), rot=(math.radians(65), 0, 0), mat=teeth_mat, parent=self.root, verts=4)
+            # Spindly legs
+            for leg_side, lx in ((-1, -0.20), (1, 0.20)):
+                add_box(f"{self.id}_leg_{leg_side}", (0.18, 0.20, 1.20), loc=(lx, 0.10, 0.60), rot=(math.radians(-8), 0, 0), mat=body_mat, parent=self.root, bevel=0.02)
+            # Jagged shadowy spine horns down curved back
+            for sp_i in range(7):
+                add_cone(f"{self.id}_spine_{sp_i}", 0.06, 0.01, 0.45 + sp_i * 0.04, loc=(0, 0.15 + sp_i * 0.04, 1.05 + sp_i * 0.18), rot=(math.radians(-50), 0, 0), mat=tendril_mat, parent=self.root, verts=4)
+
         else:
-            # Giant furry / shadow monster
+            # Giant furry monster (fur_giant)
             add_box(f"{self.id}_torso", (0.85, 0.55, 0.92), loc=(0, 0, 1.15), mat=body_mat, parent=self.root, bevel=0.08)
             add_box(f"{self.id}_head", (0.58, 0.52, 0.50), loc=(0, -0.14, 1.68), mat=body_mat, parent=self.root, bevel=0.08)
             add_box(f"{self.id}_legL", (0.30, 0.34, 0.72), loc=(-0.25, 0, 0.36), mat=body_mat, parent=self.root, bevel=0.04)
@@ -561,7 +824,7 @@ class ProceduralCreature:
             add_box(f"{self.id}_armL", (0.28, 0.30, 0.95), loc=(-0.60, -0.05, 1.05), mat=body_mat, parent=self.root, bevel=0.04)
             add_box(f"{self.id}_armR", (0.28, 0.30, 0.95), loc=(0.60, -0.05, 1.05), mat=body_mat, parent=self.root, bevel=0.04)
 
-            # Procedural fur spikes (dense outward-angled tufts)
+            # Procedural fur spikes
             if "fur_spikes" in spec.get("features", []) or arch == "fur_giant":
                 rng = random.Random(hash(self.id) & 0xFFFF)
                 for idx in range(52):
@@ -572,7 +835,7 @@ class ProceduralCreature:
                     ry = rng.uniform(-0.9, 0.9)
                     add_cone(f"{self.id}_fur{idx}", 0.09, 0.008, 0.36, loc=(fx, fy, fz), rot=(rx, ry, 0), mat=body_mat, parent=self.root, verts=4)
 
-            # Mouth: giant curved row of flat human teeth
+            # Mouth
             mouth_t = spec.get("mouth_type", "human_teeth")
             if mouth_t != "none":
                 add_box(f"{self.id}_gums", (0.50, 0.12, 0.20), loc=(0, -0.40, 1.56), mat=gum_mat, parent=self.root, bevel=0.02)
@@ -595,8 +858,24 @@ class ProceduralCreature:
         rot_z = math.radians(float(actor_state.get("rot_y", 0)))
         set_key(self.root, "location", f0, (bx, by, bz), "CONSTANT")
         set_key(self.root, "rotation_euler", f0, (0, 0, rot_z), "CONSTANT")
-        # Menacing subtle loom/bob
         set_key(self.root, "location", f1, self.shot_end_pos, "LINEAR")
+
+        # Wing flap / soar cycle for winged beasts
+        if hasattr(self, "wing_L_pivot") and hasattr(self, "wing_R_pivot"):
+            mid_f = int(f0 + (f1 - f0) * 0.5)
+            set_key(self.wing_L_pivot, "rotation_euler", f0, (0, 0, 0), "CONSTANT")
+            set_key(self.wing_R_pivot, "rotation_euler", f0, (0, 0, 0), "CONSTANT")
+            set_key(self.wing_L_pivot, "rotation_euler", mid_f, (0, 0.32, 0), "LINEAR")
+            set_key(self.wing_R_pivot, "rotation_euler", mid_f, (0, -0.32, 0), "LINEAR")
+            set_key(self.wing_L_pivot, "rotation_euler", f1, (0, 0, 0), "LINEAR")
+            set_key(self.wing_R_pivot, "rotation_euler", f1, (0, 0, 0), "LINEAR")
+
+        # Menacing head twitch for shadow stalker
+        if hasattr(self, "stalker_head"):
+            mid_f = int(f0 + (f1 - f0) * 0.5)
+            set_key(self.stalker_head, "rotation_euler", f0, (math.radians(18), 0, 0), "CONSTANT")
+            set_key(self.stalker_head, "rotation_euler", mid_f, (math.radians(24), 0, math.radians(12)), "LINEAR")
+            set_key(self.stalker_head, "rotation_euler", f1, (math.radians(18), 0, 0), "LINEAR")
 
 
 # ---------------------------------------------------------------------------
@@ -817,32 +1096,160 @@ def build_environments(scene):
     add_env_cone("int_tl_shade", 0.24, 0.14, 0.28, (-0.65, 1.7, 1.24), lamp_glow, c_int, verts=12)
     add_env_box("int_lamp", (0.32, 0.32, 0.36), (0, 4.2, 3.2), lamp_glow, c_int, bevel=0.02)
 
-    # 3. HOSPITAL ROOM
+    # 3. HOSPITAL ROOM (Cinematic Atmospheric Ward)
     c_hosp = make_col("set_hospital_room")
     sets["hospital_room"] = c_hosp
-    hosp_wall = make_textured_mat("hosp_w", (0.78, 0.83, 0.88, 1.0), (0.85, 0.89, 0.93, 1.0), scale=4.0, roughness=0.45, bump_strength=0.06)
-    hosp_fl = make_textured_mat("hosp_f", (0.62, 0.68, 0.74, 1.0), (0.72, 0.78, 0.82, 1.0), scale=8.0, roughness=0.35, bump_strength=0.08)
-    ecg_mat = make_mat("hosp_ecg", (0.1, 0.95, 0.35, 1.0), emission=(0.1, 0.95, 0.35, 1.0), emission_strength=5.5)
-    curtain_mat = make_mat("hosp_curt", (0.65, 0.80, 0.88, 1.0), roughness=0.85)
+
+    # Two-Tone Walls: Deep hospital teal-slate wainscot lower half, warm textured sage-grey upper half (no cheap flat white!)
+    hosp_wall_top = make_textured_mat("hosp_w_top", (0.70, 0.74, 0.72, 1.0), (0.78, 0.81, 0.79, 1.0), scale=4.0, roughness=0.65, bump_strength=0.04)
+    hosp_wainscot = make_textured_mat("hosp_w_bot", (0.14, 0.26, 0.30, 1.0), (0.20, 0.32, 0.36, 1.0), scale=5.0, roughness=0.40, bump_strength=0.06)
+    hosp_rail_mat = make_mat("hosp_guardrail", (0.85, 0.87, 0.90, 1.0), metallic=0.92, roughness=0.18)
+    hosp_baseboard = make_mat("hosp_bboard", (0.10, 0.11, 0.13, 1.0), roughness=0.6)
+
+    # Polished hospital linoleum / terrazzo floor with sharp specular reflections
+    hosp_fl = make_textured_mat("hosp_fl_spec", (0.18, 0.22, 0.24, 1.0), (0.24, 0.28, 0.30, 1.0), scale=8.0, roughness=0.10, bump_strength=0.02)
+
+    # Lighting & Medical equipment materials
+    ceil_mat = make_mat("hosp_ceil", (0.65, 0.68, 0.70, 1.0), roughness=0.85)
+    hosp_light = make_mat("hosp_ceil_light", (0.92, 0.96, 1.0, 1.0), emission=(0.92, 0.96, 1.0, 1.0), emission_strength=2.2)
+    ecg_mat = make_mat("hosp_ecg", (0.05, 1.0, 0.42, 1.0), emission=(0.05, 1.0, 0.42, 1.0), emission_strength=9.0)
+    curtain_mat = make_textured_mat("hosp_curt", (0.22, 0.38, 0.44, 1.0), (0.30, 0.48, 0.54, 1.0), scale=6.0, roughness=0.88, bump_strength=0.12)
+    chrome_mat = make_mat("hosp_chrome", (0.88, 0.89, 0.92, 1.0), metallic=0.95, roughness=0.12)
+    chair_mat = make_textured_mat("hosp_chair", (0.10, 0.18, 0.26, 1.0), (0.14, 0.24, 0.34, 1.0), scale=4.0, roughness=0.60, bump_strength=0.08)
+    gas_o2 = make_mat("hosp_gas_o2", (0.12, 0.78, 0.25, 1.0), roughness=0.3)
+    gas_vac = make_mat("hosp_gas_vac", (0.95, 0.82, 0.12, 1.0), roughness=0.3)
+    blind_mat = make_mat("hosp_blinds", (0.75, 0.78, 0.80, 1.0), roughness=0.40)
+    chart_mat = make_mat("hosp_chart", (0.92, 0.88, 0.80, 1.0), roughness=0.7)
+
+    # Hospital Bed Fabrics
+    sheet_mat = make_textured_mat("hosp_sheet", (0.78, 0.86, 0.88, 1.0), (0.84, 0.90, 0.92, 1.0), scale=12.0, roughness=0.75, bump_strength=0.04)
+    blanket_mat = make_textured_mat("hosp_blanket", (0.10, 0.20, 0.32, 1.0), (0.15, 0.28, 0.42, 1.0), scale=18.0, roughness=0.88, bump_strength=0.16)
+    pillow_mat = make_textured_mat("hosp_pillow", (0.86, 0.86, 0.84, 1.0), (0.90, 0.90, 0.88, 1.0), scale=8.0, roughness=0.80, bump_strength=0.05)
+
     for nm, sz, lc, mt in [
+        # Reflective Floor & Dimmed Acoustic Ceiling
         ("hp_fl", (10, 10, 0.1), (0, 0, -0.05), hosp_fl),
-        ("hp_wb", (10, 0.22, 4.4), (0, 4.5, 2.2), hosp_wall),
-        ("hp_wl", (0.22, 10, 4.4), (-4.5, 0, 2.2), hosp_wall),
-        ("hp_wr", (0.22, 10, 4.4), (4.5, 0, 2.2), hosp_wall),
-        ("hp_bed_hb", (1.7, 0.14, 1.25), (0, 3.65, 0.62), trim_white),
-        ("hp_bed", (1.6, 2.5, 0.68), (0, 2.4, 0.34), trim_white),
-        ("hp_blnk", (1.64, 1.6, 0.22), (0, 1.95, 0.62), shutter_mat),
-        ("hp_pil", (1.1, 0.45, 0.18), (0, 3.25, 0.75), note_mat),
-        ("hp_cab", (0.75, 0.65, 0.95), (1.45, 3.2, 0.48), trim_white),
-        ("hp_mon", (0.65, 0.25, 0.50), (1.45, 3.2, 1.22), iron_mat),
-        ("hp_scr", (0.55, 0.05, 0.38), (1.45, 3.06, 1.22), ecg_mat),
-        ("hp_curt", (0.08, 3.2, 2.8), (-1.9, 2.4, 1.8), curtain_mat),
-        ("hp_win_f", (2.2, 0.12, 1.5), (-1.8, 4.38, 2.3), trim_white),
+        ("hp_ceil", (10, 10, 0.1), (0, 0, 4.45), ceil_mat),
+        # Recessed Ceiling Troffers with Soft Frosted Diffusers
+        ("hp_clight1", (2.0, 1.0, 0.06), (0, 2.3, 4.40), hosp_light),
+        ("hp_clight2", (2.0, 1.0, 0.06), (0, -1.5, 4.40), hosp_light),
+
+        # Upper Walls (Warm Sage-Grey Medical Plaster)
+        ("hp_wb_top", (10, 0.22, 3.1), (0, 4.5, 2.9), hosp_wall_top),
+        ("hp_wl_top", (0.22, 10, 3.1), (-4.5, 0, 2.9), hosp_wall_top),
+        ("hp_wr_top", (0.22, 10, 3.1), (4.5, 0, 2.9), hosp_wall_top),
+
+        # Lower Walls (Deep Teal-Slate Wainscoting Bumper Panels)
+        ("hp_wb_bot", (10, 0.26, 1.35), (0, 4.48, 0.675), hosp_wainscot),
+        ("hp_wl_bot", (0.26, 10, 1.35), (-4.48, 0, 0.675), hosp_wainscot),
+        ("hp_wr_bot", (0.26, 10, 1.35), (4.48, 0, 0.675), hosp_wainscot),
+
+        # Protective Dark Rubber Baseboards
+        ("hp_bb_b", (9.8, 0.28, 0.16), (0, 4.46, 0.08), hosp_baseboard),
+        ("hp_bb_l", (0.28, 9.8, 0.16), (-4.46, 0, 0.08), hosp_baseboard),
+        ("hp_bb_r", (0.28, 9.8, 0.16), (4.46, 0, 0.08), hosp_baseboard),
+
+        # Stainless Steel Hospital Wall Crash Rail
+        ("hp_rail_b", (9.2, 0.08, 0.12), (0, 4.38, 1.05), hosp_rail_mat),
+
+        # Modern Tubular Hospital Bed
+        ("hp_bed_frame", (1.68, 2.58, 0.38), (0, 2.4, 0.19), chrome_mat),
+        ("hp_bed_hb", (1.68, 0.08, 0.52), (0, 3.65, 0.62), hosp_rail_mat),
+        ("hp_bed_fb", (1.68, 0.08, 0.42), (0, 1.15, 0.44), hosp_rail_mat),
+        ("hp_bed_mat", (1.52, 2.38, 0.32), (0, 2.4, 0.48), sheet_mat),
+        ("hp_bed_rail_l", (0.06, 1.4, 0.32), (-0.80, 2.4, 0.68), chrome_mat),
+        ("hp_bed_rail_r", (0.06, 1.4, 0.32), (0.80, 2.4, 0.68), chrome_mat),
+        ("hp_blnk", (1.48, 1.55, 0.44), (0, 2.05, 0.82), blanket_mat),
+        ("hp_sheet_cuff", (1.50, 0.16, 0.08), (0, 2.65, 0.90), sheet_mat),
+        ("hp_pil", (1.1, 0.48, 0.20), (0, 3.05, 0.64), pillow_mat),
+
+        # Patient Chart Clipboard Hanging on Footboard
+        ("hp_chart_board", (0.28, 0.02, 0.38), (0.25, 1.08, 0.52), chrome_mat),
+        ("hp_chart_paper", (0.24, 0.03, 0.32), (0.25, 1.07, 0.52), chart_mat),
+
+        # Medical Headwall Console behind bed
+        ("hp_hwall", (2.8, 0.14, 0.55), (0, 4.38, 1.85), hosp_wall_top),
+        ("hp_gas1", (0.16, 0.06, 0.22), (-0.6, 4.30, 1.85), gas_o2),
+        ("hp_gas2", (0.16, 0.06, 0.22), (-0.3, 4.30, 1.85), gas_vac),
+        ("hp_call", (0.14, 0.05, 0.18), (0.3, 4.30, 1.85), mailbox_red),
+
+        # Vital Signs Monitor on Adjustable Swivel Arm (Glowing ECG Green)
+        ("hp_mon_pole", (0.08, 0.08, 1.15), (1.55, 3.1, 0.95), chrome_mat),
+        ("hp_mon_box", (0.68, 0.26, 0.52), (1.55, 3.0, 1.55), iron_mat),
+        ("hp_mon_scr", (0.58, 0.05, 0.40), (1.55, 2.86, 1.55), ecg_mat),
+
+        # Overbed Mayo Rolling Tray Table with Water Pitcher & Straw Cup
+        ("hp_tray_top", (0.95, 0.52, 0.06), (0.45, 1.7, 0.95), chrome_mat),
+        ("hp_tray_leg", (0.08, 0.08, 0.88), (0.85, 1.7, 0.46), chrome_mat),
+        ("hp_med_cup", (0.08, 0.08, 0.12), (0.35, 1.7, 1.02), win_mat),
+
+        # Bedside Visitor Armchair (Padded hospital recliner)
+        ("hp_ch_seat", (0.78, 0.75, 0.20), (-1.85, 2.5, 0.44), chair_mat),
+        ("hp_ch_back", (0.78, 0.18, 0.80), (-1.85, 2.85, 0.85), chair_mat),
+        ("hp_ch_armL", (0.14, 0.70, 0.35), (-2.25, 2.5, 0.65), chair_mat),
+        ("hp_ch_armR", (0.14, 0.70, 0.35), (-1.45, 2.5, 0.65), chair_mat),
+        ("hp_ch_leg1", (0.08, 0.08, 0.40), (-2.18, 2.22, 0.20), chrome_mat),
+        ("hp_ch_leg2", (0.08, 0.08, 0.40), (-1.52, 2.22, 0.20), chrome_mat),
+
+        # Privacy Curtain on Track
+        ("hp_curt", (0.08, 3.4, 2.9), (-2.55, 2.5, 1.85), curtain_mat),
+
+        # Hospital Room Window & Venetian Blinds (creates cinematic shadow streaks!)
+        ("hp_win_f", (2.2, 0.12, 1.5), (-1.8, 4.38, 2.3), hosp_rail_mat),
         ("hp_win", (2.0, 0.10, 1.3), (-1.8, 4.36, 2.3), win_mat),
+
+        # Heavy Hospital Door with Vision Window & Kickplate
+        ("hp_door_f", (1.4, 0.14, 2.5), (3.2, 4.38, 1.25), hosp_rail_mat),
+        ("hp_door", (1.2, 0.12, 2.38), (3.2, 4.36, 1.20), hosp_wainscot),
+        ("hp_door_win", (0.35, 0.14, 0.85), (3.2, 4.35, 1.60), win_mat),
+        ("hp_door_kick", (1.18, 0.14, 0.35), (3.2, 4.35, 0.18), chrome_mat),
+
+        # Hand Sanitizer Dispenser next to door
+        ("hp_sanitizer", (0.18, 0.12, 0.32), (2.2, 4.36, 1.50), hosp_rail_mat),
+        # Biohazard Step Trash Can with Foot Pedal
+        ("hp_trash_can", (0.35, 0.35, 0.55), (2.3, 4.15, 0.28), mailbox_red),
     ]:
         add_env_box(nm, sz, lc, mt, c_hosp, bevel=0.02)
-    add_env_cyl("hp_iv_pole", 0.04, 2.2, (-1.15, 3.1, 1.1), iron_mat, c_hosp, verts=10)
-    add_env_box("hp_iv_bag", (0.22, 0.12, 0.34), (-1.05, 3.1, 1.95), win_mat, c_hosp, bevel=0.04)
+
+    # Venetian Blind Slats across window for cinematic shadow streaks
+    for bi in range(12):
+        b_z = 1.72 + bi * 0.10
+        add_env_box(f"hp_blind_{bi}", (1.95, 0.06, 0.015), (-1.8, 4.34, b_z), blind_mat, c_hosp, rot=(math.radians(35), 0, 0), bevel=0)
+
+    # IV Pole with dual fluid bags, drip chamber & translucent IV infusion line to bed
+    add_env_cyl("hp_iv_pole", 0.04, 2.2, (1.25, 3.5, 1.1), chrome_mat, c_hosp, verts=10)
+    add_env_box("hp_iv_bag1", (0.18, 0.10, 0.28), (1.15, 3.5, 1.95), win_mat, c_hosp, bevel=0.04)
+    add_env_box("hp_iv_bag2", (0.18, 0.10, 0.28), (1.35, 3.5, 1.95), win_mat, c_hosp, bevel=0.04)
+    add_env_cyl("hp_iv_tube", 0.014, 1.25, (1.05, 3.05, 1.25), win_mat, c_hosp, rot=(math.radians(24), math.radians(18), 0), verts=8)
+
+    # Bedside Rolling Tray Details: Ribbed Water Pitcher & Drinking Straw
+    pitcher_m = make_mat("hp_pitcher_m", (0.80, 0.90, 0.96, 1.0), roughness=0.25)
+    straw_m = make_mat("hp_straw_m", (0.90, 0.22, 0.22, 1.0), roughness=0.5)
+    add_env_cyl("hp_pitcher", 0.07, 0.22, (0.55, 1.65, 1.06), pitcher_m, c_hosp, verts=14)
+    add_env_cyl("hp_straw", 0.008, 0.18, (0.35, 1.70, 1.08), straw_m, c_hosp, rot=(math.radians(15), 0, 0), verts=6)
+
+    # Dedicated Atmospheric Hospital Lights:
+    # 1. Warm Bedside Examination / Reading Sconce pointing over patient
+    hosp_spot = bpy.data.lights.new("hp_bed_sconce", type="SPOT")
+    hosp_spot.energy = 110.0
+    hosp_spot.color = (1.0, 0.90, 0.74)
+    hosp_spot.spot_size = math.radians(52)
+    hosp_spot.spot_blend = 0.45
+    hosp_spot_obj = bpy.data.objects.new("hp_bed_sconce", hosp_spot)
+    hosp_spot_obj.location = (0, 3.65, 2.75)
+    hosp_spot_obj.rotation_euler = (math.radians(-32), 0, 0)
+    c_hosp.objects.link(hosp_spot_obj)
+
+    # 2. Window Directional Key Light streaming through Venetian blinds
+    win_spot = bpy.data.lights.new("hp_win_beam", type="SPOT")
+    win_spot.energy = 220.0
+    win_spot.color = (0.75, 0.88, 1.0)
+    win_spot.spot_size = math.radians(48)
+    win_spot.spot_blend = 0.25
+    win_spot_obj = bpy.data.objects.new("hp_win_beam", win_spot)
+    win_spot_obj.location = (-1.8, 6.2, 3.6)
+    win_spot_obj.rotation_euler = (math.radians(145), 0, 0)
+    c_hosp.objects.link(win_spot_obj)
 
     # 4. MEDIEVAL VILLAGE
     c_med = make_col("set_medieval_village")
@@ -1167,6 +1574,19 @@ def main():
     for m_spec in ep.get("creatures", []):
         rigs[m_spec["id"]] = ProceduralCreature(m_spec, cast_col)
 
+    # Auto-register any actor ID mentioned in shots that was missing from cast/creatures
+    for s in ep.get("shots", []):
+        for act in s.get("actors", []):
+            aid = act.get("id", "")
+            if aid and aid not in rigs:
+                low = aid.lower()
+                if any(w in low for w in ("monster", "creature", "beast", "shadow", "stalker", "demon", "bird", "crawler", "ghost", "entity", "hound", "wendigo", "gargoyle")):
+                    print(f"[blender_render] Auto-generating procedural creature for unlisted actor: {aid}")
+                    rigs[aid] = ProceduralCreature({"id": aid, "archetype": aid, "scale": 2.6}, cast_col)
+                else:
+                    print(f"[blender_render] Auto-generating human rig for unlisted actor: {aid}")
+                    rigs[aid] = R6Rig({"id": aid, "height": "adult"}, faces_dir, cast_col)
+
     # Camera with shallow cinematic depth of field
     cam_data = bpy.data.cameras.new("MainCam")
     cam_data.lens = 38.0
@@ -1180,7 +1600,7 @@ def main():
     total_dur = float(ep.get("total_duration", 60.0))
     scene.frame_start = 1
     scene.frame_end = max(2, int(math.ceil(total_dur * fps)))
-    if args.max_frames > 0:
+    if args.max_frames > 0 and args.still_frame == 0:
         scene.frame_end = min(scene.frame_end, args.max_frames)
 
     for idx, shot in enumerate(shots):
@@ -1188,8 +1608,11 @@ def main():
         t1 = float(shot.get("end", t0 + 2.0))
         f0 = max(1, int(round(t0 * fps)) + 1)
         f1 = max(f0 + 1, int(round(t1 * fps)))
-        if idx == len(shots) - 1:
+        if idx == len(shots) - 1 and args.max_frames == 0:
             f1 = scene.frame_end
+
+        if args.max_frames > 0 and args.still_frame == 0 and f0 > scene.frame_end:
+            continue
 
         # Fast set switching: keyframe only the Root Empty of each environment set.
         # This eliminates 1,296 individual fcurves, keeping environment meshes flagged as static BVH!
@@ -1217,10 +1640,22 @@ def main():
                 rigs[aid].set_shot(act, f0, f1, fps) if isinstance(rigs[aid], R6Rig) else rigs[aid].set_shot(act, f0, f1)
                 if aid == cam_target:
                     p = act.get("pos", [0, 0, 0])
-                    target_h = rigs[aid].focus_height
-                    target_pos = Vector((float(p[0]), float(p[2]), float(p[1]) + target_h))
-                    ep_pos = getattr(rigs[aid], "shot_end_pos", (float(p[0]), float(p[2]), float(p[1])))
-                    target_pos_end = Vector((ep_pos[0], ep_pos[1], ep_pos[2] + target_h))
+                    anim_state = act.get("anim", "idle")
+                    if anim_state in ("lie", "sleep", "bed"):
+                        target_h = 0.32  # Bedside mattress eye-level
+                        # Focus on patient's face / chest near the pillow (shifted along bed towards headboard)
+                        target_pos = Vector((float(p[0]), float(p[2]) + 0.65, float(p[1]) + target_h))
+                        target_pos_end = Vector((float(p[0]), float(p[2]) + 0.65, float(p[1]) + target_h))
+                    elif anim_state == "sit":
+                        target_h = 0.82  # Seated visitor eye-level
+                        target_pos = Vector((float(p[0]), float(p[2]), float(p[1]) + target_h))
+                        ep_pos = getattr(rigs[aid], "shot_end_pos", (float(p[0]), float(p[2]), float(p[1])))
+                        target_pos_end = Vector((ep_pos[0], ep_pos[1], ep_pos[2] + target_h))
+                    else:
+                        target_h = rigs[aid].focus_height
+                        target_pos = Vector((float(p[0]), float(p[2]), float(p[1]) + target_h))
+                        ep_pos = getattr(rigs[aid], "shot_end_pos", (float(p[0]), float(p[2]), float(p[1])))
+                        target_pos_end = Vector((ep_pos[0], ep_pos[1], ep_pos[2] + target_h))
                     target_rot_z = math.radians(float(act.get("rot_y", 0)))
 
         # Hide unused actors off-stage
@@ -1231,18 +1666,58 @@ def main():
         # Camera framing (automatically scales distance to character/monster height, orbits to front, AND tracks moving actors!)
         dist_scale = max(1.0, target_h / 1.35)
         cam_type = shot.get("cam", "push_in")
-        if cam_type == "establishing_aerial":
+        is_hospital = (shot.get("set") == "hospital_room")
+
+        if is_hospital:
+            # Cinematic hospital room camera framing (natural distances, clear compositions, no extreme/clipping zooms)
+            if cam_type == "closeup_face":
+                # Medium close-up framing patient's face & chest comfortably
+                off0 = Vector((0.5, -1.8, 0.45))
+                off1 = Vector((0.2, -1.3, 0.35))
+            elif cam_type in ("ward_crane_swing", "crane", "high_angle", "establishing_aerial", "wide"):
+                # Elevated 3rd-person swinging crane shot sweeping across the ward
+                # Centered between bedside visitor and hospital bed so BOTH characters and all medical equipment are framed
+                scene_center_offset = Vector((-0.45, 0.0, 0.20))
+                off0 = scene_center_offset + Vector((-1.1, -5.0, 2.35))
+                off1 = scene_center_offset + Vector((1.2, -4.4, 1.95))
+            elif cam_type == "ots_left":
+                # Over-the-shoulder behind visitor looking across at patient and medical monitors
+                off0 = Vector((-1.45, -2.6, 0.65))
+                off1 = Vector((-1.20, -2.0, 0.50))
+            elif cam_type == "ots_right":
+                off0 = Vector((1.9, -2.8, 0.65))
+                off1 = Vector((1.5, -2.1, 0.50))
+            elif cam_type == "dutch_angle_tension":
+                off0 = Vector((1.2, -3.2, 0.65))
+                off1 = Vector((0.8, -2.4, 0.45))
+            elif cam_type == "low_angle_monster":
+                off0 = Vector((0.8, -3.4, -0.15))
+                off1 = Vector((0.4, -2.6, -0.05))
+            else:  # push_in / default: clean cinematic 3/4 ward shot showing bed, patient, visitor, IV pole & monitor
+                off0 = Vector((0.8, -3.6, 0.65))
+                off1 = Vector((0.4, -2.6, 0.45))
+        elif cam_type == "establishing_aerial":
             off0 = Vector((2.5, -12.0 * dist_scale, 7.5))
             off1 = Vector((1.0, -9.0 * dist_scale, 5.5))
         elif cam_type == "closeup_face":
             off0 = Vector((0.0, -2.1 * dist_scale, 0.15))
             off1 = Vector((0.0, -1.75 * dist_scale, 0.15))
+        elif cam_type in ("medium_shot", "showcase_prop"):
+            off0 = Vector((0.25, -3.2 * dist_scale, -0.15))
+            off1 = Vector((0.05, -2.7 * dist_scale, -0.15))
         elif cam_type == "whip_zoom":
             off0 = Vector((0.6, -4.5 * dist_scale, 0.4))
             off1 = Vector((0.0, -1.9 * dist_scale, 0.15))
         elif cam_type == "low_angle_monster":
-            off0 = Vector((1.4, -5.4 * dist_scale, 0.75 - target_pos.z))
-            off1 = Vector((0.6, -4.4 * dist_scale, 0.90 - target_pos.z))
+            # Menacing low-angle towering framing that captures the monster's full height, arms/wings, and menacing face
+            if target_pos.z > 0.8:
+                # Airborne flying beast: wide low-to-mid dramatic perspective showcasing wingspan & raptor dive
+                off0 = Vector((0.0, -7.8, -0.2))
+                off1 = Vector((0.0, -6.6, -0.1))
+            else:
+                # Towering grounded behemoth/stalker: framed from low angle with breathing room for full spine and razor claws
+                off0 = Vector((0.0, -6.2, 0.75 - target_pos.z))
+                off1 = Vector((0.0, -5.2, 0.85 - target_pos.z))
         elif cam_type == "ots_left":
             off0 = Vector((-1.6, -3.0 * dist_scale, 0.2))
             off1 = Vector((-1.2, -2.6 * dist_scale, 0.2))
@@ -1293,13 +1768,31 @@ def main():
         cam_data.dof.focus_distance = dist1
         cam_data.dof.keyframe_insert(data_path="focus_distance", frame=f1)
 
-    # Render animation
+    # Render animation or still snapshot
     out_path = Path(args.out).resolve()
     out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def _on_render_frame(s, *a):
+        cur = s.frame_current
+        end = s.frame_end
+        pct = int((cur / max(1, end)) * 100)
+        print(f"[blender_render] Frame {cur}/{end} ({pct}%) rendered", flush=True)
+
+    bpy.app.handlers.render_post.append(_on_render_frame)
+
+    if out_path.suffix.lower() == ".png" or args.still_frame > 0:
+        f = args.still_frame if args.still_frame > 0 else (args.max_frames if args.max_frames > 0 else 1)
+        scene.frame_set(f)
+        scene.render.image_settings.file_format = "PNG"
+        scene.render.filepath = str(out_path)
+        bpy.ops.render.render(write_still=True)
+        print(f"[blender_render] Rendered snapshot still at frame {f} to {out_path}", flush=True)
+        return
+
     scene.render.use_file_extension = False
     scene.render.filepath = str(out_path)
     bpy.ops.render.render(animation=True)
-    print(f"[blender_render] Rendered {scene.frame_end} frames to {out_path}")
+    print(f"[blender_render] Rendered {scene.frame_end} frames to {out_path}", flush=True)
 
 
 if __name__ == "__main__":

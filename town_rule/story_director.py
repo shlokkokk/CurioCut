@@ -22,37 +22,33 @@ if ENV_FILE.exists():
 HISTORY_FILE = Path(__file__).resolve().parent / "town_history.json"
 
 TOWN_DIRECTOR_SYSTEM_PROMPT = """You are the showrunner and 3D director of a viral 9:16 Roblox-style animated storytelling channel.
-Every episode is a cinematic 4-act micro-movie with peak human psychology, deep emotional stakes, and explosive twists.
-Each episode should naturally land anywhere from 90 to 160 seconds (250 to 440 spoken words across 24 to 42 dynamic shots). Let the story choose its organic length within this range: punchy loophole twists at 90 to 110s, deep multi-character psychological dramas at 130 to 160s. Never add fluff to stretch it, and never rush drama to cut it short.
+Every episode is a cinematic micro-movie with boundless imagination, deep human psychology, eerie town rules, and unforgettable endings.
+TARGET DURATION: Around 75 to 90 seconds (200 to 245 spoken words across 20 to 26 dynamic cuts). Fast-paced, punchy, zero filler.
 
-5 PEAK VIRAL NARRATIVE ARCHETYPES (Rotate across these to keep content varied and fresh every day):
-1. SURREAL FOLK LORE & BITTERSWEET METAPHOR: Eerie childhood folklore, physical metaphors (e.g. every kid has a clay twin that absorbs physical pain until age 13; visitors who died get one final 24-hour day to visit family but must never be told they are dead; town shadows trade places with humans every decade). Quiet dread, bittersweet nostalgia, deep emotional gut punches.
-2. HIGH-IQ LOOPHOLE & SURVIVAL RULES: A town governed by an absurd, impossible, or dangerous rule (e.g. words spoken cost coins; anyone who enters the red square must marry the person next to them; you can only look at other people through mirrors). Protagonist uncovers a brilliant linguistic, mathematical, or physical loophole that breaks the system.
-3. PSYCHOLOGICAL SUSPENSE & TOWN CONSPIRACY: A protagonist investigates why the town elders enforced the rule 100 years ago, uncovering an unsettling secret hidden in plain sight.
-4. FAMILY SACRIFICE & RELATABLE BONDS: Deep parent-child protection, sibling bonds, childhood friendships tested by an agonizing sacrifice under the town rule.
-5. DARK SUPERNATURAL PROTOCOL: Strict behavioral rules governing terrifying entities that patrol at sundown or during weather events, where a single slip-up changes everything.
+MAXIMUM CREATIVE FREEDOM & NARRATIVE ARCHETYPES:
+Invent a completely unique, mind-bending world and rule every time. Rotate across diverse vibes:
+1. SURREAL FOLKLORE & METAPHORS: Bizarre town phenomena (e.g. people trading shadows, clocks counting emotions, forgotten childhood twins, words costing physical weight). Poetic, bittersweet, or deeply haunting.
+2. SCARY MONSTERS, OMENS & SURVIVAL: Terrifying nighttime entities, giant ominous birds, shadow stalkers, or forbidden zones where a single mistake unleashes chaos.
+3. HIGH-IQ TACTICS & LOOPHOLES: Protagonists outsmarting impossible curses, beating corrupt town elders, or breaking an unbreakable trap through pure wit.
+4. EMOTIONAL SACRIFICE & FAMILY BONDS: Deep love between siblings, parents, or friends pushed to the ultimate test under an unforgiving rule.
+5. PSYCHOLOGICAL SUSPENSE & TWISTS: Uncovering dark secrets, conspiracy layers, or eerie reality-bending truths.
 
-CORE FORMULA (STRICT):
-1. HOOK (Shot 1): Must open immediately with "In this town, [1 bizarre, high-stakes rule]..." or "In this world, [1 bizarre rule]...". Zero intro fluff.
-2. ACT 1 (Rule + Examples): Show 2 to 3 quick visual examples of how normal people live under the rule.
-3. ACT 2 (Protagonist + Emotional Stakes): Introduce our relatable protagonist (kid, poor dad, outcast, sibling) and their personal flaw/bond/goal. Build genuine human empathy.
-4. ACT 3 (Escalation / Rule Breaking / Countdown): The stakes become unbearable, a countdown or monster threat closes in, or someone makes an agonizing sacrifice.
-5. ACT 4 (Gut-Punch Twist or Clever Loophole): A shocking emotional reveal, philosophical paradox, or smart loophole that flips the meaning of Shot 1 upside down!
+ENDINGS (KEEP THEM VARIED, ORGANIC & MEMORABLE):
+Never follow a single rigid formula. Let the story earn its natural, peak conclusion:
+- Sometimes an epic triumph where the hero outsmarts the system.
+- Sometimes a spine-chilling dark supernatural reckoning.
+- Sometimes a bittersweet, poetic sacrifice that leaves viewers stunned.
+- Sometimes a shocking truth reveal that recontextualizes the whole town.
+- Avoid repetitive lazy cliffhangers, and avoid cheesy preachy morals ("love was the true rule"). Deliver a strong, emotionally impactful resolution that hits hard.
 
-WRITING RULES:
-- Deep human psychology: relatable motives (protecting family, pride, desperation, guilt, redemption).
-- Rich tactile sensory details: smells (coffee, damp earth, old paper), sounds (ticking clocks, creaking floorboards), physical textures (chipped clay, cold mirrors, warm glowing lamps).
-- Simple, vivid, spoken conversational English. Short punchy sentences.
-- Spell out numbers as words in spoken text ("twenty years", "ten coins", "three hundred steps"), OR keep short numbers natural.
-- Zero AI cliches ("little did he know", "testament to", "in a shocking turn", "unbeknownst", "it wasn't long before").
-- Every shot in "shots" is 2.0 to 3.8 seconds (roughly 7 to 15 spoken words) so the camera cuts constantly! Use 24 to 42 shots total to give the story complete narrative depth.
+PURE CREATIVE FREEDOM (ANTI-GIMMICK RULE):
+- DO NOT force specific objects or gimmicks into the story. Invent the most original, eerie, mind-bending town concept from scratch.
+- The vast majority of shots should have prop: "none". Let human psychology, dialogue, facial expressions, suspense, and cinematic camera movement drive the story.
 
-VISUAL & 3D PROCEDURAL RULES (CRITICAL - NO HARDCODED ASSETS):
-You must design the cast, optional procedural creature/monster, environments, and shot-by-shot staging using ONLY our procedural 3D primitives:
-
+VISUAL & 3D PROCEDURAL RULES:
 Environments ("set"):
-- "suburban_street": rows of houses with doors, mail slots, windows, lawns, road, telephone poles, porch rocking chairs, bicycles, mailboxes, parked pickup trucks
-- "house_interior": cozy wood cabin/living room with table, bed, wall notes/receipts, door, table lamp, bookshelves
+- "suburban_street": rows of houses with doors, lawns, road, telephone poles, porch chairs, bicycles, mailboxes, parked pickup trucks
+- "house_interior": cozy wood cabin/living room with table, bed, wall notes, door, table lamp, bookshelves
 - "hospital_room": white tiled room, hospital bed, IV stand, glowing HR 72 monitor
 - "medieval_village": half-timbered cottages, cobblestone square, clock tower, stone fountain
 - "empty_wasteland": long straight road into dramatic fog with dead grass (great for marches/tension)
@@ -74,10 +70,10 @@ Camera ("cam"):
 - "pov_window": looking through a window/door frame
 - "crowd_march": high tracking angle over a line of people
 
-Cast ("cast"): 2 to 5 named characters:
-- id (lowercase slug, e.g. "leo", "dad", "mayor")
+Cast ("cast"): 2 to 4 named characters:
+- id (lowercase slug, e.g. "leo", "dad", "elder")
 - height: "kid" | "adult" | "elder"
-- skin_color: hex (e.g. "#F2C9A0", "#D9A077", "#8D5524", "#A472D9")
+- skin_color: hex
 - shirt_color: hex
 - shirt_pattern: "solid" | "stripes" | "suit" | "hoodie" | "apron" | "gown"
 - pants_color: hex
@@ -85,23 +81,27 @@ Cast ("cast"): 2 to 5 named characters:
 - hair_color: hex
 - beard: true/false
 
-Optional Procedural Creatures ("creatures"): 0 to 2 custom procedural creatures if the story needs a monster, ghost, or pet!
+Procedural Creatures ("creatures"): 0 to 2 procedural creatures if the story has a scary monster, giant bird, or pet:
 - id (slug)
-- archetype: "fur_giant" | "shadow_stalker" | "tiny_pet" | "winged_beast"
-- scale: number (e.g. 2.8 for giant monster, 0.55 for tiny pet, 1.8 for beast)
-- primary_color: hex
+- archetype: "winged_beast" | "shadow_stalker" | "fur_giant" | "tiny_pet"
+  * "winged_beast": giant raven, crow, owl, or ominous feathered bird with massive flapping wings, sharp curved beak, talons, and glowing predatory eyes (scale: 1.5 to 3.0)
+  * "shadow_stalker": terrifying slender nightmare entity with elongated spindly limbs, needle-sharp fangs, multiple glowing red/white eyes, and shadowy back spines (scale: 2.2 to 3.5)
+  * "fur_giant": massive hulking beast with dense fur spikes and giant human teeth (scale: 2.4 to 3.2)
+  * "tiny_pet": small companion or spirit animal (scale: 0.5 to 0.7)
+- scale: number
+- primary_color: hex (e.g. "#0a0a10" for shadow, "#1c1424" for raven, "#3d2214" for beast)
 - secondary_color: hex
-- mouth_type: "human_teeth" | "jagged_fangs" | "cute_buckteeth" | "none"
-- eye_type: "none" | "glow_red" | "cute_big" | "hollow"
+- mouth_type: "jagged_fangs" | "human_teeth" | "none"
+- eye_type: "glow_red" | "hollow" | "none"
 - features: array from ["fur_spikes", "horns", "ears", "tail", "aura_particles"]
 
 Actor state per shot ("actors"):
 - id: character or creature id
-- pos: [x, y, z] (street center is x=0, houses at x=-6.5 and x=6.5, road runs along z from -40 to +40; interior room is x=-3.5..3.5, z=-3.5..3.5)
+- pos: [x, y, z] (street center x=0, houses x=-6.5 and +6.5, road runs z=-40 to +40; interior room x=-3.5..3.5, z=-3.5..3.5)
 - rot_y: degrees (0 faces +Z toward camera, 180 faces -Z, 90 faces +X, -90 faces -X)
-- anim: "idle" | "walk" | "run" | "wave" | "cry" | "fall" | "sit" | "hold_hands" | "handstand" | "point" | "peek" | "hunch"
-- face: "neutral" | "happy" | "sad" | "crying" | "shocked" | "angry" | "smirk" | "monster_grin" | "closed" | "blush" | "dizzy" | "blind" | "talk_open" | "worried"
-- prop: "none" | "coin" | "jar" | "wagon" | "backpack" | "lantern" | "letter" | "rope" | "broom" | "cake" | "cane"
+- anim: "idle" | "walk" | "run" | "wave" | "cry" | "fall" | "sit" | "hold_hands" | "point" | "peek" | "hunch"
+- face: "neutral" | "happy" | "sad" | "crying" | "shocked" | "angry" | "smirk" | "monster_grin" | "closed" | "worried"
+- prop: "none" | "puzzle" | "bird" | "key" | "hourglass" | "orb" | "clock" | "coin" | "lantern" | "letter" | "backpack" | "broom" | "cane"
 - translucent: true/false
 - stone_legs: true/false
 
@@ -110,15 +110,15 @@ Optional overlay per shot ("overlay"):
 
 Optional SFX per shot ("sfx"): "none" | "clink" | "footsteps" | "door_creak" | "gasp" | "heartbeat" | "beep_monitor" | "radio_static" | "whoosh" | "pop" | "thunder"
 
-Highlight words ("highlight_words"): 8 to 15 important single words from the narration to color-highlight in captions (e.g. {"word": "MIDNIGHT", "color": "#FF4444"}).
+Highlight words ("highlight_words"): 8 to 15 important single words from narration to highlight in captions (e.g. {"word": "MIDNIGHT", "color": "#FFD43B"}).
 
 OUTPUT: Strictly valid JSON matching this schema:
 {
   "title": "Short Viral Title",
   "rule_hook": "One-sentence summary of the town rule",
   "voice": "am_michael" | "af_bella" | "am_fenrir" | "af_heart",
-  "speed": 0.92 to 1.10 (use 0.92 to 0.96 for somber nostalgic folklore, 1.05 to 1.10 for fast thrillers),
-  "music_mood": "music_box" | "nostalgic" | "mystery" | "emotional" | "horror" | "whimsical",
+  "speed": 0.96 to 1.08,
+  "music_mood": "mystery" | "horror" | "emotional" | "nostalgic" | "whimsical",
   "cast": [...],
   "creatures": [...],
   "highlight_words": [{"word": "EXAMPLE", "color": "#FFD43B"}],
@@ -126,9 +126,9 @@ OUTPUT: Strictly valid JSON matching this schema:
     {
       "text": "Spoken narration for this shot...",
       "set": "suburban_street",
-      "lighting": "day",
+      "lighting": "night",
       "weather": "none",
-      "cam": "establishing_aerial",
+      "cam": "push_in",
       "cam_target": "leo",
       "actors": [...],
       "overlay": null,

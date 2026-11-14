@@ -191,7 +191,7 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
             elif "Total duration:" in line:
                 m_dur = re.search(r"Total duration:\s*([\d\.]+)s", line)
                 if m_dur:
-                    total_render_frames[0] = max(240, int(float(m_dur.group(1)) * 24))
+                    total_render_frames[0] = max(240, int(float(m_dur.group(1)) * 30))
             elif "[4/6]" in line:
                 update_live_progress(
                     step_title="Building Captions & HUD",

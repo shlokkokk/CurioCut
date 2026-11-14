@@ -256,7 +256,7 @@ def main():
 
     print("\nMonitoring Cloud execution...")
     start_t = time.time()
-    max_wait = 21600  # 360 minutes (6 hours) unbreakable ceiling
+    max_wait = 43200  # 720 minutes (12 hours) matching Kaggle maximum session ceiling
     queued_start = time.time()
     has_alerted_2h = False
     has_alerted_3h = False
