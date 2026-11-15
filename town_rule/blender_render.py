@@ -32,6 +32,7 @@ parser.add_argument("--fps", type=int, default=30)
 parser.add_argument("--draft", action="store_true", help="Fast 540x960 preview render")
 parser.add_argument("--max-frames", type=int, default=0, help="Optional cap on rendered frames for quick QA")
 parser.add_argument("--still-frame", type=int, default=0, help="Render a single still snapshot frame and exit")
+parser.add_argument("--engine", default="auto", choices=["auto", "CYCLES", "EEVEE", "EEVEE_NEXT", "BLENDER_EEVEE_NEXT"], help="Render engine (CYCLES, EEVEE_NEXT, or auto)")
 parser.add_argument("--faces-dir", default=str(Path(__file__).resolve().parent / "assets" / "faces"))
 args = parser.parse_args(argv)
 
@@ -1347,54 +1348,61 @@ def build_environments(scene):
 # ---------------------------------------------------------------------------
 # Lighting, Weather & Camera Director
 # ---------------------------------------------------------------------------
-def configure_render(scene, fps: int, draft: bool):
-    # Auto-detect hardware GPU acceleration: on Linux headless cloud servers (like Kaggle with Tesla T4),
-    # Cycles OptiX / CUDA communicates directly with NVIDIA hardware compute kernels, completely bypassing
-    # missing X11/EGL display drivers that force EEVEE onto slow CPU llvmpipe.
+def configure_render(scene, fps: int, draft: bool, engine_choice: str = "auto"):
+    # Hardware acceleration selector: CYCLES, EEVEE_NEXT, or auto
     use_gpu_cycles = False
-    try:
-        prefs = bpy.context.preferences
-        cycles_addon = prefs.addons.get("cycles")
-        if cycles_addon:
-            cprefs = cycles_addon.preferences
-            for backend in ["OPTIX", "CUDA"]:
-                try:
-                    cprefs.compute_device_type = backend
-                    cprefs.get_devices()
-                    matched = [d for d in cprefs.devices if d.type == backend]
-                    if matched:
-                        for d in cprefs.devices:
-                            d.use = (d.type == backend)
-                        scene.render.engine = "CYCLES"
-                        scene.cycles.device = "GPU"
-                        scene.cycles.samples = 8 if draft else 16
-                        scene.cycles.preview_samples = 8
-                        # Peak-quality AI neural denoising accelerated on GPU (Blender 4.1+)
-                        scene.cycles.use_denoising = True
-                        if hasattr(scene.cycles, "denoiser"):
-                            scene.cycles.denoiser = "OPENIMAGEDENOISE"
-                        if hasattr(scene.cycles, "denoising_use_gpu"):
-                            scene.cycles.denoising_use_gpu = True
-                        if hasattr(scene.cycles, "denoising_prefilter"):
-                            scene.cycles.denoising_prefilter = "FAST"
-                        if hasattr(scene.cycles, "denoising_input_passes"):
-                            scene.cycles.denoising_input_passes = "RGB_ALBEDO_NORMAL"
-                        scene.cycles.max_bounces = 4
-                        scene.cycles.diffuse_bounces = 2
-                        scene.cycles.glossy_bounces = 2
-                        scene.cycles.transmission_bounces = 2
-                        scene.cycles.volume_bounces = 0
-                        scene.cycles.transparent_max_bounces = 4
-                        use_gpu_cycles = True
-                        print(f"[blender_render] Activated hardware GPU: {backend} ({matched[0].name}) via CYCLES path-tracer!", flush=True)
-                        break
-                except Exception as ex:
-                    print(f"[blender_render] Backend {backend} check: {ex}", flush=True)
-    except Exception as e:
-        print(f"[blender_render] GPU check error: {e}", flush=True)
+    chosen = (engine_choice or "auto").strip().upper()
 
-    if not use_gpu_cycles:
-        # Fall back to EEVEE Next (for environments with an active OpenGL/windowing display)
+    if chosen not in ("EEVEE", "EEVEE_NEXT", "BLENDER_EEVEE_NEXT"):
+        try:
+            import addon_utils
+            addon_utils.enable("cycles")
+        except Exception:
+            pass
+
+        try:
+            prefs = bpy.context.preferences
+            cycles_addon = prefs.addons.get("cycles")
+            if cycles_addon:
+                cprefs = cycles_addon.preferences
+                for backend in ["OPTIX", "CUDA"]:
+                    try:
+                        cprefs.compute_device_type = backend
+                        cprefs.get_devices()
+                        matched = [d for d in cprefs.devices if d.type == backend]
+                        if matched:
+                            for d in cprefs.devices:
+                                d.use = (d.type == backend)
+                            scene.render.engine = "CYCLES"
+                            scene.cycles.device = "GPU"
+                            scene.cycles.samples = 8 if draft else 16
+                            scene.cycles.preview_samples = 8
+                            # Peak-quality AI neural denoising accelerated on GPU (Blender 4.1+)
+                            scene.cycles.use_denoising = True
+                            if hasattr(scene.cycles, "denoiser"):
+                                scene.cycles.denoiser = "OPENIMAGEDENOISE"
+                            if hasattr(scene.cycles, "denoising_use_gpu"):
+                                scene.cycles.denoising_use_gpu = True
+                            if hasattr(scene.cycles, "denoising_prefilter"):
+                                scene.cycles.denoising_prefilter = "FAST"
+                            if hasattr(scene.cycles, "denoising_input_passes"):
+                                scene.cycles.denoising_input_passes = "RGB_ALBEDO_NORMAL"
+                            scene.cycles.max_bounces = 4
+                            scene.cycles.diffuse_bounces = 2
+                            scene.cycles.glossy_bounces = 2
+                            scene.cycles.transmission_bounces = 2
+                            scene.cycles.volume_bounces = 0
+                            scene.cycles.transparent_max_bounces = 4
+                            use_gpu_cycles = True
+                            print(f"[blender_render] Activated hardware GPU: {backend} ({matched[0].name}) via CYCLES path-tracer!", flush=True)
+                            break
+                    except Exception as ex:
+                        print(f"[blender_render] Backend {backend} check: {ex}", flush=True)
+        except Exception as e:
+            print(f"[blender_render] GPU check error: {e}", flush=True)
+
+    if not use_gpu_cycles or chosen in ("EEVEE", "EEVEE_NEXT", "BLENDER_EEVEE_NEXT"):
+        # Use EEVEE Next (ultra-fast rasterization with screen-space raytracing)
         engines = [e.identifier for e in bpy.types.RenderSettings.bl_rna.properties["engine"].enum_items]
         scene.render.engine = "BLENDER_EEVEE_NEXT" if "BLENDER_EEVEE_NEXT" in engines else "BLENDER_EEVEE"
         if hasattr(scene, "eevee"):
@@ -1558,7 +1566,7 @@ def main():
     clear_scene()
     scene = bpy.context.scene
     fps = args.fps
-    configure_render(scene, fps, args.draft)
+    configure_render(scene, fps, args.draft, getattr(args, "engine", "auto"))
     bg, sun_data, _ = setup_world_and_lights(scene)
 
     # Build sets & weather
@@ -1705,6 +1713,9 @@ def main():
         elif cam_type in ("medium_shot", "showcase_prop"):
             off0 = Vector((0.25, -3.2 * dist_scale, -0.15))
             off1 = Vector((0.05, -2.7 * dist_scale, -0.15))
+        elif cam_type in ("ensemble_master", "wide_group"):
+            off0 = Vector((0.0, -5.2 * dist_scale, 0.15))
+            off1 = Vector((0.0, -4.6 * dist_scale, 0.15))
         elif cam_type == "whip_zoom":
             off0 = Vector((0.6, -4.5 * dist_scale, 0.4))
             off1 = Vector((0.0, -1.9 * dist_scale, 0.15))

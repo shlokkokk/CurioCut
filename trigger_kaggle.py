@@ -17,8 +17,46 @@ if ENV_FILE.exists():
             k, v = line.split("=", 1)
             os.environ.setdefault(k.strip(), v.strip())
 
-KAGGLE_TOKEN = os.environ.get("KAGGLE_API_TOKEN", "")
-KAGGLE_USER = os.environ.get("KAGGLE_USERNAME") or "shlokkshahh"
+def load_kaggle_pool():
+    """Dynamically loads and deduplicates all Kaggle accounts from environment variables."""
+    pool = []
+    # 1. Primary account
+    u1 = os.environ.get("KAGGLE_USERNAME", "").strip() or "shlokkshahh"
+    t1 = os.environ.get("KAGGLE_API_TOKEN", "").strip()
+    if t1:
+        pool.append({"user": u1, "token": t1})
+
+    # 2. Numbered failover accounts (2, 3, 4, ...)
+    for idx in range(2, 25):
+        u = os.environ.get(f"KAGGLE_USERNAME_{idx}", "").strip()
+        t = os.environ.get(f"KAGGLE_API_TOKEN_{idx}", "").strip()
+        if u and t and not any(a["user"] == u for a in pool):
+            pool.append({"user": u, "token": t})
+
+    # 3. Delimited KAGGLE_ACCOUNTS string (user:token,user2:token2)
+    raw_accs = os.environ.get("KAGGLE_ACCOUNTS", "").strip()
+    if raw_accs:
+        for entry in raw_accs.split(","):
+            if ":" in entry:
+                parts = entry.split(":", 1)
+                u = parts[0].strip()
+                t = parts[1].strip()
+                if u and t and not any(a["user"] == u for a in pool):
+                    pool.append({"user": u, "token": t})
+
+    if not pool:
+        pool = [{"user": u1, "token": t1}]
+    return pool
+
+KAGGLE_POOL = load_kaggle_pool()
+current_account_idx = 0
+
+def get_current_account():
+    global current_account_idx
+    if current_account_idx >= len(KAGGLE_POOL):
+        current_account_idx = len(KAGGLE_POOL) - 1
+    return KAGGLE_POOL[current_account_idx]
+
 KERNEL_SLUG = "curiocut-gpu-engine"
 LOG_RELAY_URL = "https://curiocut-corn.pcgpt00.workers.dev/api/logs"
 run_message_id = None
@@ -26,9 +64,52 @@ run_started_at = time.time()
 latest_worker_log = ""
 run_version = None
 
-latest_kernel_url = f"https://www.kaggle.com/code/{KAGGLE_USER}/{KERNEL_SLUG}"
-status_url = f"https://www.kaggle.com/api/v1/kernels/status?userName={KAGGLE_USER}&kernelSlug={KERNEL_SLUG}"
-out_url = f"https://www.kaggle.com/api/v1/kernels/output?userName={KAGGLE_USER}&kernelSlug={KERNEL_SLUG}"
+def get_kernel_url(user, v_num=None):
+    base = f"https://www.kaggle.com/code/{user}/{KERNEL_SLUG}"
+    return f"{base}?versionNumber={v_num}" if v_num else base
+
+def get_status_url(user):
+    return f"https://www.kaggle.com/api/v1/kernels/status?userName={user}&kernelSlug={KERNEL_SLUG}"
+
+def get_out_url(user):
+    return f"https://www.kaggle.com/api/v1/kernels/output?userName={user}&kernelSlug={KERNEL_SLUG}"
+
+def is_account_block_error(msg: str) -> bool:
+    low = (msg or "").lower()
+    block_markers = [
+        "quota", "exceeded", "limit reached", "maximum hours",
+        "no gpu available", "session running", "concurrent",
+        "too many active", "not available for this account",
+        "unauthorized", "invalid token", "forbidden", "rate limit"
+    ]
+    return any(k in low for k in block_markers)
+
+def clean_kaggle_log(raw_log: str) -> str:
+    """Parses Kaggle JSON stream log arrays into clean, readable text."""
+    if not raw_log:
+        return ""
+    stripped = raw_log.strip()
+    if stripped.startswith("[") and stripped.endswith("]"):
+        try:
+            chunks = json.loads(stripped)
+            if isinstance(chunks, list):
+                return "".join(c.get("data", "") for c in chunks if isinstance(c, dict))
+        except Exception:
+            pass
+    return raw_log
+
+def notify_account_failover(old_user, new_user, reason):
+    try:
+        from discord_notifier import notify_alert
+        notify_alert(
+            title="Kaggle Multi-Account Failover Activated",
+            details=f"Account `{old_user}` reached limit: **{reason}**.\nAuto-rotating to standby account `{new_user}` ({current_account_idx + 1}/{len(KAGGLE_POOL)} in pool).",
+            severity="warning"
+        )
+    except Exception as ex:
+        print(f"Notice: Failover alert error: {ex}")
+
+latest_kernel_url = get_kernel_url(get_current_account()["user"])
 
 secrets_to_pass = {
     "GROQ_API_KEY": os.environ.get("GROQ_API_KEY", ""),
@@ -87,12 +168,15 @@ os.environ["DISCORD_WEBHOOK_LIVE_PROGRESS"] = {repr(secrets_to_pass["DISCORD_WEB
     return full_worker_code
 
 def push_kernel(enable_gpu=True):
-    global latest_kernel_url, run_message_id, run_version
+    global latest_kernel_url, run_message_id, run_version, current_account_idx
+    acc = get_current_account()
+    user = acc["user"]
+    token = acc["token"]
     mode_str = "NVIDIA Tesla T4 GPU (16 GB VRAM)" if enable_gpu else "High-Speed 4-Core Cloud Compute"
-    print(f"\nDispatching kernel: {KAGGLE_USER}/{KERNEL_SLUG} [{mode_str}]...")
+    print(f"\nDispatching kernel: {user}/{KERNEL_SLUG} [{mode_str}] (Account {current_account_idx + 1}/{len(KAGGLE_POOL)}: {user})...")
     
     payload = {
-        "slug": f"{KAGGLE_USER}/{KERNEL_SLUG}",
+        "slug": f"{user}/{KERNEL_SLUG}",
         "newTitle": "CurioCut GPU Engine",
         "text": full_worker_code,
         "language": "python",
@@ -109,59 +193,95 @@ def push_kernel(enable_gpu=True):
         "https://www.kaggle.com/api/v1/kernels/push",
         data=json.dumps(payload).encode("utf-8"),
         headers={
-            "Authorization": f"Bearer {KAGGLE_TOKEN}",
-            "Content-Type": "application/json"
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "User-Agent": "kaggle-api/v1.6.14"
         },
         method="POST"
     )
 
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        res = json.loads(resp.read().decode("utf-8"))
-        if res.get("hasError") or res.get("error"):
-            err_msg = res.get("error") or res.get("errorNullable") or "Unknown Kaggle API error"
-            raise RuntimeError(f"Kaggle API Error: {err_msg}")
-        v_num = res.get("versionNumber")
-        run_version = v_num
-        base_url = (res.get("url") or f"https://www.kaggle.com/code/{KAGGLE_USER}/{KERNEL_SLUG}").split("?")[0]
-        latest_kernel_url = f"{base_url}?versionNumber={v_num}" if v_num else base_url
-        print(f"[OK] Job accepted by Kaggle cloud API (Version #{v_num})!")
-        print(f"URL: {latest_kernel_url}")
-        try:
-            from discord_notifier import update_run_log
-            if run_message_id:
-                update_run_log(
-                    run_message_id, v_num, secrets_to_pass["CURIO_SLOT"], latest_kernel_url,
-                    "QUEUED", time.time() - run_started_at,
-                    "Kaggle accepted the run. Waiting for the execution container to start.\n"
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            res = json.loads(resp.read().decode("utf-8"))
+            if res.get("hasError") or res.get("error"):
+                err_msg = res.get("error") or res.get("errorNullable") or "Unknown Kaggle API error"
+                raise RuntimeError(f"Kaggle API Error: {err_msg}")
+            v_num = res.get("versionNumber")
+            run_version = v_num
+            base_url = (res.get("url") or f"https://www.kaggle.com/code/{user}/{KERNEL_SLUG}").split("?")[0]
+            latest_kernel_url = f"{base_url}?versionNumber={v_num}" if v_num else base_url
+            print(f"[OK] Job accepted by Kaggle cloud API on {user} (Version #{v_num})!")
+            print(f"URL: {latest_kernel_url}")
+            try:
+                from discord_notifier import update_run_log
+                if run_message_id:
+                    update_run_log(
+                        run_message_id, v_num, secrets_to_pass["CURIO_SLOT"], latest_kernel_url,
+                        "QUEUED", time.time() - run_started_at,
+                        f"Kaggle accepted the run on {user}. Waiting for the execution container to start.\n"
+                    )
+            except Exception as e:
+                print(f"Notice: Could not initialize per-run Discord log: {e}")
+            try:
+                from discord_notifier import notify_engine
+                notify_engine(
+                    title=f"Autonomous Video Pipeline Triggered (v{v_num})" if v_num else "Autonomous Video Pipeline Triggered",
+                    description=f"CurioCut dispatched **{secrets_to_pass['CURIO_SLOT'].upper()}** to Kaggle Cloud GPU runner (Account: `{user}`).\n\n[Open Kaggle Run v{v_num}]({latest_kernel_url})",
+                    fields=[
+                        {"name": "Slot", "value": secrets_to_pass["CURIO_SLOT"].upper(), "inline": True},
+                        {"name": "Account", "value": f"`{user}` ({current_account_idx + 1}/{len(KAGGLE_POOL)})", "inline": True},
+                        {"name": "Hardware", "value": "NVIDIA GPU (T4/P100)" if "GPU" in mode_str else "Cloud CPU", "inline": True},
+                        {"name": "Kernel Version", "value": f"Version #{v_num}" if v_num else "Latest", "inline": True}
+                    ],
+                    color=0x38BDF8,
+                    button_label=f"View Run v{v_num} on Kaggle" if v_num else "View Cloud Runner on Kaggle",
+                    button_url=latest_kernel_url
                 )
-        except Exception as e:
-            print(f"Notice: Could not initialize per-run Discord log: {e}")
+            except Exception:
+                pass
+            return res
+    except urllib.error.HTTPError as he:
+        body = ""
         try:
-            from discord_notifier import notify_engine
-            notify_engine(
-                title=f"Autonomous Video Pipeline Triggered (v{v_num})" if v_num else "Autonomous Video Pipeline Triggered",
-                description=f"CurioCut dispatched **{secrets_to_pass['CURIO_SLOT'].upper()}** to Kaggle Cloud GPU runner.\n\n[Open Kaggle Run v{v_num}]({latest_kernel_url})",
-                fields=[
-                    {"name": "Slot", "value": secrets_to_pass["CURIO_SLOT"].upper(), "inline": True},
-                    {"name": "Hardware", "value": "NVIDIA GPU (T4/P100)" if "GPU" in mode_str else "Cloud CPU", "inline": True},
-                    {"name": "Kernel Version", "value": f"Version #{v_num}" if v_num else "Latest", "inline": True}
-                ],
-                color=0x38BDF8,
-                button_label=f"View Run v{v_num} on Kaggle" if v_num else "View Cloud Runner on Kaggle",
-                button_url=latest_kernel_url
-            )
+            body = he.read().decode("utf-8")
         except Exception:
             pass
-        return res
+        err_msg = f"HTTP {he.code}: {he.reason} - {body}"
+        if is_account_block_error(err_msg) and (current_account_idx + 1 < len(KAGGLE_POOL)):
+            next_user = KAGGLE_POOL[current_account_idx + 1]["user"]
+            print(f"\n[ACCOUNT BLOCKED / QUOTA EXHAUSTED] Account '{user}': {err_msg[:120]}")
+            print(f"[FAILOVER] Auto-switching to standby account: '{next_user}'...")
+            current_account_idx += 1
+            notify_account_failover(user, next_user, f"Account restriction: {err_msg[:80]}")
+            return push_kernel(enable_gpu=enable_gpu)
+        raise RuntimeError(f"Kaggle push failed: {err_msg}")
+    except RuntimeError as re_err:
+        err_str = str(re_err)
+        if is_account_block_error(err_str) and (current_account_idx + 1 < len(KAGGLE_POOL)):
+            next_user = KAGGLE_POOL[current_account_idx + 1]["user"]
+            print(f"\n[ACCOUNT BLOCKED / QUOTA EXHAUSTED] Account '{user}': {err_str[:120]}")
+            print(f"[FAILOVER] Auto-switching to standby account: '{next_user}'...")
+            current_account_idx += 1
+            notify_account_failover(user, next_user, f"Account restriction: {err_str[:80]}")
+            return push_kernel(enable_gpu=enable_gpu)
+        raise
 
 def fetch_worker_log(include_kaggle_api=False):
     """Fetch official execution logs from Kaggle API when job completes or fails."""
     if include_kaggle_api:
         try:
-            req_out = urllib.request.Request(out_url, headers={"Authorization": f"Bearer {KAGGLE_TOKEN}"})
+            acc = get_current_account()
+            req_out = urllib.request.Request(
+                get_out_url(acc["user"]),
+                headers={
+                    "Authorization": f"Bearer {acc['token']}",
+                    "User-Agent": "kaggle-api/v1.6.14"
+                }
+            )
             with urllib.request.urlopen(req_out, timeout=20) as resp_out:
                 out_data = json.loads(resp_out.read().decode("utf-8"))
-                return out_data.get("log", "") or ""
+                raw = out_data.get("log", "") or ""
+                return clean_kaggle_log(raw)
         except Exception:
             pass
     return ""
@@ -306,16 +426,25 @@ def main():
                 pass
 
         try:
-            req_st = urllib.request.Request(status_url, headers={"Authorization": f"Bearer {KAGGLE_TOKEN}"})
+            acc = get_current_account()
+            user = acc["user"]
+            token = acc["token"]
+            req_st = urllib.request.Request(
+                get_status_url(user),
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "User-Agent": "kaggle-api/v1.6.14"
+                }
+            )
             with urllib.request.urlopen(req_st, timeout=20) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 st = data.get("status", "unknown")
                 fail_msg = data.get("failureMessage", "")
                 script_v_id = data.get("scriptVersionId") or data.get("versionId") or data.get("id")
                 if script_v_id:
-                    latest_kernel_url = f"https://www.kaggle.com/code/{KAGGLE_USER}/{KERNEL_SLUG}?scriptVersionId={script_v_id}"
+                    latest_kernel_url = f"https://www.kaggle.com/code/{user}/{KERNEL_SLUG}?scriptVersionId={script_v_id}"
                 
-                print(f"  [{elapsed}s] Cloud Worker Status: {st.upper()}")
+                print(f"  [{elapsed}s] Cloud Worker Status ({user}): {st.upper()}")
                 
                 # Kaggle API takes 30-45s to transition away from previous run's status.
                 # If status reports complete/error in the first 60 seconds, it's stale status from the prior run.
@@ -348,10 +477,31 @@ def main():
                         print(latest_worker_log[-1000:])
                     sys.exit(0)
                 elif st == "error":
-                    print(f"\n[ERROR] Cloud Execution Error: {fail_msg}")
+                    print(f"\n[ERROR] Cloud Execution Error on {user}: {fail_msg}")
                     latest_worker_log = fetch_worker_log(include_kaggle_api=True) or latest_worker_log
                     if fail_msg:
                         latest_worker_log += f"\nKaggle failure: {fail_msg}\n"
+                    
+                    # Quota auto-failover if killed mid-run:
+                    if (is_account_block_error(fail_msg) or is_account_block_error(latest_worker_log)) and (current_account_idx + 1 < len(KAGGLE_POOL)):
+                        next_user = KAGGLE_POOL[current_account_idx + 1]["user"]
+                        print(f"\n[MID-RUN FAILOVER] Account '{user}' halted: {fail_msg}")
+                        print(f"[FAILOVER] Auto-migrating job to standby account '{next_user}'...")
+                        notify_account_failover(user, next_user, f"Mid-run termination: {fail_msg or 'Session/Quota limit'}")
+                        current_account_idx += 1
+                        try:
+                            push_kernel(enable_gpu=True)
+                            start_t = time.time()
+                            queued_start = time.time()
+                            has_alerted_2h = False
+                            has_alerted_3h = False
+                            continue
+                        except Exception as failover_err:
+                            print(f"[ERROR] Standby failover dispatch failed: {failover_err}")
+                            latest_worker_log += f"\nStandby failover dispatch failed: {failover_err}\n"
+                            publish_run_log("FAILED", latest_worker_log)
+                            sys.exit(1)
+
                     publish_run_log("FAILED", latest_worker_log)
                     if latest_worker_log:
                         print("\n--- CLOUD ERROR LOGS ---")
@@ -362,6 +512,28 @@ def main():
                     latest_worker_log = fetch_worker_log(include_kaggle_api=True) or latest_worker_log
                     publish_run_log("CANCELLED", latest_worker_log)
                     sys.exit(1)
+        except urllib.error.HTTPError as he:
+            if he.code in (401, 403) and (current_account_idx + 1 < len(KAGGLE_POOL)):
+                next_user = KAGGLE_POOL[current_account_idx + 1]["user"]
+                print(f"\n[AUTH BLOCK] Account '{user}' returned HTTP {he.code}. Auto-switching to standby account '{next_user}'...")
+                notify_account_failover(user, next_user, f"Authentication/permission error: HTTP {he.code}")
+                current_account_idx += 1
+                try:
+                    push_kernel(enable_gpu=True)
+                    start_t = time.time()
+                    queued_start = time.time()
+                    has_alerted_2h = False
+                    has_alerted_3h = False
+                    continue
+                except Exception as push_err:
+                    print(f"[ERROR] Failover push failed: {push_err}")
+                    latest_worker_log += f"\nFailover push failed: {push_err}\n"
+                    publish_run_log("FAILED", latest_worker_log)
+                    sys.exit(1)
+            elif he.code == 404 and elapsed < 90:
+                print(f"  [{elapsed}s] Waiting for Kaggle API to register kernel endpoint on {user}...")
+            else:
+                print(f"  Status check HTTP {he.code}: {he.reason}")
         except Exception as e:
             print(f"  Status check: {e}")
 

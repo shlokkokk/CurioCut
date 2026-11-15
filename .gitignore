@@ -1,6 +1,9 @@
 # Environment variables & API keys
 .env
 *.env
+kaggle_*.json
+kaggle_*.txt
+access_token
 
 # YouTube & OAuth Credentials
 youtube_token.json
