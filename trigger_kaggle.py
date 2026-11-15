@@ -7,6 +7,7 @@ import json
 import urllib.request
 import urllib.parse
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 
 # Load environment variables if local .env exists
@@ -48,7 +49,20 @@ def load_kaggle_pool():
         pool = [{"user": u1, "token": t1}]
     return pool
 
-KAGGLE_POOL = load_kaggle_pool()
+def load_daily_ordered_pool():
+    """Loads all accounts and cyclically rotates the active pool based on the day of the year."""
+    raw_pool = load_kaggle_pool()
+    if not raw_pool:
+        return raw_pool
+    # Day-of-year modulo (Day 1 -> Acc 1, Day 2 -> Acc 2, Day 3 -> Acc 3, Day 4 -> Acc 4, Day 5 -> Acc 1...)
+    day_num = datetime.now(timezone.utc).timetuple().tm_yday
+    day_offset = day_num % len(raw_pool)
+    ordered = raw_pool[day_offset:] + raw_pool[:day_offset]
+    print(f"[ROUND-ROBIN POOL] Day {day_num} of year -> Daily Lead: '{ordered[0]['user']}'")
+    print(f"[ROUND-ROBIN POOL] Circular Failover Order: {[a['user'] for a in ordered]}")
+    return ordered
+
+KAGGLE_POOL = load_daily_ordered_pool()
 current_account_idx = 0
 
 def get_current_account():
@@ -155,6 +169,7 @@ os.environ["INSTAGRAM_ACCOUNT_ID"] = {repr(secrets_to_pass["INSTAGRAM_ACCOUNT_ID
 os.environ["INSTAGRAM_ACCESS_TOKEN"] = {repr(secrets_to_pass["INSTAGRAM_ACCESS_TOKEN"])}
 os.environ["YOUTUBE_TOKEN_JSON"] = {repr(secrets_to_pass["YOUTUBE_TOKEN_JSON"])}
 os.environ["CURIO_SLOT"] = {repr(secrets_to_pass["CURIO_SLOT"])}
+os.environ["KAGGLE_CURRENT_USER"] = {repr(get_current_account()["user"])}
 os.environ["DISCORD_RUN_MESSAGE_ID"] = {repr(secrets_to_pass["DISCORD_RUN_MESSAGE_ID"])}
 os.environ["DISCORD_WEBHOOK_ENGINE_LOGS"] = {repr(secrets_to_pass["DISCORD_WEBHOOK_ENGINE_LOGS"])}
 os.environ["DISCORD_WEBHOOK_ALERTS"] = {repr(secrets_to_pass["DISCORD_WEBHOOK_ALERTS"])}
@@ -175,6 +190,7 @@ def push_kernel(enable_gpu=True):
     acc = get_current_account()
     user = acc["user"]
     token = acc["token"]
+    prepare_worker_payload()
     mode_str = "NVIDIA Tesla T4 GPU (16 GB VRAM)" if enable_gpu else "High-Speed 4-Core Cloud Compute"
     print(f"\nDispatching kernel: {user}/{KERNEL_SLUG} [{mode_str}] (Account {current_account_idx + 1}/{len(KAGGLE_POOL)}: {user})...")
     
@@ -227,17 +243,18 @@ def push_kernel(enable_gpu=True):
                 print(f"Notice: Could not initialize per-run Discord log: {e}")
             try:
                 from discord_notifier import notify_engine
+                role_str = "Daily Lead" if current_account_idx == 0 else f"Failover Standby #{current_account_idx}"
                 notify_engine(
-                    title=f"Autonomous Video Pipeline Triggered (v{v_num})" if v_num else "Autonomous Video Pipeline Triggered",
-                    description=f"CurioCut dispatched **{secrets_to_pass['CURIO_SLOT'].upper()}** to Kaggle Cloud GPU runner (Account: `{user}`).\n\n[Open Kaggle Run v{v_num}]({latest_kernel_url})",
+                    title=f"GPU Cloud Engine Dispatched -> `{user}`",
+                    description=f"CurioCut dispatched **{secrets_to_pass['CURIO_SLOT'].upper()}** to Kaggle GPU runner.\n**Selected Account**: `{user}` ({role_str}, {current_account_idx + 1}/{len(KAGGLE_POOL)} in pool)\n\n[Open Kaggle Execution v{v_num}]({latest_kernel_url})",
                     fields=[
+                        {"name": "Selected Account", "value": f"`{user}` ({role_str})", "inline": True},
                         {"name": "Slot", "value": secrets_to_pass["CURIO_SLOT"].upper(), "inline": True},
-                        {"name": "Account", "value": f"`{user}` ({current_account_idx + 1}/{len(KAGGLE_POOL)})", "inline": True},
                         {"name": "Hardware", "value": "NVIDIA GPU (T4/P100)" if "GPU" in mode_str else "Cloud CPU", "inline": True},
                         {"name": "Kernel Version", "value": f"Version #{v_num}" if v_num else "Latest", "inline": True}
                     ],
                     color=0x38BDF8,
-                    button_label=f"View Run v{v_num} on Kaggle" if v_num else "View Cloud Runner on Kaggle",
+                    button_label=f"View {user} on Kaggle (v{v_num})" if v_num else f"View {user} on Kaggle",
                     button_url=latest_kernel_url
                 )
             except Exception:
@@ -329,8 +346,10 @@ def publish_run_log(status, log_text=None):
         title_match = re.search(r"(?:Final Title:|Generated)\s*['\"]?([^'\"\n]+)", current_log, re.IGNORECASE)
         style_match = re.search(r"Starting 3D short generation \(Slot:\s*([^|)]+)\|\s*Style:\s*([^\)]+)", current_log, re.IGNORECASE)
         slot_label = secrets_to_pass["CURIO_SLOT"]
+        acc_name = get_current_account()["user"]
+        slot_label = f"{slot_label} · [{acc_name}]"
         if style_match:
-            slot_label = f"{style_match.group(1).strip()} · {style_match.group(2).strip()}"
+            slot_label = f"{style_match.group(1).strip()} · {style_match.group(2).strip()} · [{acc_name}]"
         update_run_log(
             run_message_id, run_version, slot_label, latest_kernel_url,
             status, time.time() - run_started_at, current_log,
@@ -463,11 +482,30 @@ def main():
 
                 # Keep waiting for GPU (Kaggle batch GPU queue normally takes 2-8 minutes, ceiling 30 mins)
                 if gpu_requested and st == "queued" and (time.time() - queued_start) > 1800:
-                    print("\n[WARNING] GPU queue reached 30-minute wait ceiling. Auto-switching to Cloud Compute...")
-                    gpu_requested = False
-                    push_kernel(enable_gpu=False)
-                    queued_start = time.time()
-                    continue
+                    if current_account_idx + 1 < len(KAGGLE_POOL):
+                        next_user = KAGGLE_POOL[current_account_idx + 1]["user"]
+                        print(f"\n[QUEUE DELAY] GPU queue reached 30m on {user}. Shifting to standby account {next_user}...")
+                        notify_account_failover(user, next_user, "GPU queue 30-minute wait ceiling reached")
+                        current_account_idx += 1
+                        push_kernel(enable_gpu=True)
+                        queued_start = time.time()
+                        start_t = time.time()
+                        continue
+                    else:
+                        print("\n[WARNING] All GPU accounts in pool queued. Falling back to Cloud Compute...")
+                        try:
+                            from discord_notifier import notify_alert
+                            notify_alert(
+                                title="All GPU Queues Congested - Fallback Activated",
+                                details="All accounts in the GPU pool reached 30m queue wait ceiling. Falling back to High-Speed Cloud Compute.",
+                                severity="warning"
+                            )
+                        except Exception:
+                            pass
+                        gpu_requested = False
+                        push_kernel(enable_gpu=False)
+                        queued_start = time.time()
+                        continue
 
                 if st == "complete":
                     print("\n" + "="*70)

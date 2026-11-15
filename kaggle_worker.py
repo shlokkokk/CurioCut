@@ -303,14 +303,16 @@ if style_arg == "town-rule":
         os.environ["BLENDER_EXE"] = str(blender_bin)
         os.environ["PATH"] = f"{blender_bin.parent}:{os.environ.get('PATH', '')}"
 
-print(f"\n[4/4] Starting 3D short generation (Slot: {slot} | Style: {style_arg})...", flush=True)
+current_acc = os.environ.get("KAGGLE_CURRENT_USER", "Kaggle Cloud GPU")
+print(f"\n[4/4] Starting 3D short generation (Account: {current_acc} | Slot: {slot} | Style: {style_arg})...", flush=True)
 
 try:
     from discord_notifier import notify_engine, notify_error
     notify_engine(
-        title="Cloud Video Engine Booted",
-        description=f"GPU execution environment active for **{slot.upper()}**.",
+        title=f"Cloud Video Engine Booted -> `{current_acc}`",
+        description=f"GPU execution environment active for **{slot.upper()}** on account `{current_acc}`.",
         fields=[
+            {"name": "Active Account", "value": f"`{current_acc}`", "inline": True},
             {"name": "Slot", "value": slot.upper(), "inline": True},
             {"name": "Visual Style", "value": style_arg.upper(), "inline": True},
             {"name": "Audio Engine", "value": "Dual Kokoro Stereo", "inline": True}
