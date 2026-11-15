@@ -101,10 +101,13 @@ def clean_kaggle_log(raw_log: str) -> str:
 def notify_account_failover(old_user, new_user, reason):
     try:
         from discord_notifier import notify_alert
+        new_url = get_kernel_url(new_user)
         notify_alert(
             title="Kaggle Multi-Account Failover Activated",
             details=f"Account `{old_user}` reached limit: **{reason}**.\nAuto-rotating to standby account `{new_user}` ({current_account_idx + 1}/{len(KAGGLE_POOL)} in pool).",
-            severity="warning"
+            severity="warning",
+            button_label=f"View {new_user} on Kaggle",
+            button_url=new_url
         )
     except Exception as ex:
         print(f"Notice: Failover alert error: {ex}")
@@ -503,6 +506,17 @@ def main():
                             sys.exit(1)
 
                     publish_run_log("FAILED", latest_worker_log)
+                    try:
+                        from discord_notifier import notify_error
+                        notify_error(
+                            context=f"Kaggle GPU Execution ({user})",
+                            error_msg=fail_msg or "Execution failed on cloud runner",
+                            stack_trace=latest_worker_log[-1200:] if latest_worker_log else None,
+                            button_label="Inspect Failed Kaggle Run",
+                            button_url=latest_kernel_url
+                        )
+                    except Exception:
+                        pass
                     if latest_worker_log:
                         print("\n--- CLOUD ERROR LOGS ---")
                         print(latest_worker_log)
