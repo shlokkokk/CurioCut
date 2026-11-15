@@ -191,7 +191,7 @@ def push_kernel(enable_gpu=True):
     user = acc["user"]
     token = acc["token"]
     prepare_worker_payload()
-    mode_str = "NVIDIA Tesla T4 GPU (16 GB VRAM)" if enable_gpu else "High-Speed 4-Core Cloud Compute"
+    mode_str = "NVIDIA Tesla T4 GPU (16 GB VRAM)" if enable_gpu else "CPU (4-Core / High-Speed)"
     print(f"\nDispatching kernel: {user}/{KERNEL_SLUG} [{mode_str}] (Account {current_account_idx + 1}/{len(KAGGLE_POOL)}: {user})...")
     
     payload = {
@@ -497,7 +497,7 @@ def main():
                             from discord_notifier import notify_alert
                             notify_alert(
                                 title="All GPU Queues Congested - Fallback Activated",
-                                details="All accounts in the GPU pool reached 30m queue wait ceiling. Falling back to High-Speed Cloud Compute.",
+                                details="All accounts in the GPU pool reached 30m queue wait ceiling. Falling back to CPU mode (4-Core / High-Speed).",
                                 severity="warning"
                             )
                         except Exception:
