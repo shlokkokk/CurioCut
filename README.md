@@ -1,196 +1,201 @@
-# CurioCut
+<div align="center">
 
-A fully autonomous short-form video pipeline that runs on a $0 stack. Every day it picks a topic, generates a script, renders a 3D animated scene, voices it with Kokoro TTS, and uploads the finished video to YouTube Shorts and Instagram Reels, all without touching a single button.
+# 🎬 CurioCut
 
----
+### Autonomous Short-Form Video Studio & Publishing Pipeline
+**Fully automated • Dual 3D Render Engines • Zero Monthly Cloud Cost**
 
-## How It Works
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Blender 4.3](https://img.shields.io/badge/Blender-4.3_EEVEE_Next-E87D0D?style=for-the-badge&logo=blender&logoColor=white)](https://blender.org)
+[![Three.js](https://img.shields.io/badge/Three.js-WebGL_Studio-000000?style=for-the-badge&logo=three.js&logoColor=white)](https://threejs.org)
+[![Kokoro TTS](https://img.shields.io/badge/Kokoro_TTS-Neural_Voice-7C3AED?style=for-the-badge)](https://github.com/thewh1teagle/kokoro-onnx)
+[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Edge_Worker-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)](https://workers.cloudflare.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
 
-Three cron slots fire daily (1 PM, 7 PM, and 9:30 PM IST). Each slot:
+<br/>
 
-1. Cloudflare Edge Worker wakes up and fires a `repository_dispatch` event to GitHub Actions
-2. GitHub Actions triggers `trigger_kaggle.py`, which queues the job on a Kaggle GPU notebook
-3. Kaggle pulls the repo, generates the script and dialogue, renders the video in headless Chrome with WebGL, and uploads to YouTube + Instagram
-4. Live render progress streams to Discord in real-time via the bot. Every Kaggle version also gets its own updating card and `run_v{version}.log` attachment in `#run-logs`. Post notifications with direct action buttons arrive in `#youtube-posts` and `#instagram-posts`.
-5. Instagram comments matching the CTA keyword (`MCPSER`, `TOOL`, etc.) get an auto-reply and a DM with the resource link: handled 24/7 by Cloudflare Edge, not Kaggle
+*CurioCut autonomously researches trending topics, generates natural screenplays, animates 3D scenes, synthesizes dual-speaker neural audio, aligns word-synced subtitles, and publishes finished vertical videos to YouTube Shorts and Instagram Reels — with zero manual intervention and $0 monthly compute cost.*
 
-Total monthly cost: $0.
-
----
-
-## Video Styles
-
-The pipeline has two modes. `claude-desk` is the flagship 3D style; the rest rotate through classic 2D/3D animation styles for story content.
-
-| Style | Description |
-|---|---|
-| `claude-desk` | Two 3D characters (Guide + Skeptic) at a glowing desk debating a dev tool or Claude skill. Cinematic speaker cuts, dynamic props, Kokoro dual-voice. |
-| `tall-tale` | 2D toon characters in a 3D sunny world. True stories told fast and funny. |
-| `deep-dive` | Zack D. Films style 3D anatomy/science explainer. |
-| `night-file` | Dark mystery and true crime. Low key lighting, dramatic pacing. |
-| `inside-out` | 2D x-ray cutaway explainer. |
-| `paper-atlas` | Cut-paper collage look for history topics. |
-| `stick-story` | Minimal stick-figure survival and life-hack format. |
+</div>
 
 ---
 
-## Repo Layout
+## ⚡ Highlights
+
+- **$0 Serverless Stack**: Orchestrated across Cloudflare Edge, GitHub Actions, and cloud GPU environments with round-robin quota rotation.
+- **Dual 3D Engines**: Headless WebGL (Three.js/Chrome) for fast dynamic studio dialogue + Headless Blender 4.3 (EEVEE Next) for procedural 3D narrative films.
+- **Multi-Speaker Neural Speech**: Ultra-fast ONNX-powered Kokoro TTS paired with acoustic silence trimming and phonetic tech normalization.
+- **Phonetic Word-Level Subtitles**: Sub-second alignment powered by faster-whisper, generating highlighted kinetic captions directly onto the canvas.
+- **Autonomous Multi-Platform Publishing**: Direct automated publishing to YouTube Shorts (YouTube Data API v3) and Instagram Reels (Meta Graph API v21).
+- **24/7 Edge Comment-to-DM Engine**: Cloudflare Worker instantly detects keyword triggers on reels and delivers private resource DMs in seconds.
+- **Real-Time Discord Observability**: Live frame-by-frame render meters, remote control trigger buttons, and versioned execution logs.
+
+---
+
+## 🏗️ System Architecture
 
 ```
-.
-├── make_short.py               # Main pipeline entry point (script → audio → render → upload)
-├── generate_script.py          # Story script generator (Gemini / Groq / offline fallback)
-├── generate_tech_dialogue.py   # Two-person dialogue generator for claude-desk style
-├── tech_harvester.py           # Finds trending MCP servers, GitHub repos, HN posts
-├── story_harvester.py          # Finds story topics from Reddit, Wikipedia, Groq
-├── dual_voice.py               # Kokoro TTS for Guide + Skeptic voices
-├── discord_notifier.py         # Discord Bot API helpers for all 9 channels
-├── instagram_comment_bot.py    # Comment auto-responder and DM dispatcher (backup)
-├── instagram_uploader.py       # Uploads reel via Meta Graph API v21
-├── youtube_uploader.py         # Uploads short via YouTube Data API v3
-├── kaggle_worker.py            # Cloud runner that executes on Kaggle GPU
-├── trigger_kaggle.py           # Dispatches and streams Kaggle notebook run
-├── authenticate_youtube.py     # One-time OAuth flow to generate youtube_token.json
-├── published_reels.json        # Maps Instagram media IDs to reel metadata for comment bot
-├── requirements.txt
-│
-├── cloudflare/
-│   ├── worker.js               # Edge worker: cron triggers, Discord interactions, IG webhooks
-│   └── wrangler.toml           # Deployment config (3 cron slots)
-│
-├── faceless-shorts-skill/
-│   └── faceless-shorts/
-│       ├── scripts/            # voice.py (Kokoro TTS), words.py (Whisper captions), mix.py
-│       └── styles/
-│           ├── claude-desk/    # 3D studio scene (Three.js: toon.js, shots.js, props.js, etc.)
-│           ├── tall-tale/
-│           ├── deep-dive/
-│           ├── night-file/
-│           ├── inside-out/
-│           ├── paper-atlas/
-│           └── stick-story/
-│
-└── .github/workflows/
-    └── daily-shorts.yml        # GitHub Actions: receives dispatch, triggers Kaggle
+┌─────────────────────────────────────────────────────────────┐
+│                 1. CLOUDFLARE EDGE WORKER                   │
+│  • Precision Cron Schedulers (3 Daily Release Slots)        │
+│  • 24/7 Instagram Comment-to-DM Lead Delivery               │
+│  • Discord Remote Control & Emergency Quota Protection      │
+└──────────────────────────────┬──────────────────────────────┘
+                               │ repository_dispatch
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  2. GITHUB ACTIONS DISPATCHER               │
+│  • Multi-Account Pool Manager (Automated Round-Robin)       │
+│  • Account Health Check & Failover Switching                │
+└──────────────────────────────┬──────────────────────────────┘
+                               │ triggers GPU runner
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   3. CLOUD GPU RUNNER                       │
+│  ┌───────────────────────┐       ┌───────────────────────┐  │
+│  │    Narrative AI       │       │    Audio Synthesis    │  │
+│  │ • Gemini / Groq LLMs  │  ──►  │ • Kokoro ONNX Dual-TTS│  │
+│  │ • Anti-cliché prompts │       │ • Whisper Alignments  │  │
+│  └───────────────────────┘       └───────────────────────┘  │
+│              │                               │              │
+│              ▼                               ▼              │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │                 Dual Visual Render Engines            │  │
+│  │  • Three.js WebGL (Headless Chrome + Puppeteer)       │  │
+│  │  • Blender 4.3 EEVEE Next (Procedural 3D Cinema)      │  │
+│  │  • FFmpeg 1080x1920 (9:16 Vertical HD Muxing)         │  │
+│  └───────────────────────────────────────────────────────┘  │
+└──────────────────────────────┬──────────────────────────────┘
+                               │ publishes video
+                               ▼
+        ┌─────────────────────────────────────────────┐
+        │             DISTRIBUTION NETWORK            │
+        │  • YouTube Shorts (OAuth v3 API)            │
+        │  • Instagram Reels (Meta Graph API v21)     │
+        │  • Discord Community Live Stream Feeds      │
+        └─────────────────────────────────────────────┘
 ```
 
 ---
 
-## The Rendering Stack
+## 🎨 Creative Animation Suites
 
-Each animation style is a self-contained Three.js scene running in headless Chrome via Puppeteer. The capture pipeline:
+CurioCut intelligently matches story scripts to distinct visual worlds:
 
-- `tools/capture.mjs`: drives Chrome DevTools Protocol, captures frames at 1080x1920 (9:16), pipes raw frames to FFmpeg
-- `tools/mix.py`: blends the Kokoro voiceover, procedural sound cues, and music bed into `data/mix.wav`
-- `scripts/words.py`: runs faster-whisper on the audio to get word-level timestamps for the caption system
-- `scripts/voice.py`: single-speaker Kokoro TTS for non-dialogue styles
-
-For `claude-desk`, `dual_voice.py` runs first to alternate between Guide (`am_fenrir`) and Skeptic (`af_bella`) voices and produce `data/lines.json` with per-line speaker + timing data that `shots.js` reads to drive cinematic speaker cuts.
-
----
-
-## Discord Control Panel
-
-The `#panel` channel has buttons to trigger any slot on demand, create a custom topic, skip the next slot, or emergency stop. All button interactions are handled by the Cloudflare worker (no server needed).
-
-The `#live-progress` channel shows a single message that edits in real-time as frames render, with a progress bar and frame counter. Buttons for YouTube and Instagram appear once the upload is done.
-
-The `#run-logs` channel keeps a separate message for every Kaggle version. The dispatcher refreshes its status card and replaces the attached `run_v{version}.log` snapshot about once a minute while the job runs, then writes a final snapshot for completed, failed, cancelled, or timed-out jobs. Each card links directly to its Kaggle version. Logs are capped to the newest 7 MB per attachment to stay within Discord's upload limit.
+| Style | Engine | Description |
+|---|---|---|
+| **`claude-desk`** | Three.js / WebGL | **Flagship Tech Studio.** Two 3D characters (*Guide* + *Skeptic*) at a glowing desk debating dev tools and AI skills with dynamic holographic props. |
+| **`dev-studio`** | Three.js / WebGL | **Developer Loft.** Seated developer and a hovering ceramic mascot robot exploring open-source GitHub breakthroughs. |
+| **`town-rule`** | Blender 4.3 EEVEE | **Cinematic 3D Narrative.** Procedural environments, custom facial decal rigs, atmospheric lighting, and rule-based psychological horror/mystery. |
+| **`deep-dive`** | Three.js / WebGL | **Medical & Anatomy Explainer.** Zack D. Films style 3D biological cross-sections, glowing cyan X-ray views, and macro vessel journeys. |
+| **`tall-tale`** | Three.js / WebGL | **Cartoon True Stories.** Flat 2D animated characters moving through a sunny 3D town world exploring bizarre loopholes and heists. |
+| **`night-file`** | Three.js / WebGL | **Investigative Mystery.** Low-key 3D noir corridors, cork evidence boards with connecting red strings, and typewriter archives. |
+| **`paper-atlas`** | Three.js / WebGL | **Historical Cut-Paper.** Aged parchment maps, crimson movement routes, and wax seals chronicling turning points in history. |
 
 ---
 
-## Comment-to-DM
+## 🔄 Daily Production Slots (IST)
 
-When a viewer comments the CTA keyword on a reel, the Cloudflare worker:
+| Slot | Local Time | Topic Focus | Visual Engine |
+|---|---|---|---|
+| **Slot 1** | **1:00 PM IST** (11:55 AM trigger) | Rule-based suspense / Classic true stories | Blender 4.3 EEVEE Next / WebGL |
+| **Slot 2** | **7:00 PM IST** (05:55 PM trigger) | Claude skills & autonomous developer tools | Three.js (`claude-desk`) |
+| **Slot 3** | **9:30 PM IST** (08:55 PM trigger) | Open-source GitHub exploits & AI break-outs | Three.js (`dev-studio`) |
 
-1. Verifies the comment has no existing replies (live Meta Graph API check)
-2. Posts a public reply on the reel
-3. Sends a private DM with the resource link
-4. Updates the `#dms-sent` Discord channel
-
-Deduplication runs at two layers: a 24-hour edge cache keyed by comment ID, and a live reply check on the Meta API before any action is taken.
+*All slots can be triggered on demand or skipped via the Discord remote panel.*
 
 ---
 
-## Setup
+## 🚀 The Core Pipeline
+
+### 1. Intelligent Scripting & Directing
+* Dynamic topic harvesting from curated vaults and real-time open-source repositories.
+* Screenplay generation optimized for spoken cadence, short conversational cuts (1.5–2.5s), and zero AI buzzwords.
+* Phonetic normalizer transforms technical jargon (`API` $\rightarrow$ `A.P.I.`, `MCP` $\rightarrow$ `M.C.P.`, `$50K` $\rightarrow$ `fifty thousand dollars`).
+
+### 2. Dual-Speaker Audio Engineering
+* **Guide**: Grounded, resonant masculine voice (`am_fenrir`).
+* **Skeptic / Mascot**: Bright, emotive questioning voice (`af_bella`).
+* Phonetic word timestamps generated by faster-whisper drive dynamic speaker switching and kinetic captions.
+* Procedural sound effects and lo-fi audio beds mixed via NumPy.
+
+### 3. Headless GPU Video Rendering
+* Headless Chrome captures synchronized 1080×1920 frames via Chrome DevTools Protocol.
+* Blender 4.3 EEVEE Next renders procedural geometry, volumetric lighting, and camera paths.
+* Direct pipe to FFmpeg for hardware-accelerated H.264 video compression.
+
+### 4. Edge Comment-to-DM Automation
+* Viewers comment the designated trigger keyword (e.g. `TOOL`, `CLAUDE`, `AGENT`) on Instagram Reels.
+* Cloudflare Worker checks deduplication in KV cache and live Meta Graph API.
+* Automatically posts a public reply and sends a private direct message with the resource link.
+
+---
+
+## 📡 Discord Command & Observability Suite
+
+CurioCut streams every phase of production to a dedicated Discord operations center:
+
+- **`#live-progress`**: A single auto-updating message reflecting real-time render percentage, active frame counts, and platform links.
+- **`#panel`**: Interactive buttons to trigger slots on demand, inject custom topics, skip upcoming slots, or execute an emergency stop.
+- **`#run-logs`**: Versioned execution cards with attached logs for cloud runs.
+- **`#youtube-posts` & `#instagram-posts`**: Instant notifications with direct link buttons when videos go live.
+- **`#dms-sent`**: Real-time audit log of automated Instagram direct messages delivered.
+
+---
+
+## 🛠️ Local Development & Quickstart
 
 ### Prerequisites
-
 - Python 3.11+
 - Node.js 18+
-- Google Chrome (for local rendering)
-- Kaggle account (for cloud GPU rendering)
-- Cloudflare account (free tier)
+- Google Chrome (for local WebGL rendering)
+- FFmpeg
 
-### Credentials needed
+### Installation
+```bash
+# Clone the repository
+git clone https://github.com/shlokkokk/CurioCut.git
+cd CurioCut
 
-Create a `.env` file in the project root:
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### Render a Single Short Locally
+```bash
+# Generate and render a claude-desk video
+python make_short.py --style claude-desk
+
+# Render a fast draft preview
+python make_short.py --style tall-tale --draft
+
+# Render and publish directly
+python make_short.py --style claude-desk --upload
+```
+
+### Environment Configuration
+Create a `.env` file in the root directory:
 
 ```env
-GROQ_API_KEY=
-GEMINI_API_KEY=
-GEMINI_API_KEY_BACKUP=
+# AI Scripting Engines
+GEMINI_API_KEY=your_gemini_api_key
+GROQ_API_KEY=your_groq_api_key
 
-INSTAGRAM_ACCOUNT_ID=
-INSTAGRAM_ACCESS_TOKEN=
+# Social Platforms
+INSTAGRAM_ACCOUNT_ID=your_instagram_account_id
+INSTAGRAM_ACCESS_TOKEN=your_instagram_token
 
-DISCORD_BOT_TOKEN=
-DISCORD_APPLICATION_ID=
-DISCORD_PUBLIC_KEY=
+# Discord Observability (Bot & Webhooks)
+DISCORD_BOT_TOKEN=your_discord_bot_token
+DISCORD_APPLICATION_ID=your_discord_app_id
+DISCORD_WEBHOOK_LIVE_PROGRESS=your_webhook_url
+DISCORD_WEBHOOK_ENGINE_LOGS=your_webhook_url
 ```
 
-For YouTube, run `authenticate_youtube.py` once to generate `youtube_token.json`.
-
-### GitHub Actions secrets
-
-The workflow reads these from GitHub Secrets:
-
-```
-GEMINI_API_KEY, GEMINI_API_KEY_BACKUP, GROQ_API_KEY
-KAGGLE_USERNAME, KAGGLE_API_TOKEN
-YOUTUBE_TOKEN_JSON
-INSTAGRAM_ACCOUNT_ID, INSTAGRAM_ACCESS_TOKEN
-DISCORD_BOT_TOKEN
-```
-
-### Cloudflare Worker secrets
-
-```bash
-npx wrangler secret put GITHUB_TOKEN
-npx wrangler secret put DISCORD_BOT_TOKEN
-npx wrangler secret put INSTAGRAM_ACCESS_TOKEN
-```
-
-### Local render (single video)
-
-```bash
-pip install -r requirements.txt
-python make_short.py --style claude-desk
-python make_short.py --style tall-tale --upload
-```
-
-### Deploy Cloudflare worker
-
-```bash
-cd cloudflare
-npx wrangler deploy
-```
+*For YouTube Shorts, run `python authenticate_youtube.py` once to establish OAuth credentials.*
 
 ---
 
-## Cron Schedule (IST)
+## 📄 License
 
-| Slot | Trigger | Style |
-|---|---|---|
-| 1 | 11:55 AM | Classic rotation |
-| 2 | 6:25 PM | Classic rotation |
-| 3 | 8:55 PM | `claude-desk` (flagship) |
-
-All three slots can also be manually triggered from Discord `#panel` or via GitHub Actions `workflow_dispatch`.
-
----
-
-## License
-
-MIT. The Three.js vendor files in `faceless-shorts-skill/` are MIT licensed separately (see `vendor/LICENSE-three.txt` in each style directory).
-
+This project is licensed under the MIT License. Included third-party visual components and libraries are subject to their respective upstream licenses.
