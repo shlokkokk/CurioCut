@@ -925,13 +925,23 @@ const TECH_DM_REPLIES = [
   "Sent @{user}! Check your Instagram DMs."
 ];
 
-const STORY_PUBLIC_REPLIES = [
-  "Appreciate you watching @{user}! Follow @curiocutt so you don't miss tomorrow's story.",
-  "Wild right?! New bizarre true stories drop daily on @curiocutt, hit follow to stay tuned.",
-  "Thanks for dropping by @{user}! Follow @curiocutt for more stories like this every day.",
-  "Glad you caught this one @{user}, follow so tomorrow's drop hits your feed!",
-  "Appreciate the comment @{user}! Follow @curiocutt for daily deep dives and true stories."
+const STORY_CONVERSATION_REPLIES = [
+  "Wild right?! Did you see that twist coming or did it get you? @{user} 👀 Follow @curiocutt for tomorrow's rule drop.",
+  "Appreciate you watching @{user}! If you woke up in this town tomorrow, how long are you surviving? Follow for tomorrow's drop!",
+  "Glad you caught this one @{user}! What would you have done under this rule? Follow to catch the next town story.",
+  "Thanks for watching @{user}! Do you think the rule was fair or completely twisted? Follow @curiocutt so tomorrow's story hits your feed.",
+  "Appreciate the comment @{user}! What kind of bizarre rule do you think the next town should have? Hit follow to stay tuned."
 ];
+
+const REPEAT_FAN_REPLIES = [
+  "Always great seeing you back @{user}! What would you do if you were trapped under this town's rule? 👀",
+  "You never miss a drop @{user} 🙌 Did you expect that ending or did it completely surprise you?",
+  "Our day-one regular @{user}! 🔥 If you woke up in this town tomorrow, how long are you surviving?",
+  "Appreciate the constant love on these drops @{user}! What crazy rule should the next town have?",
+  "The legend @{user} is back! Do you think the protagonist made the right call or was it a mistake?"
+];
+
+const STORY_PUBLIC_REPLIES = STORY_CONVERSATION_REPLIES;
 
 function pickReply(list, seedStr, vars) {
   let hash = 0;
@@ -1252,15 +1262,36 @@ async function processInstagramComment(comment, env, skipReplyCheck = false) {
   const validResourceUrl = /^https?:\/\/\S+$/i.test(rule.resource_url || "") ? rule.resource_url : "";
   const safeRuleTitle = (rule.title || "CurioCut Reel").replace(/[\[\]()]/g, "").slice(0, 120);
 
-  // Mode 1: Non-Tech Story Reel -> rotating "follow for more" public reply only, NO DM
+  // Mode 1: Non-Tech Story Reel -> engaging conversation starters & fan recognition
   if (rule.mode === "story" || !validResourceUrl) {
     if (normalizeToken(text).length < 2) {
       console.log(`[Instagram Responder] Skipping short/empty story comment ${commentId}: "${text}"`);
       return { commentId, mediaId, mode: "story", skipped: "too_short" };
     }
+
+    // Check repeat fan status via KV
+    let userCommentCount = 1;
+    let isRepeatFan = false;
+    const unameLower = (user || "").toLowerCase().trim();
+    if (["lwk_muji", "jokee_peraltaa", "shlokkshahh"].includes(unameLower)) {
+      isRepeatFan = true;
+    }
+    if (env && env.REELS_KV && unameLower) {
+      try {
+        const cmtKey = `user_cmt:${unameLower}`;
+        const prevCount = await env.REELS_KV.get(cmtKey);
+        userCommentCount = prevCount ? (parseInt(prevCount, 10) + 1) : (isRepeatFan ? 2 : 1);
+        if (userCommentCount >= 2) isRepeatFan = true;
+        await env.REELS_KV.put(cmtKey, String(userCommentCount), { expirationTtl: 2592000 }); // 30 days
+      } catch (eKv) {
+        console.error("KV user count error:", eKv);
+      }
+    }
+
+    const replyPool = isRepeatFan ? REPEAT_FAN_REPLIES : STORY_CONVERSATION_REPLIES;
     const pubText = rule.public_reply
       ? applyTemplate(rule.public_reply, { user, keyword: rule.keyword, title: safeRuleTitle })
-      : pickReply(STORY_PUBLIC_REPLIES, commentId || text, { user });
+      : pickReply(replyPool, commentId || text, { user });
 
     const rep = await postMetaCommentReply(commentId, pubText, token);
     const publicOk = rep.ok;
@@ -1276,12 +1307,13 @@ async function processInstagramComment(comment, env, skipReplyCheck = false) {
           },
           body: JSON.stringify({
             embeds: [{
-              title: publicOk ? "Story Comment Replied" : "Story Reply Failed",
+              title: publicOk ? (isRepeatFan ? "⭐ Repeat Fan Replied" : "Story Comment Replied") : "Story Reply Failed",
               description: `@${user} commented \`${safeText}\` on **${safeRuleTitle}**`.slice(0, 1500),
-              color: publicOk ? 0x0EA5E9 : 0xEF4444,
+              color: publicOk ? (isRepeatFan ? 0xF59E0B : 0x0EA5E9) : 0xEF4444,
               fields: [
                 { name: "Reply Sent", value: (publicOk ? pubText : (rep.errorMsg || "Meta API error")).slice(0, 900), inline: false },
-                { name: "Mode", value: "Story Reel (Public Follow-CTA Only, No DM)", inline: false }
+                { name: "Audience Tier", value: isRepeatFan ? `⭐ Repeat Supporter (Comment #${userCommentCount})` : "New / 1st-Time Commenter", inline: true },
+                { name: "Mode", value: "Conversation Starter (No DM)", inline: true }
               ],
               footer: { text: "24/7 Cloudflare Edge Auto-Responder" }
             }],
@@ -1361,9 +1393,9 @@ async function processInstagramComment(comment, env, skipReplyCheck = false) {
   if (rule.dm_text) {
     dmText = applyTemplate(rule.dm_text, { user, keyword: reelKeyword, title: reelTitle, link: resourceUrl });
   } else if (isClaudeSkill) {
-    dmText = `Hey @${user}! Here is the Claude skill you asked for (${reelTitle}):\n\n1-Click Install in Claude Code:\nAsk Claude Code: "install ${resourceUrl}"\n\nGitHub Repo & Setup Guide:\n${resourceUrl}\n\nTip: You can also add this to your claude_desktop_config.json under mcpServers.\n\nFollow @curiocutt for daily AI tools and Claude skills!`;
+    dmText = `Hey @${user}! Here is the resource you requested for ${reelTitle}:\n\n🔗 Direct Repo & Guide:\n${resourceUrl}\n\n⚡ Quick Setup:\nPaste the link into Claude or any AI coding agent and ask it to install and configure it for you.\n\n💬 Hit any errors or get stuck? Just reply here and I'll help you get it running!\n\nFollow @curiocutt for daily AI tools!`;
   } else {
-    dmText = `Hey @${user}! Here is the repo link for ${reelTitle}:\n\nLink: ${resourceUrl}\n\nClone the repo or ask Claude Code to set it up for you.\n\nFollow @curiocutt for daily open-source AI drops!`;
+    dmText = `Hey @${user}! Here is the resource you requested for ${reelTitle}:\n\n🔗 Direct Repo & Guide:\n${resourceUrl}\n\n⚡ Quick Setup:\nPaste the link into Claude or any AI agent and ask: "Help me install and run this locally."\n\n💬 Hit any errors or get stuck? Just reply here and I'll help you get it running!\n\nFollow @curiocutt for daily open-source AI drops!`;
   }
 
   const dmPayload = {

@@ -232,19 +232,20 @@ def process_reels_comments(default_keyword="JARVIS", default_url="https://github
                 # Step 3: Send private DM
                 if is_claude_skill:
                     dm_msg = (
-                        f"Hey @{c_user}! Here is the Claude Skill you requested for '{reel_title}':\n\n"
-                        f"⚡ 1-Click Install via Claude Code:\n"
-                        f"Ask Claude Code in terminal: 'install {reel_url}'\n\n"
-                        f"🔗 Direct MCP Repository & Guide:\n"
-                        f"{reel_url}\n\n"
-                        f"💡 Desktop Tip: You can also add this to your claude_desktop_config.json under 'mcpServers'.\n\n"
+                        f"Hey @{c_user}! Here is the resource you requested for '{reel_title}':\n\n"
+                        f"🔗 Direct Repo & Guide:\n{reel_url}\n\n"
+                        f"⚡ Quick Setup:\n"
+                        f"Paste the link into Claude or any AI coding agent and ask it to install and configure it for you.\n\n"
+                        f"💬 Hit any errors or get stuck? Just reply here and I'll help you get it running!\n\n"
                         f"Follow @curiocutt for daily underground AI exploits!"
                     )
                 else:
                     dm_msg = (
-                        f"Hey @{c_user}! Here is the direct link and prompt you requested for '{reel_title}':\n\n"
-                        f"🔗 Resource: {reel_url}\n\n"
-                        f"Setup instructions: Clone the repo or paste the link into Claude Code and say 'install this for me'.\n\n"
+                        f"Hey @{c_user}! Here is the resource you requested for '{reel_title}':\n\n"
+                        f"🔗 Direct Repo & Guide:\n{reel_url}\n\n"
+                        f"⚡ Quick Setup:\n"
+                        f"Paste the link into Claude or any AI agent and ask: 'Help me install and run this locally.'\n\n"
+                        f"💬 Hit any errors or get stuck? Just reply here and I'll help you get it running!\n\n"
                         f"Follow @curiocutt for daily underground AI exploits!"
                     )
                 dm_ok = False
