@@ -127,7 +127,11 @@ def run_cmd(cmd, cwd=None, env=None, on_line=None):
         process.stdout.close()
     return_code = process.wait()
     if return_code != 0:
-        raise RuntimeError(f"Command failed with code {return_code}: {' '.join(cmd)}")
+        tail = "".join(output_lines[-25:]).strip()
+        err_msg = f"Command failed with code {return_code}: {' '.join(cmd)}"
+        if tail:
+            err_msg += f"\n--- Diagnostics ---\n{tail}"
+        raise RuntimeError(err_msg)
     return ''.join(output_lines)
 
 def get_next_style(history_file):
@@ -241,10 +245,14 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
         file_size_mb = output_mp4.stat().st_size / (1024 * 1024)
         print(f"Render complete: {output_mp4.resolve()} ({file_size_mb:.2f} MB)")
 
+        acc_label = os.environ.get("KAGGLE_CURRENT_USER", "Local PC")
         notify_engine(
             title="Video Render Complete",
             description=f"**{title}** is rendered ({file_size_mb:.1f} MB). Ready to upload.",
-            fields=[{"name": "Style", "value": style, "inline": True}],
+            fields=[
+                {"name": "Account", "value": f"`{acc_label}`", "inline": True},
+                {"name": "Style", "value": style, "inline": True}
+            ],
             color=0x3B82F6
         )
     else:
@@ -324,10 +332,12 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
         print(f"Title: {title}")
         print(f"Style: {style}")
 
+        acc_label = os.environ.get("KAGGLE_CURRENT_USER", "Local PC")
         notify_engine(
             title="Short Generation Started",
             description=f"CurioCut engine started generating: **{title}**",
             fields=[
+                {"name": "Account", "value": f"`{acc_label}`", "inline": True},
                 {"name": "Style", "value": style, "inline": True},
                 {"name": "Upload Target", "value": "YouTube + Instagram" if upload else "Local Only", "inline": True}
             ]
@@ -413,10 +423,12 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
         file_size_mb = output_mp4.stat().st_size / (1024 * 1024)
         print(f"Render complete: {output_mp4.resolve()} ({file_size_mb:.2f} MB)")
 
+        acc_label = os.environ.get("KAGGLE_CURRENT_USER", "Local PC")
         notify_engine(
             title="Video Render Complete",
             description=f"**{title}** is rendered ({file_size_mb:.1f} MB). Ready to upload.",
             fields=[
+                {"name": "Account", "value": f"`{acc_label}`", "inline": True},
                 {"name": "Style", "value": style, "inline": True}
             ],
             color=0x3B82F6

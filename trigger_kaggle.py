@@ -415,7 +415,12 @@ def main():
             print(f"  [ALERT] 2 hours elapsed on GPU worker. Dispatching Quota Guardian check to Discord...")
             try:
                 from discord_notifier import notify_long_run_alert
-                notify_long_run_alert(elapsed, latest_kernel_url)
+                acc_name = get_current_account()["user"]
+                slot_name = secrets_to_pass.get("CURIO_SLOT", "auto")
+                phase_label = describe_run_phase(st, latest_worker_log)
+                title_match = re.search(r"(?:Final Title:|Generated)\s*['\"]?([^'\"\n]+)", latest_worker_log, re.IGNORECASE)
+                ep_title = title_match.group(1).strip() if title_match else None
+                notify_long_run_alert(elapsed, latest_kernel_url, account=acc_name, slot=slot_name, phase=phase_label, title=ep_title)
             except Exception as ex:
                 print(f"  Notice: Long run alert dispatch: {ex}")
 
@@ -424,7 +429,12 @@ def main():
             print(f"  [ALERT] 3 hours elapsed on GPU worker. Dispatching CRITICAL Quota Guardian check to Discord...")
             try:
                 from discord_notifier import notify_long_run_alert
-                notify_long_run_alert(elapsed, latest_kernel_url)
+                acc_name = get_current_account()["user"]
+                slot_name = secrets_to_pass.get("CURIO_SLOT", "auto")
+                phase_label = describe_run_phase(st, latest_worker_log)
+                title_match = re.search(r"(?:Final Title:|Generated)\s*['\"]?([^'\"\n]+)", latest_worker_log, re.IGNORECASE)
+                ep_title = title_match.group(1).strip() if title_match else None
+                notify_long_run_alert(elapsed, latest_kernel_url, account=acc_name, slot=slot_name, phase=phase_label, title=ep_title)
             except Exception as ex:
                 print(f"  Notice: Long run alert dispatch: {ex}")
 

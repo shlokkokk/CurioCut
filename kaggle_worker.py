@@ -361,7 +361,20 @@ else:
             details=f"Pipeline aborted on cloud runner (exit code {ret_code}). Check logs for details.",
             is_error=True
         )
-        notify_error("Cloud Runner", f"Worker stopped with code {ret_code}")
+        full_diag = streamer.get_full_log()
+        diag_snippet = "\n".join([l for l in full_diag.splitlines() if l.strip()][-30:])
+        notify_error("Cloud Runner", f"Worker stopped with code {ret_code}", stack_trace=diag_snippet)
     except Exception:
         pass
-    sys.exit(ret_code)
+
+    # HARD TERMINATE: Kill any orphaned background child processes and force exit Kaggle container immediately
+    print("\n[CRITICAL SHUTDOWN] Force terminating GPU container to protect weekly quota...", flush=True)
+    try:
+        if sys.platform != "win32":
+            os.system("pkill -9 -f chrome 2>/dev/null || true")
+            os.system("pkill -9 -f blender 2>/dev/null || true")
+            os.system("pkill -9 -f ffmpeg 2>/dev/null || true")
+            os.system("pkill -9 -f node 2>/dev/null || true")
+    except Exception:
+        pass
+    os._exit(ret_code)

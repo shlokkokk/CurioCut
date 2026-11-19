@@ -289,7 +289,7 @@ def notify_alert(title, details, severity="warning", button_label=None, button_u
         components = make_action_row([make_button(button_label, button_url)])
     return send_embed("alerts", embed, components=components)
 
-def notify_long_run_alert(elapsed_seconds, kernel_url=None):
+def notify_long_run_alert(elapsed_seconds, kernel_url=None, account=None, slot=None, phase=None, title=None):
     """Sends a Quota Guardian health check alert to Discord #alerts with Open Kaggle & Stop buttons."""
     hrs = elapsed_seconds / 3600.0
     is_critical = hrs >= 2.8
@@ -300,14 +300,25 @@ def notify_long_run_alert(elapsed_seconds, kernel_url=None):
         if is_critical else
         "Cloud GPU engine is still active. If normal (such as dense scene rendering), you can let it proceed. If stuck or hung, click Stop GPU Engine to abort and protect your weekly quota."
     )
+    fields = [
+        {"name": "Elapsed Time", "value": f"{int(elapsed_seconds // 60)} minutes ({hrs:.2f} hours)", "inline": True},
+    ]
+    if account:
+        fields.append({"name": "Active Account", "value": f"`{account}`", "inline": True})
+    if slot:
+        fields.append({"name": "Active Job / Slot", "value": f"`{slot.upper()}`", "inline": True})
+    if phase:
+        fields.append({"name": "Current Phase", "value": f"`{phase}`", "inline": True})
+    if title:
+        fields.append({"name": "Episode / Topic", "value": f"**{title}**", "inline": False})
+        
+    fields.append({"name": "Safety Action", "value": "Click Stop GPU Engine to open confirmation modal", "inline": False})
+
     embed = {
         "title": f"{severity_prefix}GPU Run Health Check ({hrs:.1f} Hours Elapsed)",
         "description": desc,
         "color": color,
-        "fields": [
-            {"name": "Elapsed Time", "value": f"{int(elapsed_seconds // 60)} minutes ({hrs:.2f} hours)", "inline": True},
-            {"name": "Safety Action", "value": "Click Stop GPU Engine to open confirmation modal", "inline": True}
-        ],
+        "fields": fields,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "footer": {"text": "CurioCut Quota Guardian"}
     }
