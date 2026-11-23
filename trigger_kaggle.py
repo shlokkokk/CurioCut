@@ -359,7 +359,7 @@ def publish_run_log(status, log_text=None):
         print(f"Notice: Per-run Discord log update failed: {e}")
 
 def main():
-    global run_message_id, run_started_at, latest_worker_log, run_version, latest_kernel_url
+    global run_message_id, run_started_at, latest_worker_log, run_version, latest_kernel_url, current_account_idx
     run_started_at = time.time()
     print("\n" + "="*70)
     print("   CURIO CUT - AUTONOMOUS CLOUD DISPATCHER   ")
@@ -398,7 +398,7 @@ def main():
 
     print("\nMonitoring Cloud execution...")
     start_t = time.time()
-    max_wait = 43200  # 720 minutes (12 hours) matching Kaggle maximum session ceiling
+    max_wait = 19800  # 330 minutes (5.5 hours) to ensure clean exit & alerts before GitHub Actions 6h ceiling
     queued_start = time.time()
     has_alerted_2h = False
     has_alerted_3h = False

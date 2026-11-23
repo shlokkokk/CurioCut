@@ -16,8 +16,8 @@ if ENV_FILE.exists():
             k, v = line.split("=", 1)
             os.environ.setdefault(k.strip(), v.strip())
 
-TOKEN = os.environ.get("KAGGLE_API_TOKEN", "KGAT_2b148c0780213910a41e366af92f5e16")
-USER = os.environ.get("KAGGLE_USERNAME", "shlokkshahh")
+TOKEN = os.environ.get("KAGGLE_API_TOKEN", "")
+USER = os.environ.get("KAGGLE_USERNAME", "")
 SLUG = "curiocut-gpu-engine"
 
 def get_status(version=None):
