@@ -398,7 +398,7 @@ def main():
 
     print("\nMonitoring Cloud execution...")
     start_t = time.time()
-    max_wait = 19800  # 330 minutes (5.5 hours) to ensure clean exit & alerts before GitHub Actions 6h ceiling
+    max_wait = 43200  # 720 minutes (12 hours) matching Kaggle maximum session ceiling
     queued_start = time.time()
     has_alerted_2h = False
     has_alerted_3h = False
