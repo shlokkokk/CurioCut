@@ -99,7 +99,7 @@ CurioCut intelligently matches story scripts to distinct visual worlds:
 | Slot | Local Time | Topic Focus | Visual Engine |
 |---|---|---|---|
 | **Slot 1** | **1:00 PM IST** (11:55 AM trigger) | Rule-based suspense / Classic true stories | Blender 4.3 EEVEE Next / WebGL |
-| **Slot 2** | **7:00 PM IST** (05:55 PM trigger) | Claude skills & autonomous developer tools | Three.js (`claude-desk`) |
+| **Slot 2** | **6:30 PM IST** (04:15 PM trigger) | Claude skills & autonomous developer tools | Three.js (`claude-desk`) |
 | **Slot 3** | **9:30 PM IST** (08:55 PM trigger) | Open-source GitHub exploits & AI break-outs | Three.js (`dev-studio`) |
 
 *All slots can be triggered on demand or skipped via the Discord remote panel.*

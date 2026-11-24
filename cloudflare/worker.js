@@ -155,7 +155,7 @@ export default {
 
     // Slot 1 default is temporarily "town-rule" while trending (swap back to "classic" anytime)
     let slotType = "town-rule";
-    if (hourUTC === 12 || cronStr.includes("12")) {
+    if (cronStr === "45 10 * * *" || hourUTC === 10) {
       slotType = "claude-desk";
     } else if (hourUTC === 15 || cronStr.includes("15")) {
       slotType = "dev-studio";
