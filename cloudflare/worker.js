@@ -691,6 +691,63 @@ export default {
       });
     }
 
+    if (path === "/api/track") {
+      if (request.method === "OPTIONS") {
+        return new Response(null, {
+          status: 204,
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type"
+          }
+        });
+      }
+      if (request.method === "POST") {
+        ctx.waitUntil((async () => {
+          try {
+            if (!env.REELS_KV) return;
+            const payload = await request.json();
+            const allowed = new Set(["visit", "open_repo", "watch_reel", "copy_prompt", "copy_git"]);
+            const ev = String(payload?.event || "").toLowerCase();
+            if (!allowed.has(ev)) return;
+            const kw = normalizeToken(payload?.keyword || "").slice(0, 24);
+            const totals = (await env.REELS_KV.get("stats:totals", "json")) || {};
+            totals[ev] = (totals[ev] || 0) + 1;
+            totals.updated_at = Date.now();
+            await env.REELS_KV.put("stats:totals", JSON.stringify(totals));
+            if (kw) {
+              const kwStats = (await env.REELS_KV.get(`stats:kw:${kw}`, "json")) || {};
+              kwStats[ev] = (kwStats[ev] || 0) + 1;
+              await env.REELS_KV.put(`stats:kw:${kw}`, JSON.stringify(kwStats));
+            }
+          } catch {}
+        })());
+        return new Response(JSON.stringify({ ok: true }), {
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            "Access-Control-Allow-Origin": "*"
+          }
+        });
+      }
+    }
+
+    if (path === "/api/stats" && request.method === "GET") {
+      if (!(await verifyEdgeAuth(request, env))) {
+        return Response.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+      }
+      if (!env.REELS_KV) {
+        return Response.json({ ok: false, error: "REELS_KV not bound" }, { status: 500 });
+      }
+      const totals = (await env.REELS_KV.get("stats:totals", "json")) || {};
+      const listed = await env.REELS_KV.list({ prefix: "stats:kw:", limit: 100 });
+      const byKeyword = {};
+      const vals = await Promise.all(listed.keys.map(k => env.REELS_KV.get(k.name, "json")));
+      listed.keys.forEach((k, i) => {
+        if (vals[i]) byKeyword[k.name.replace("stats:kw:", "")] = vals[i];
+      });
+      return Response.json({ ok: true, totals, byKeyword });
+    }
+
     if (path === "/links" || path === "/links/") {
       const items = await getVaultItems(env);
       return new Response(renderLinksHubPage(items), {
