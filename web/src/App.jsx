@@ -617,49 +617,53 @@ export default function App() {
                       </div>
 
                       <div className="drop-foot">
-                        <a
-                          className="btn btn-outline drop-open-btn"
-                          href={it.resource_url}
-                          rel="noopener"
-                          onClick={(e) => handleExternalClick(e, it, 'repo')}
-                        >
-                          Open Repo
-                          <ArrowUpRight size={14} />
-                        </a>
-                        <div className="drop-foot-sub">
+                        <div className="drop-foot-row1">
+                          <a
+                            className="btn btn-outline drop-open-btn"
+                            href={it.resource_url}
+                            rel="noopener"
+                            onClick={(e) => handleExternalClick(e, it, 'repo')}
+                          >
+                            Open Repo
+                            <ArrowUpRight size={14} />
+                          </a>
                           <button
                             type="button"
-                            className="btn btn-ghost drop-sub-btn"
+                            className="btn drop-setup-btn"
                             onClick={() => setSelected(it)}
                             aria-label="Setup & Prompt"
                             title="Setup & Prompt"
                           >
-                            <Terminal size={12} />
+                            <Terminal size={13} />
                             Setup
                           </button>
-                          {it.permalink && (
-                            <a
-                              className="btn btn-ghost drop-sub-btn"
-                              href={it.permalink}
-                              rel="noopener"
-                              onClick={(e) => handleExternalClick(e, it, 'reel')}
-                            >
-                              <IgIcon size={12} />
-                              Instagram
-                            </a>
-                          )}
-                          {it.yt_url && (
-                            <a
-                              className="btn btn-ghost drop-sub-btn drop-sub-yt"
-                              href={it.yt_url}
-                              rel="noopener"
-                              onClick={(e) => handleExternalClick(e, it, 'yt')}
-                            >
-                              <YtIcon size={12} />
-                              YouTube
-                            </a>
-                          )}
                         </div>
+                        {(it.permalink || it.yt_url) && (
+                          <div className="drop-foot-row2">
+                            {it.permalink && (
+                              <a
+                                className="btn drop-social-btn drop-ig-btn"
+                                href={it.permalink}
+                                rel="noopener"
+                                onClick={(e) => handleExternalClick(e, it, 'reel')}
+                              >
+                                <IgIcon size={13} />
+                                Instagram
+                              </a>
+                            )}
+                            {it.yt_url && (
+                              <a
+                                className="btn drop-social-btn drop-yt-btn"
+                                href={it.yt_url}
+                                rel="noopener"
+                                onClick={(e) => handleExternalClick(e, it, 'yt')}
+                              >
+                                <YtIcon size={13} />
+                                YouTube
+                              </a>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </motion.article>
                   );

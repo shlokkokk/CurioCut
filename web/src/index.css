@@ -611,36 +611,74 @@ html, body {
   border-top: 1px solid var(--hairline);
 }
 
-.drop-open-btn {
-  width: 100%;
-  height: 36px;
-  padding: 0 0.85rem;
-  font-size: 0.81rem;
+.drop-foot-row1 {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
 }
 
-.drop-foot-sub {
+.drop-open-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 36px;
+  padding: 0 0.85rem;
+  font-size: 0.8rem;
+}
+
+.drop-setup-btn {
+  flex: 0 0 auto;
+  height: 36px;
+  padding: 0 0.8rem;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--accent);
+  background: rgba(212, 255, 62, 0.08);
+  border: 1px solid rgba(212, 255, 62, 0.28);
+}
+
+.drop-setup-btn:hover {
+  background: rgba(212, 255, 62, 0.16);
+  border-color: rgba(212, 255, 62, 0.55);
+}
+
+.drop-foot-row2 {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
-  gap: 0.4rem;
+  gap: 0.45rem;
 }
 
-.drop-sub-btn {
-  height: 31px;
-  padding: 0 0.5rem;
-  gap: 5px;
-  font-size: 0.73rem;
+.drop-social-btn {
+  height: 32px;
+  padding: 0 0.65rem;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
   border-radius: 8px;
-  color: var(--muted);
 }
 
-.drop-sub-btn:hover {
-  color: var(--text);
+.drop-ig-btn {
+  color: #f9a8d4;
+  background: rgba(225, 48, 108, 0.09);
+  border: 1px solid rgba(225, 48, 108, 0.26);
 }
 
-.drop-sub-yt:hover {
-  border-color: rgba(255, 70, 70, 0.45);
-  color: #ff6b6b;
+.drop-ig-btn:hover {
+  color: #fbcfe8;
+  background: rgba(225, 48, 108, 0.17);
+  border-color: rgba(225, 48, 108, 0.5);
+}
+
+.drop-yt-btn {
+  color: #fca5a5;
+  background: rgba(255, 59, 59, 0.09);
+  border: 1px solid rgba(255, 59, 59, 0.26);
+}
+
+.drop-yt-btn:hover {
+  color: #fecaca;
+  background: rgba(255, 59, 59, 0.17);
+  border-color: rgba(255, 59, 59, 0.5);
 }
 
 /* Inspector Drawer */
