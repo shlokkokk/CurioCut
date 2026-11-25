@@ -351,12 +351,12 @@ export default function App() {
               <Search size={13} />
               <span>Search</span>
             </button>
-            <a className="yt-link" href="https://www.youtube.com/@CurioCutt" rel="noopener">
+            <a className="yt-link" href="https://www.youtube.com/@CurioCutt" target="_blank" rel="noopener noreferrer">
               <YtIcon size={14} />
               YouTube
               <ArrowUpRight size={13} />
             </a>
-            <a className="ig-link" href="https://instagram.com/curiocutt" rel="noopener">
+            <a className="ig-link" href="https://instagram.com/curiocutt" target="_blank" rel="noopener noreferrer">
               <IgIcon size={13} />
               @curiocutt
               <ArrowUpRight size={13} />
@@ -373,7 +373,7 @@ export default function App() {
               <a
                 className="social-pill-mobile"
                 href="https://instagram.com/curiocutt"
-                rel="noopener"
+                target="_blank" rel="noopener noreferrer"
                 aria-label="Instagram @curiocutt"
               >
                 <IgIcon size={14} />
@@ -382,7 +382,7 @@ export default function App() {
               <a
                 className="social-pill-mobile social-pill-yt"
                 href="https://www.youtube.com/@CurioCutt"
-                rel="noopener"
+                target="_blank" rel="noopener noreferrer"
                 aria-label="YouTube @CurioCutt"
               >
                 <YtIcon size={14} />
@@ -412,7 +412,7 @@ export default function App() {
             Every AI agent, Claude skill, and developer exploit featured on{' '}
             <a
               href="https://instagram.com/curiocutt"
-              rel="noopener"
+              target="_blank" rel="noopener noreferrer"
               style={{ color: 'var(--text)', textDecoration: 'underline', textDecorationColor: 'var(--accent)', textUnderlineOffset: '3px', fontWeight: 600 }}
             >
               @curiocutt
@@ -537,7 +537,7 @@ export default function App() {
                   <a
                     className="btn btn-accent featured-primary"
                     href={featuredItem.resource_url}
-                    rel="noopener"
+                    target="_blank" rel="noopener noreferrer"
                     onClick={(e) => handleExternalClick(e, featuredItem, 'repo')}
                   >
                     Open Repository
@@ -558,7 +558,7 @@ export default function App() {
                           <a
                             className="btn btn-outline"
                             href={featuredItem.permalink}
-                            rel="noopener"
+                            target="_blank" rel="noopener noreferrer"
                             onClick={(e) => handleExternalClick(e, featuredItem, 'reel')}
                           >
                             <IgIcon size={13} />
@@ -569,7 +569,7 @@ export default function App() {
                           <a
                             className="btn btn-outline"
                             href={featuredItem.yt_url}
-                            rel="noopener"
+                            target="_blank" rel="noopener noreferrer"
                             onClick={(e) => handleExternalClick(e, featuredItem, 'yt')}
                           >
                             <YtIcon size={13} />
@@ -621,7 +621,7 @@ export default function App() {
                           <a
                             className="btn btn-outline drop-open-btn"
                             href={it.resource_url}
-                            rel="noopener"
+                            target="_blank" rel="noopener noreferrer"
                             onClick={(e) => handleExternalClick(e, it, 'repo')}
                           >
                             Open Repo
@@ -644,7 +644,7 @@ export default function App() {
                               <a
                                 className="btn drop-social-btn drop-ig-btn"
                                 href={it.permalink}
-                                rel="noopener"
+                                target="_blank" rel="noopener noreferrer"
                                 onClick={(e) => handleExternalClick(e, it, 'reel')}
                               >
                                 <IgIcon size={13} />
@@ -655,7 +655,7 @@ export default function App() {
                               <a
                                 className="btn drop-social-btn drop-yt-btn"
                                 href={it.yt_url}
-                                rel="noopener"
+                                target="_blank" rel="noopener noreferrer"
                                 onClick={(e) => handleExternalClick(e, it, 'yt')}
                               >
                                 <YtIcon size={13} />
@@ -689,8 +689,8 @@ export default function App() {
         <footer className="footer">
           <span>CURIOCUT INDEX • LIVE EDGE FEED</span>
           <div style={{ display: 'flex', gap: 16 }}>
-            <a href="https://instagram.com/curiocutt" rel="noopener">Instagram</a>
-            <a href="https://curiocut-corn.pcgpt00.workers.dev/privacy" rel="noopener">Privacy</a>
+            <a href="https://instagram.com/curiocutt" target="_blank" rel="noopener noreferrer">Instagram</a>
+            <a href="https://curiocut-corn.pcgpt00.workers.dev/privacy" target="_blank" rel="noopener noreferrer">Privacy</a>
           </div>
         </footer>
       </div>
@@ -783,7 +783,7 @@ export default function App() {
                   className="btn btn-outline"
                   style={{ width: '100%' }}
                   href={selected.resource_url}
-                  rel="noopener"
+                  target="_blank" rel="noopener noreferrer"
                   onClick={(e) => handleExternalClick(e, selected, 'repo')}
                 >
                   Open Repository
@@ -795,7 +795,7 @@ export default function App() {
                       <a
                         className="btn btn-ghost"
                         href={selected.permalink}
-                        rel="noopener"
+                        target="_blank" rel="noopener noreferrer"
                         onClick={(e) => handleExternalClick(e, selected, 'reel')}
                       >
                         <IgIcon size={14} />
@@ -806,7 +806,7 @@ export default function App() {
                       <a
                         className="btn btn-ghost"
                         href={selected.yt_url}
-                        rel="noopener"
+                        target="_blank" rel="noopener noreferrer"
                         onClick={(e) => handleExternalClick(e, selected, 'yt')}
                       >
                         <YtIcon size={14} />
@@ -877,7 +877,7 @@ export default function App() {
                   className="btn btn-accent"
                   style={{ width: '100%', whiteSpace: 'nowrap' }}
                   href={pendingLink.url}
-                  rel="noopener"
+                  target="_blank" rel="noopener noreferrer"
                   onClick={() => {
                     const evName =
                       pendingLink.kind === 'reel'
