@@ -605,76 +605,63 @@ html, body {
 
 .drop-foot {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding-top: 0.8rem;
-  border-top: 1px solid var(--hairline);
-}
-
-.drop-foot-main {
-  display: flex;
   align-items: center;
   gap: 0.45rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--hairline);
 }
 
 .drop-open-btn {
   flex: 1 1 auto;
   min-width: 0;
-  padding: 0.52rem 0.75rem;
+  height: 36px;
+  padding: 0 0.75rem;
   font-size: 0.8rem;
 }
 
 .drop-icon-btn {
   flex: 0 0 auto;
-  padding: 0.52rem 0.75rem;
+  height: 36px;
+  padding: 0 0.7rem;
   gap: 5px;
   font-size: 0.78rem;
-  height: auto;
-  width: auto;
 }
 
-.drop-watch-strip {
-  display: flex;
+.drop-watch-seg {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.38rem 0.65rem;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.02);
+  height: 36px;
+  border-radius: 10px;
   border: 1px solid var(--hairline);
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
+  background: rgba(255, 255, 255, 0.02);
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
-.drop-watch-label {
+.drop-watch-half {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 100%;
   color: var(--muted);
-  letter-spacing: 0.08em;
-  font-size: 0.64rem;
-}
-
-.drop-watch-links {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.65rem;
-}
-
-.drop-watch-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--text);
   text-decoration: none;
-  opacity: 0.86;
-  transition: opacity 0.15s, color 0.15s;
+  transition: background 0.15s, color 0.15s;
 }
 
-.drop-watch-link:hover {
-  opacity: 1;
+.drop-watch-half:hover {
+  background: rgba(255, 255, 255, 0.06);
   color: var(--accent);
 }
 
 .drop-watch-yt:hover {
   color: #ff6b6b;
+}
+
+.drop-watch-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--hairline);
 }
 
 /* Inspector Drawer */
