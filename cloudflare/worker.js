@@ -1938,24 +1938,87 @@ function pluralVisits(n) {
   return `${(n || 0).toLocaleString()} ${n === 1 ? "visit" : "visits"}`;
 }
 
+async function fetchClaritySummary(env, numOfDays = 1) {
+  if (!env.CLARITY_API_TOKEN) return null;
+  const days = Math.min(3, Math.max(1, numOfDays));
+  const cacheKey = `clarity:cache:${days}d`;
+  if (env.REELS_KV) {
+    try {
+      const cached = await env.REELS_KV.get(cacheKey, "json");
+      if (cached) return cached;
+    } catch {}
+  }
+  try {
+    const res = await fetch(
+      `https://www.clarity.ms/export-data/api/v1/project-live-insights?numOfDays=${days}&dimension1=Device`,
+      {
+        headers: {
+          "Authorization": `Bearer ${env.CLARITY_API_TOKEN}`,
+          "Accept": "application/json",
+          "User-Agent": "CurioCut-Edge/1.0"
+        }
+      }
+    );
+    if (!res.ok) return null;
+    const raw = await res.json();
+    if (!Array.isArray(raw)) return null;
+
+    const findMetric = (name) => raw.find(m => m.metricName === name)?.information || [];
+    const traffic = findMetric("Traffic");
+    const scroll = findMetric("ScrollDepth");
+    const engage = findMetric("EngagementTime");
+
+    let users = 0, sessions = 0, bots = 0, mobile = 0, pc = 0;
+    for (const row of traffic) {
+      users += row.distinctUserCount || 0;
+      sessions += row.totalSessionCount || 0;
+      bots += row.totalBotSessionCount || 0;
+      if (row.Device === "Mobile") mobile += row.totalSessionCount || 0;
+      else if (row.Device === "PC") pc += row.totalSessionCount || 0;
+    }
+    const avgScroll = scroll.length
+      ? Math.round(scroll.reduce((a, r) => a + (r.averageScrollDepth || 0), 0) / scroll.length)
+      : 0;
+    const avgActive = engage.length
+      ? Math.round(engage.reduce((a, r) => a + (r.activeTime || 0), 0) / engage.length)
+      : 0;
+
+    const summary = { users, sessions, bots, mobile, pc, avgScroll, avgActive };
+    if (env.REELS_KV) {
+      await env.REELS_KV.put(cacheKey, JSON.stringify(summary), { expirationTtl: 14400 });
+    }
+    return summary;
+  } catch {
+    return null;
+  }
+}
+
 async function buildStatsEmbed(env, period = "today") {
   const istDay = getISTDateKey(0);
   const totals = (env.REELS_KV && await env.REELS_KV.get("stats:totals", "json")) || {};
 
   if (period === "week") {
-    const week = await aggregateWeekStats(env);
+    const [week, clarity] = await Promise.all([aggregateWeekStats(env), fetchClaritySummary(env, 3)]);
+    const fields = [
+      { name: "7-Day Visits", value: `\`${(week.visit || 0).toLocaleString()}\``, inline: true },
+      { name: "Repo Opens", value: `\`${(week.open_repo || 0).toLocaleString()}\``, inline: true },
+      { name: "Copies (Prompt / Git)", value: `\`${week.copy_prompt || 0}\` / \`${week.copy_git || 0}\``, inline: true },
+      { name: "Watch (IG / YT)", value: `\`${week.watch_reel || 0}\` / \`${week.watch_yt || 0}\``, inline: true },
+      { name: "All-Time Visits", value: `\`${(totals.visit || 0).toLocaleString()}\``, inline: true },
+    ];
+    if (clarity) {
+      fields.push({
+        name: "Clarity (Last 3 Days)",
+        value: `• **Users / Sessions:** \`${clarity.users}\` / \`${clarity.sessions}\` (\`${clarity.mobile}\` Mobile, \`${clarity.pc}\` PC)\n• **Avg Scroll / Active:** \`${clarity.avgScroll}%\` / \`${clarity.avgActive}s\``,
+        inline: false
+      });
+    }
+    fields.push({ name: "Top Drops (7d)", value: formatTopDrops(week.byKeyword, 5), inline: false });
     return {
       title: "Weekly Site Stats",
       description: `-# ${getISTDateKey(6)} to ${istDay} (IST)`,
       color: 0xD4FF3E,
-      fields: [
-        { name: "7-Day Visits", value: `\`${(week.visit || 0).toLocaleString()}\``, inline: true },
-        { name: "Repo Opens", value: `\`${(week.open_repo || 0).toLocaleString()}\``, inline: true },
-        { name: "Copies (Prompt / Git)", value: `\`${week.copy_prompt || 0}\` / \`${week.copy_git || 0}\``, inline: true },
-        { name: "Watch (IG / YT)", value: `\`${week.watch_reel || 0}\` / \`${week.watch_yt || 0}\``, inline: true },
-        { name: "All-Time Visits", value: `\`${(totals.visit || 0).toLocaleString()}\``, inline: true },
-        { name: "Top Drops (7d)", value: formatTopDrops(week.byKeyword, 5), inline: false }
-      ],
+      fields,
       footer: { text: "CurioCut Analytics • Weekly" }
     };
   }
@@ -1982,19 +2045,31 @@ async function buildStatsEmbed(env, period = "today") {
     };
   }
 
-  const today = (env.REELS_KV && await env.REELS_KV.get(`stats:day:${istDay}`, "json")) || {};
+  const [todayRaw, clarity] = await Promise.all([
+    env.REELS_KV ? env.REELS_KV.get(`stats:day:${istDay}`, "json") : null,
+    fetchClaritySummary(env, 1)
+  ]);
+  const today = todayRaw || {};
+  const fields = [
+    { name: "Today Visits", value: `\`${(today.visit || 0).toLocaleString()}\``, inline: true },
+    { name: "Repo Opens", value: `\`${(today.open_repo || 0).toLocaleString()}\``, inline: true },
+    { name: "Copies (Prompt / Git)", value: `\`${today.copy_prompt || 0}\` / \`${today.copy_git || 0}\``, inline: true },
+    { name: "Watch (IG / YT)", value: `\`${today.watch_reel || 0}\` / \`${today.watch_yt || 0}\``, inline: true },
+    { name: "All-Time Visits", value: `\`${(totals.visit || 0).toLocaleString()}\``, inline: true },
+  ];
+  if (clarity) {
+    fields.push({
+      name: "Clarity (Last 24h)",
+      value: `• **Users / Sessions:** \`${clarity.users}\` / \`${clarity.sessions}\` (\`${clarity.mobile}\` Mobile, \`${clarity.pc}\` PC)\n• **Avg Scroll / Active:** \`${clarity.avgScroll}%\` / \`${clarity.avgActive}s\``,
+      inline: false
+    });
+  }
+  fields.push({ name: "Top Drops Today", value: formatTopDrops(today.byKeyword, 5), inline: false });
   return {
     title: "Daily Site Stats",
     description: `-# ${istDay} (IST)`,
     color: 0xD4FF3E,
-    fields: [
-      { name: "Today Visits", value: `\`${(today.visit || 0).toLocaleString()}\``, inline: true },
-      { name: "Repo Opens", value: `\`${(today.open_repo || 0).toLocaleString()}\``, inline: true },
-      { name: "Copies (Prompt / Git)", value: `\`${today.copy_prompt || 0}\` / \`${today.copy_git || 0}\``, inline: true },
-      { name: "Watch (IG / YT)", value: `\`${today.watch_reel || 0}\` / \`${today.watch_yt || 0}\``, inline: true },
-      { name: "All-Time Visits", value: `\`${(totals.visit || 0).toLocaleString()}\``, inline: true },
-      { name: "Top Drops Today", value: formatTopDrops(today.byKeyword, 5), inline: false }
-    ],
+    fields,
     footer: { text: "CurioCut Analytics • Daily" }
   };
 }

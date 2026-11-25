@@ -23,8 +23,19 @@ const REFRESH_COOLDOWN_MS = 15000;
 const REFRESH_WINDOW_MS = 5 * 60 * 1000;
 const MAX_REFRESHES_PER_WINDOW = 5;
 
+const NOTRACK_KEY = 'curiocut_notrack';
+
+function isTrackingDisabled() {
+  try {
+    return typeof localStorage !== 'undefined' && localStorage.getItem(NOTRACK_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 function trackEvent(event, keyword = '') {
   try {
+    if (isTrackingDisabled()) return;
     if (typeof window !== 'undefined' && typeof window.clarity === 'function') {
       window.clarity('event', keyword ? `${event}_${keyword}` : event);
     }
@@ -193,7 +204,16 @@ export default function App() {
   };
 
   useEffect(() => {
-    const mode = new URLSearchParams(window.location.search).get('preview');
+    const params = new URLSearchParams(window.location.search);
+    const nt = params.get('notrack');
+    if (nt === '1') {
+      try { localStorage.setItem(NOTRACK_KEY, '1'); } catch {}
+      showToast('Tracking disabled on this browser', 'success');
+    } else if (nt === '0') {
+      try { localStorage.removeItem(NOTRACK_KEY); } catch {}
+      showToast('Tracking re-enabled on this browser', 'success');
+    }
+    const mode = params.get('preview');
     if (mode === 'offline') {
       setIsStale(true);
       setStaleReason('Your internet connection appears offline. Showing saved drops.');
