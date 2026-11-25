@@ -1,5 +1,6 @@
 # Generates two-person dialogue (Guide + Skeptic) for claude-desk style
 import os
+import re
 import sys
 import json
 import time
@@ -180,10 +181,30 @@ def generate_dialogue_script(story_info=None, style="claude-desk"):
     title = story_info.get("title", "")
     tool = story_info.get("tool_name", "")
     premise = story_info.get("premise", "")
-    cta = story_info.get("cta_keyword", "TOOL")
     url = story_info.get("resource_url", "")
 
+    # Pick a natural, topic-matched CTA keyword from a fixed Zorcha-synced pool
     is_dev_studio = (style == "dev-studio")
+    ctx_lower = f"{title} {tool} {premise}".lower()
+    if any(k in ctx_lower for k in ("mcp", "model context")):
+        pool = ["MCP", "SKILL", "CLAUDE"]
+    elif any(k in ctx_lower for k in ("prompt", "system prompt", "jailbreak")):
+        pool = ["PROMPT", "SKILL", "CLAUDE"]
+    elif any(k in ctx_lower for k in ("claude", "anthropic")):
+        pool = ["CLAUDE", "SKILL", "AGENT"]
+    elif any(k in ctx_lower for k in ("agent", "autonomous", "swarm", "workflow", "bot", "n8n")):
+        pool = ["AGENT", "AUTO", "FLOW", "BOT"]
+    elif any(k in ctx_lower for k in ("local", "ollama", "deepseek", "llama", "offline", "weights", "vram")):
+        pool = ["LOCAL", "MODEL", "RUN"]
+    elif any(k in ctx_lower for k in ("code", "coding", "cli", "terminal", "ide", "cursor", "playwright", "browser", "debug", "test", "api")):
+        pool = ["CODE", "DEV", "BUILD", "STACK"]
+    elif "github.com" in url.lower():
+        pool = ["GITHUB", "REPO", "SOURCE", "DROP"]
+    else:
+        pool = ["TOOL", "DROP", "LINK", "SOURCE"]
+
+    idx = sum(ord(ch) for ch in (title or tool or "curiocut")) % len(pool)
+    cta = pool[idx]
     system_prompt = DEV_STUDIO_SYSTEM_PROMPT if is_dev_studio else DIALOGUE_SYSTEM_PROMPT
 
     if is_dev_studio:
@@ -251,7 +272,7 @@ def generate_dialogue_script(story_info=None, style="claude-desk"):
             print("  Loading verified master dev-studio dialogue...")
             script_data = {
                 "title": "Stop Paying $49 For AI Tools",
-                "cta_keyword": "STUDIO",
+                "cta_keyword": "TOOL",
                 "tool_name": "Open-Generative-AI",
                 "resource_url": "https://github.com/Anil-matcha/Open-Generative-AI",
                 "lines": [
@@ -305,8 +326,8 @@ def generate_dialogue_script(story_info=None, style="claude-desk"):
                     },
                     {
                         "speaker": "guide",
-                        "text": "Comment STUDIO below and we will DM you the direct repo link right now.",
-                        "header": "COMMENT 'STUDIO' BELOW",
+                        "text": "Comment TOOL below and we will DM you the direct repo link right now.",
+                        "header": "COMMENT 'TOOL' BELOW",
                         "prop": "comment_ui"
                     }
                 ]
@@ -386,7 +407,19 @@ def generate_dialogue_script(story_info=None, style="claude-desk"):
     script_data["category"] = story_info.get("category", "breaking_tech")
     script_data["tool_name"] = script_data.get("tool_name") or story_info.get("tool_name", "")
     script_data["resource_url"] = script_data.get("resource_url") or story_info.get("resource_url", "")
-    script_data["cta_keyword"] = (script_data.get("cta_keyword") or story_info.get("cta_keyword", "FAST")).upper()
+    script_data["cta_keyword"] = cta
+    # Guarantee spoken CTA line & header match `cta` so audio, caption, and Zorcha never diverge
+    if script_data.get("lines"):
+        last = script_data["lines"][-1]
+        if isinstance(last, dict):
+            if last.get("text"):
+                last["text"] = re.sub(
+                    r"(?i)(comment\s+['\"]?)([a-z0-9_-]+)(['\"]?)",
+                    rf"\g<1>{cta}\g<3>",
+                    last["text"],
+                )
+            if last.get("header") and "COMMENT" in last["header"].upper():
+                last["header"] = f"COMMENT '{cta}' BELOW"
     return script_data
 
 if __name__ == "__main__":

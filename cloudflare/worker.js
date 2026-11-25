@@ -680,9 +680,207 @@ export default {
       }
     }
 
+    if (path === "/links" || path === "/links/") {
+      const itemsByUrl = new Map();
+      if (env.REELS_KV) {
+        try {
+          let cursor = undefined;
+          for (let page = 0; page < 5; page++) {
+            const listed = await env.REELS_KV.list({ prefix: "reel:", limit: 100, cursor });
+            const vals = await Promise.all(listed.keys.map(k => env.REELS_KV.get(k.name, "json")));
+            for (const v of vals) {
+              if (!v || !v.resource_url || !/^https?:\/\/\S+$/i.test(v.resource_url)) continue;
+              itemsByUrl.set(v.media_id || v.resource_url, {
+                title: v.title || "CurioCut Tool",
+                keyword: (v.keyword || "").toUpperCase(),
+                resource_url: v.resource_url,
+                permalink: v.permalink || "",
+                updated_at: v.updated_at || 0
+              });
+            }
+            if (listed.list_complete || !listed.cursor) break;
+            cursor = listed.cursor;
+          }
+        } catch {}
+      }
+      try {
+        const ghRes = await fetch("https://raw.githubusercontent.com/shlokkokk/CurioCut/main/published_reels.json", {
+          headers: { "User-Agent": "CurioCut-Edge/1.0" }
+        });
+        if (ghRes.ok) {
+          const reg = await ghRes.json();
+          for (const [mid, r] of Object.entries(reg || {})) {
+            if (!r || !r.resource_url || !/^https?:\/\/\S+$/i.test(r.resource_url)) continue;
+            if (!itemsByUrl.has(mid)) {
+              itemsByUrl.set(mid, {
+                title: r.title || "CurioCut Tool",
+                keyword: (r.cta_keyword || "").toUpperCase(),
+                resource_url: r.resource_url,
+                permalink: r.permalink || `https://www.instagram.com/reel/${mid}/`,
+                updated_at: r.published_at ? Date.parse(r.published_at) || 0 : 0
+              });
+            }
+          }
+        }
+      } catch {}
+
+      const items = Array.from(itemsByUrl.values()).sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0));
+      return new Response(renderLinksHubPage(items), {
+        headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=60" }
+      });
+    }
+
+    // 3.5 Public Legal & Meta App Review Pages (/privacy, /terms, /data-deletion)
+    if (path === "/privacy" || path === "/privacy/") {
+      return new Response(renderLegalPage("Privacy Policy — CurioCut", `
+        <p><strong>Last updated:</strong> November 2026</p>
+        <h2>1. Information We Collect</h2>
+        <p>CurioCut Uploader accesses public Instagram comments and direct messages on content published by <strong>@curiocutt</strong> via the Meta Graph API solely to deliver requested open-source resource links and reply to viewer inquiries.</p>
+        <h2>2. How We Use Data</h2>
+        <ul>
+          <li>Detect trigger keywords (such as <code>AGENT</code>, <code>CLAUDE</code>, or <code>PROMPT</code>) in comments on @curiocutt Reels.</li>
+          <li>Send the requested public reply and private Direct Message containing the referenced resource link.</li>
+          <li>Prevent duplicate replies using temporary comment ID deduplication caches (automatically expired).</li>
+        </ul>
+        <h2>3. Data Storage &amp; Sharing</h2>
+        <p>We do not sell, rent, or share personal user data with third parties. Temporary deduplication keys expire automatically and are never used for advertising or profiling.</p>
+        <h2>4. Data Deletion</h2>
+        <p>You may request deletion of any stored interaction records at any time by following our <a href="/data-deletion">Data Deletion Instructions</a> or emailing <a href="mailto:autouploadreels@gmail.com">autouploadreels@gmail.com</a>.</p>
+        <h2>5. Contact</h2>
+        <p>Email: <a href="mailto:autouploadreels@gmail.com">autouploadreels@gmail.com</a></p>
+      `), { headers: { "Content-Type": "text/html; charset=utf-8" } });
+    }
+
+    if (path === "/terms" || path === "/terms/") {
+      return new Response(renderLegalPage("Terms of Service — CurioCut", `
+        <p><strong>Last updated:</strong> November 2026</p>
+        <h2>1. Acceptance of Terms</h2>
+        <p>By interacting with the <strong>@curiocutt</strong> Instagram account or CurioCut Uploader automation, you agree to these Terms of Service.</p>
+        <h2>2. Service Description</h2>
+        <p>CurioCut Uploader is an automated content publishing and comment-response service for @curiocutt. When you comment a designated keyword on a Reel, the service may post a public reply and send you a Direct Message with the requested link.</p>
+        <h2>3. Acceptable Use</h2>
+        <p>Users must not abuse, spam, or attempt to disrupt the automated response service. Automated responses are provided as-is for informational and educational purposes.</p>
+        <h2>4. Third-Party Links</h2>
+        <p>Messages delivered by CurioCut may contain links to third-party open-source repositories or documentation. We are not responsible for external website content.</p>
+        <h2>5. Contact</h2>
+        <p>Questions? Contact <a href="mailto:autouploadreels@gmail.com">autouploadreels@gmail.com</a>.</p>
+      `), { headers: { "Content-Type": "text/html; charset=utf-8" } });
+    }
+
+    if (path === "/data-deletion" || path === "/data-deletion/") {
+      if (request.method === "POST") {
+        const code = `curiocut_${Date.now().toString(36)}`;
+        return Response.json({
+          url: `${urlObj.origin}/data-deletion?code=${code}`,
+          confirmation_code: code
+        });
+      }
+      const code = urlObj.searchParams.get("code");
+      return new Response(renderLegalPage("User Data Deletion — CurioCut", `
+        <p><strong>Last updated:</strong> November 2026</p>
+        ${code ? `<p><strong>Deletion Request Confirmation Code:</strong> <code>${code.replace(/[^a-zA-Z0-9_-]/g, "")}</code></p>` : ""}
+        <h2>How to Request Data Deletion</h2>
+        <p>CurioCut Uploader only caches temporary comment IDs for deduplication (automatically purged). If you would like any record associated with your Instagram username or account deleted immediately:</p>
+        <ol>
+          <li>Send a Direct Message to <strong>@curiocutt</strong> on Instagram with <code>DELETE MY DATA</code>, or</li>
+          <li>Email <a href="mailto:autouploadreels@gmail.com?subject=CurioCut%20Data%20Deletion%20Request">autouploadreels@gmail.com</a> with your Instagram username.</li>
+        </ol>
+        <p>All matching temporary records are permanently removed within 48 hours of request receipt.</p>
+      `), { headers: { "Content-Type": "text/html; charset=utf-8" } });
+    }
+
     return new Response("CurioCut Edge Active", { headers: { "Content-Type": "text/plain" } });
   }
 };
+
+function renderLinksHubPage(items) {
+  const esc = (s) => String(s || "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const cards = items.map((it, idx) => {
+    const kw = esc(it.keyword || "TOOL");
+    const title = esc(it.title);
+    const url = esc(it.resource_url);
+    const latestBadge = idx === 0 ? `<span class="badge latest">LATEST DROP</span>` : "";
+    return `<article class="card" data-search="${esc((it.title + " " + it.keyword).toLowerCase())}">
+      <div class="meta"><span class="badge kw">${kw}</span>${latestBadge}</div>
+      <h2>${title}</h2>
+      <a class="btn" href="${url}" rel="noopener">Open Repo / Resource →</a>
+    </article>`;
+  }).join("");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CurioCut — AI Tools &amp; GitHub Drops</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #070812; color: #f3f4f6; margin: 0; padding: 24px 16px 48px; }
+    main { max-width: 560px; margin: 0 auto; }
+    header { text-align: center; margin-bottom: 20px; }
+    h1 { margin: 0 0 6px; font-size: 1.55rem; background: linear-gradient(90deg, #38bdf8, #a78bfa, #f472b6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .sub { color: #9ca3af; font-size: 0.9rem; margin: 0; }
+    #q { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid #262b45; background: #111426; color: #fff; font-size: 0.95rem; margin-bottom: 16px; outline: none; }
+    #q:focus { border-color: #7c3aed; }
+    .card { background: #111426; border: 1px solid #232842; border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+    .meta { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+    .badge { font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 999px; letter-spacing: 0.04em; }
+    .kw { background: #1e293b; color: #38bdf8; border: 1px solid #334155; }
+    .latest { background: #3b0764; color: #f0abfc; border: 1px solid #7e22ce; }
+    h2 { margin: 0 0 12px; font-size: 1.05rem; line-height: 1.35; color: #f9fafb; }
+    .btn { display: block; text-align: center; text-decoration: none; background: linear-gradient(90deg, #6366f1, #8b5cf6); color: #fff; font-weight: 600; padding: 11px 14px; border-radius: 10px; font-size: 0.92rem; }
+    footer { text-align: center; margin-top: 24px; font-size: 0.8rem; color: #6b7280; }
+    footer a { color: #38bdf8; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>CurioCut Resource Vault</h1>
+      <p class="sub">Every tool &amp; GitHub repo from @curiocutt Reels — newest first</p>
+    </header>
+    <input id="q" type="search" placeholder="Search by keyword (e.g. AGENT, CLAUDE, PROMPT)..." oninput="filterCards(this.value)" />
+    <section id="list">${cards || '<p class="sub">No tools registered yet.</p>'}</section>
+    <footer>Follow <a href="https://instagram.com/curiocutt" target="_blank">@curiocutt</a> for daily drops</footer>
+  </main>
+  <script>
+    function filterCards(val) {
+      var q = (val || '').trim().toLowerCase();
+      document.querySelectorAll('.card').forEach(function(el) {
+        el.style.display = (!q || (el.dataset.search || '').includes(q)) ? 'block' : 'none';
+      });
+    }
+  </script>
+</body>
+</html>`;
+}
+
+function renderLegalPage(title, bodyHtml) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${title}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0b0d17; color: #e5e7eb; margin: 0; padding: 40px 20px; line-height: 1.65; }
+    main { max-width: 720px; margin: 0 auto; background: #131626; border: 1px solid #262b45; border-radius: 14px; padding: 32px; }
+    h1 { color: #ffffff; margin-top: 0; font-size: 1.75rem; }
+    h2 { color: #a78bfa; font-size: 1.15rem; margin-top: 1.6rem; }
+    a { color: #38bdf8; }
+    code { background: #1e233a; padding: 2px 6px; border-radius: 5px; color: #f472b6; }
+    footer { margin-top: 2rem; font-size: 0.85rem; color: #9ca3af; border-top: 1px solid #262b45; padding-top: 1rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>${title}</h1>
+    ${bodyHtml}
+    <footer>CurioCut Automation • <a href="/privacy">Privacy</a> • <a href="/terms">Terms</a> • <a href="/data-deletion">Data Deletion</a></footer>
+  </main>
+</body>
+</html>`;
+}
 
 async function triggerGitHub(token, slot, topic = null) {
   const url = "https://api.github.com/repos/shlokkokk/CurioCut/dispatches";
