@@ -30,7 +30,35 @@ def get_authenticated_service():
             
     return build('youtube', 'v3', credentials=creds)
 
-def upload_short(video_path, title, description="", tags=None, privacy_status="public"):
+SITE_URL = "https://curiocut.pages.dev"
+
+
+def post_youtube_comment(youtube, video_id, text):
+    """Post a top-level comment on the uploaded YouTube video (non-fatal)."""
+    if not video_id or not text:
+        return False
+    try:
+        youtube.commentThreads().insert(
+            part="snippet",
+            body={
+                "snippet": {
+                    "videoId": video_id,
+                    "topLevelComment": {
+                        "snippet": {
+                            "textOriginal": text
+                        }
+                    }
+                }
+            }
+        ).execute()
+        print(f"  Posted YouTube first comment on {video_id}")
+        return True
+    except Exception as e:
+        print(f"  YouTube first comment note (non-fatal): {e}")
+        return False
+
+
+def upload_short(video_path, title, description="", tags=None, privacy_status="public", first_comment=None):
     """Uploads a video to YouTube as a Short.
     
     Args:
@@ -39,6 +67,7 @@ def upload_short(video_path, title, description="", tags=None, privacy_status="p
         description (str): Video description
         tags (list): List of hashtag strings
         privacy_status (str): 'public', 'unlisted', or 'private'
+        first_comment (str): Optional first comment text (defaults to site index link)
     """
     if not os.path.exists(video_path):
         raise FileNotFoundError(f"Video file not found: {video_path}")
@@ -52,10 +81,15 @@ def upload_short(video_path, title, description="", tags=None, privacy_status="p
     if not tags:
         tags = ["shorts", "viral", "curiocut", "animation", "truestory", "history", "funfacts"]
 
+    final_desc = (description or "").strip()
+    if "curiocut.pages.dev" not in final_desc:
+        site_block = f"All tools, repos & setup guides: {SITE_URL}"
+        final_desc = f"{final_desc}\n\n{site_block}" if final_desc else site_block
+
     body = {
         'snippet': {
             'title': title[:100],
-            'description': description + "\n\n#shorts #animation #facts #curiocut",
+            'description': final_desc + "\n\n#shorts #animation #facts #curiocut",
             'tags': tags,
             'categoryId': '27' # 27 = Education, 23 = Comedy, 24 = Entertainment
         },
@@ -83,6 +117,9 @@ def upload_short(video_path, title, description="", tags=None, privacy_status="p
     print(f"SUCCESSFULLY UPLOADED TO YOUTUBE SHORTS!")
     print(f"Video URL: {video_url}")
     print("="*60 + "\n")
+
+    cmt_text = (first_comment or "").strip() or f"All tools, repos & setup guides in one place: {SITE_URL}"
+    post_youtube_comment(youtube, video_id, cmt_text)
     return video_id, video_url
 
 if __name__ == '__main__':

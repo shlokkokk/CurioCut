@@ -125,6 +125,7 @@ def register_reel_edge(media_id, metadata=None, caption="", permalink=""):
         "public_reply": meta.get("public_reply"),
         "dm_text": meta.get("dm_text"),
         "permalink": permalink or f"https://www.instagram.com/reel/{media_id}/",
+        "yt_url": (meta.get("yt_url") or "").strip(),
         "category": meta.get("category") or ("story" if mode == "story" else "breaking_tech"),
         "is_claude_skill": bool(meta.get("is_claude_skill"))
     }

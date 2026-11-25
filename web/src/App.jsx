@@ -68,6 +68,25 @@ function formatRepoPath(url) {
   return String(url || '').replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
 }
 
+function IgIcon({ size = 14 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+    </svg>
+  );
+}
+
+function YtIcon({ size = 14 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z" />
+      <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 function updateSpotlight(e) {
   const rect = e.currentTarget.getBoundingClientRect();
   e.currentTarget.style.setProperty('--mx', `${e.clientX - rect.left}px`);
@@ -285,7 +304,7 @@ export default function App() {
 
   const handleExternalClick = (e, item, kind) => {
     e.preventDefault();
-    const url = kind === 'reel' ? item.permalink : item.resource_url;
+    const url = kind === 'reel' ? item.permalink : kind === 'yt' ? item.yt_url : item.resource_url;
     if (!url) return;
     setPendingLink({
       title: item.title,
@@ -332,7 +351,13 @@ export default function App() {
               <Search size={13} />
               <span>Search</span>
             </button>
+            <a className="yt-link" href="https://www.youtube.com/@CurioCutt" rel="noopener">
+              <YtIcon size={14} />
+              YouTube
+              <ArrowUpRight size={13} />
+            </a>
             <a className="ig-link" href="https://instagram.com/curiocutt" rel="noopener">
+              <IgIcon size={13} />
               @curiocutt
               <ArrowUpRight size={13} />
             </a>
@@ -344,10 +369,26 @@ export default function App() {
               <img className="brand-icon" src="/icon.png" alt="CurioCut" />
               <div className="brand-name">CurioCut</div>
             </a>
-            <a className="ig-link-mobile" href="https://instagram.com/curiocutt" rel="noopener">
-              @curiocutt
-              <ArrowUpRight size={11} />
-            </a>
+            <div className="mobile-social-pills">
+              <a
+                className="social-pill-mobile"
+                href="https://instagram.com/curiocutt"
+                rel="noopener"
+                aria-label="Instagram @curiocutt"
+              >
+                <IgIcon size={14} />
+                <span>IG</span>
+              </a>
+              <a
+                className="social-pill-mobile social-pill-yt"
+                href="https://www.youtube.com/@CurioCutt"
+                rel="noopener"
+                aria-label="YouTube @CurioCutt"
+              >
+                <YtIcon size={14} />
+                <span>YT</span>
+              </a>
+            </div>
           </div>
           <div className="topbar-row2">
             <button type="button" className="mobile-search-bar" onClick={() => setCmdOpen(true)} aria-label="Search drops">
@@ -502,7 +543,7 @@ export default function App() {
                     Open Repository
                     <ArrowUpRight size={15} />
                   </a>
-                  <div className={`featured-secondary ${featuredItem.permalink ? 'two-col' : 'one-col'}`}>
+                  <div className={`featured-secondary ${featuredItem.permalink || featuredItem.yt_url ? 'two-col' : 'one-col'}`}>
                     <button
                       type="button"
                       className="btn btn-outline"
@@ -511,16 +552,31 @@ export default function App() {
                       <Terminal size={14} />
                       Setup &amp; Prompt
                     </button>
-                    {featuredItem.permalink && (
-                      <a
-                        className="btn btn-outline"
-                        href={featuredItem.permalink}
-                        rel="noopener"
-                        onClick={(e) => handleExternalClick(e, featuredItem, 'reel')}
-                      >
-                        <Film size={14} />
-                        Watch Reel
-                      </a>
+                    {(featuredItem.permalink || featuredItem.yt_url) && (
+                      <div className="featured-watch-group">
+                        {featuredItem.permalink && (
+                          <a
+                            className="btn btn-outline"
+                            href={featuredItem.permalink}
+                            rel="noopener"
+                            onClick={(e) => handleExternalClick(e, featuredItem, 'reel')}
+                          >
+                            <IgIcon size={13} />
+                            Reel
+                          </a>
+                        )}
+                        {featuredItem.yt_url && (
+                          <a
+                            className="btn btn-outline"
+                            href={featuredItem.yt_url}
+                            rel="noopener"
+                            onClick={(e) => handleExternalClick(e, featuredItem, 'yt')}
+                          >
+                            <YtIcon size={13} />
+                            Short
+                          </a>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -561,37 +617,55 @@ export default function App() {
                       </div>
 
                       <div className="drop-foot">
-                        <a
-                          className="btn btn-outline drop-open-btn"
-                          href={it.resource_url}
-                          rel="noopener"
-                          onClick={(e) => handleExternalClick(e, it, 'repo')}
-                        >
-                          Open Repo
-                          <ArrowUpRight size={14} />
-                        </a>
-                        <button
-                          type="button"
-                          className="btn btn-ghost drop-icon-btn"
-                          onClick={() => setSelected(it)}
-                          aria-label="Setup & Prompt"
-                          title="Setup & Prompt"
-                        >
-                          <Terminal size={13} />
-                          Setup
-                        </button>
-                        {it.permalink && (
+                        <div className="drop-foot-main">
                           <a
-                            className="btn btn-ghost drop-icon-btn"
-                            href={it.permalink}
+                            className="btn btn-outline drop-open-btn"
+                            href={it.resource_url}
                             rel="noopener"
-                            aria-label="Watch Reel"
-                            title="Watch Reel"
-                            onClick={(e) => handleExternalClick(e, it, 'reel')}
+                            onClick={(e) => handleExternalClick(e, it, 'repo')}
                           >
-                            <Film size={13} />
-                            Reel
+                            Open Repo
+                            <ArrowUpRight size={14} />
                           </a>
+                          <button
+                            type="button"
+                            className="btn btn-ghost drop-icon-btn"
+                            onClick={() => setSelected(it)}
+                            aria-label="Setup & Prompt"
+                            title="Setup & Prompt"
+                          >
+                            <Terminal size={13} />
+                            Setup
+                          </button>
+                        </div>
+                        {(it.permalink || it.yt_url) && (
+                          <div className="drop-watch-strip">
+                            <span className="drop-watch-label">WATCH</span>
+                            <div className="drop-watch-links">
+                              {it.permalink && (
+                                <a
+                                  className="drop-watch-link"
+                                  href={it.permalink}
+                                  rel="noopener"
+                                  onClick={(e) => handleExternalClick(e, it, 'reel')}
+                                >
+                                  <IgIcon size={12} />
+                                  Instagram
+                                </a>
+                              )}
+                              {it.yt_url && (
+                                <a
+                                  className="drop-watch-link drop-watch-yt"
+                                  href={it.yt_url}
+                                  rel="noopener"
+                                  onClick={(e) => handleExternalClick(e, it, 'yt')}
+                                >
+                                  <YtIcon size={12} />
+                                  YouTube
+                                </a>
+                              )}
+                            </div>
+                          </div>
                         )}
                       </div>
                     </motion.article>
@@ -707,10 +781,10 @@ export default function App() {
                 </div>
               )}
 
-              <div style={{ marginTop: 'auto', display: 'flex', gap: 10 }}>
+              <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <a
                   className="btn btn-outline"
-                  style={{ flex: 1 }}
+                  style={{ width: '100%' }}
                   href={selected.resource_url}
                   rel="noopener"
                   onClick={(e) => handleExternalClick(e, selected, 'repo')}
@@ -718,16 +792,31 @@ export default function App() {
                   Open Repository
                   <ArrowUpRight size={14} />
                 </a>
-                {selected.permalink && (
-                  <a
-                    className="btn btn-ghost"
-                    href={selected.permalink}
-                    rel="noopener"
-                    onClick={(e) => handleExternalClick(e, selected, 'reel')}
-                  >
-                    <Film size={14} />
-                    Reel
-                  </a>
+                {(selected.permalink || selected.yt_url) && (
+                  <div style={{ display: 'grid', gridTemplateColumns: selected.permalink && selected.yt_url ? '1fr 1fr' : '1fr', gap: 8 }}>
+                    {selected.permalink && (
+                      <a
+                        className="btn btn-ghost"
+                        href={selected.permalink}
+                        rel="noopener"
+                        onClick={(e) => handleExternalClick(e, selected, 'reel')}
+                      >
+                        <IgIcon size={14} />
+                        Instagram
+                      </a>
+                    )}
+                    {selected.yt_url && (
+                      <a
+                        className="btn btn-ghost"
+                        href={selected.yt_url}
+                        rel="noopener"
+                        onClick={(e) => handleExternalClick(e, selected, 'yt')}
+                      >
+                        <YtIcon size={14} />
+                        YouTube
+                      </a>
+                    )}
+                  </div>
                 )}
               </div>
             </motion.aside>
@@ -762,7 +851,11 @@ export default function App() {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span className="tag-kw">
-                  {pendingLink.kind === 'reel' ? 'LEAVING TO INSTAGRAM' : 'LEAVING TO REPOSITORY'}
+                  {pendingLink.kind === 'reel'
+                    ? 'LEAVING TO INSTAGRAM'
+                    : pendingLink.kind === 'yt'
+                      ? 'LEAVING TO YOUTUBE'
+                      : 'LEAVING TO REPOSITORY'}
                 </span>
                 <button
                   type="button"
@@ -789,7 +882,13 @@ export default function App() {
                   href={pendingLink.url}
                   rel="noopener"
                   onClick={() => {
-                    trackEvent(pendingLink.kind === 'reel' ? 'watch_reel' : 'open_repo', pendingLink.keyword);
+                    const evName =
+                      pendingLink.kind === 'reel'
+                        ? 'watch_reel'
+                        : pendingLink.kind === 'yt'
+                          ? 'watch_yt'
+                          : 'open_repo';
+                    trackEvent(evName, pendingLink.keyword);
                     setPendingLink(null);
                   }}
                 >

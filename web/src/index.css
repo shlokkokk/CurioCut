@@ -71,6 +71,7 @@ html, body {
 .topbar-row2 { display: none; }
 
 /* Mobile IG link — hidden on desktop */
+.mobile-social-pills,
 .ig-link-mobile { display: none; }
 
 /* Mobile search bar — hidden on desktop */
@@ -164,6 +165,27 @@ html, body {
 
 .ig-link:hover {
   background: var(--accent);
+}
+
+.yt-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  padding: 7px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.yt-link:hover {
+  border-color: rgba(255, 70, 70, 0.55);
+  color: #ffffff;
 }
 
 /* Hero Section */
@@ -449,6 +471,16 @@ html, body {
   grid-template-columns: 1fr;
 }
 
+.featured-watch-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.featured-watch-group .btn {
+  flex: 1;
+  min-width: 0;
+}
+
 @media (min-width: 720px) {
   .featured-actions {
     grid-template-columns: 1.15fr 1.85fr;
@@ -573,27 +605,76 @@ html, body {
 
 .drop-foot {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.45rem;
+  flex-direction: column;
+  gap: 0.5rem;
   padding-top: 0.8rem;
   border-top: 1px solid var(--hairline);
 }
 
+.drop-foot-main {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
 .drop-open-btn {
   flex: 1 1 auto;
-  min-width: 7rem;
+  min-width: 0;
   padding: 0.52rem 0.75rem;
   font-size: 0.8rem;
 }
 
 .drop-icon-btn {
   flex: 0 0 auto;
-  padding: 0.52rem 0.7rem;
+  padding: 0.52rem 0.75rem;
   gap: 5px;
   font-size: 0.78rem;
   height: auto;
   width: auto;
+}
+
+.drop-watch-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.38rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--hairline);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+}
+
+.drop-watch-label {
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.64rem;
+}
+
+.drop-watch-links {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.drop-watch-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text);
+  text-decoration: none;
+  opacity: 0.86;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.drop-watch-link:hover {
+  opacity: 1;
+  color: var(--accent);
+}
+
+.drop-watch-yt:hover {
+  color: #ff6b6b;
 }
 
 /* Inspector Drawer */
@@ -950,25 +1031,42 @@ html, body {
     font-size: 0.95rem;
   }
 
-  /* IG link: compact pill, icon-only on xs */
-  .ig-link-mobile {
+  /* Mobile social pills: compact IG + YT */
+  .mobile-social-pills {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .social-pill-mobile {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     font-family: var(--font-mono);
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     font-weight: 700;
     color: var(--bg);
     background: var(--text);
-    padding: 6px 11px;
-    border-radius: 20px;
+    padding: 6px 10px;
+    border-radius: 999px;
     text-decoration: none;
-    letter-spacing: 0.01em;
     white-space: nowrap;
     transition: background 0.2s;
-    flex-shrink: 0;
   }
-  .ig-link-mobile:hover { background: var(--accent); }
+
+  .social-pill-mobile:hover { background: var(--accent); }
+
+  .social-pill-yt {
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--hairline-hi);
+  }
+
+  .social-pill-yt:hover {
+    background: var(--surface-elevated);
+    border-color: rgba(255, 70, 70, 0.55);
+  }
 
   /* Full-width search trigger in row2 */
   .mobile-search-bar {

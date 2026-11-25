@@ -508,7 +508,19 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
             try:
                 print("\n  >> Uploading to YouTube Shorts...")
                 from youtube_uploader import upload_short
-                v_id, v_url = upload_short(str(output_mp4), title=title, description=desc, privacy_status=privacy)
+                yt_kw = str(script_data.get("cta_keyword") or "").strip().upper()
+                yt_first_cmt = (
+                    f"Grab the repo & setup prompt for {yt_kw} (plus all our drops): https://curiocut.pages.dev"
+                    if (style in ["claude-desk", "dev-studio"] and yt_kw)
+                    else "All tools, repos & setup guides in one place: https://curiocut.pages.dev"
+                )
+                v_id, v_url = upload_short(
+                    str(output_mp4),
+                    title=title,
+                    description=desc,
+                    privacy_status=privacy,
+                    first_comment=yt_first_cmt,
+                )
                 print(f"  Live on YouTube: {v_url}")
                 file_size_mb = output_mp4.stat().st_size / (1024 * 1024)
                 notify_youtube_post(
@@ -544,6 +556,7 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
                     "mode": "dm" if has_tech_dm else "story",
                     "cta_keyword": script_data.get("cta_keyword", "") if has_tech_dm else "",
                     "resource_url": valid_url if has_tech_dm else "",
+                    "yt_url": v_url or "",
                     "category": script_data.get("category", style),
                     "is_claude_skill": style == "claude-desk" or script_data.get("category") == "claude_skill",
                 }
@@ -562,15 +575,20 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
                         style,
                         "Which part caught you off guard the most? Follow @curiocutt so tomorrow's story hits your feed.",
                     )
+                ig_desc = (
+                    f"{desc}\n\nAll tools & setup guides: curiocut.pages.dev"
+                    if "curiocut.pages.dev" not in desc
+                    else desc
+                )
                 ig_media_id, ig_permalink = upload_reel(
                     str(output_mp4),
-                    caption=desc,
+                    caption=ig_desc,
                     metadata=reel_meta,
                     first_comment=first_cmt,
                 )
                 print(f"  Live on Instagram: {ig_permalink}")
                 notify_instagram_post(
-                    caption=desc,
+                    caption=ig_desc,
                     permalink=ig_permalink,
                     media_id=ig_media_id,
                     keyword=reel_meta.get("cta_keyword"),
@@ -587,7 +605,8 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
                         "cta_keyword": reel_meta.get("cta_keyword", ""),
                         "resource_url": reel_meta.get("resource_url", ""),
                         "mode": reel_meta.get("mode", "story"),
-                        "permalink": ig_permalink
+                        "permalink": ig_permalink,
+                        "yt_url": v_url or ""
                     }
                     reels_map_file.write_text(json.dumps(reels_map, indent=2), encoding="utf-8")
                 except Exception:
