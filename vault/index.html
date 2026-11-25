@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>CurioCut Vault — AI Tools, Claude Skills &amp; Open-Source Drops</title>
+  <meta name="description" content="Every AI tool, Claude skill, and open-source GitHub repo featured on @curiocutt Reels." />
+  <link rel="icon" type="image/png" href="./icon.png" />
+  <style>
+    :root {
+      --bg: #05060d;
+      --surface: rgba(16, 19, 36, 0.78);
+      --surface-hover: rgba(24, 29, 54, 0.92);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-hi: rgba(139, 92, 246, 0.45);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --cyan: #38bdf8;
+      --violet: #8b5cf6;
+      --pink: #f472b6;
+      --green: #10b981;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif; min-height: 100vh; overflow-x: hidden; }
+
+    /* Ambient aurora background */
+    .bg-glow {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background:
+        radial-gradient(600px circle at 15% 10%, rgba(56, 189, 248, 0.13), transparent 55%),
+        radial-gradient(650px circle at 85% 20%, rgba(139, 92, 246, 0.16), transparent 55%),
+        radial-gradient(500px circle at 50% 90%, rgba(244, 114, 182, 0.10), transparent 60%);
+    }
+
+    .wrap { position: relative; z-index: 1; max-width: 720px; margin: 0 auto; padding: 28px 16px 64px; }
+
+    /* Header */
+    .hero-head { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+    .logo { width: 54px; height: 54px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.14); box-shadow: 0 8px 28px rgba(139, 92, 246, 0.28); flex-shrink: 0; }
+    .brand h1 { margin: 0; font-size: 1.5rem; letter-spacing: -0.02em; background: linear-gradient(95deg, #fff 10%, #38bdf8 55%, #c084fc 95%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .brand p { margin: 3px 0 0; font-size: 0.86rem; color: var(--muted); }
+    .brand a { color: var(--cyan); text-decoration: none; font-weight: 600; }
+
+    /* Search & Filter Pills */
+    .controls { position: sticky; top: 0; z-index: 10; background: rgba(5, 6, 13, 0.85); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); padding: 10px 0 12px; margin: 0 -4px 14px; }
+    .search-box { position: relative; margin-bottom: 10px; }
+    .search-box svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 17px; height: 17px; color: var(--muted); pointer-events: none; }
+    #q {
+      width: 100%; padding: 12px 14px 12px 42px; border-radius: 12px;
+      border: 1px solid var(--border); background: var(--surface); color: #fff;
+      font-size: 0.94rem; outline: none; transition: border-color .2s;
+    }
+    #q:focus { border-color: var(--violet); }
+    .pills { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+    .pills::-webkit-scrollbar { display: none; }
+    .pill {
+      border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+      padding: 7px 13px; border-radius: 999px; font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; white-space: nowrap; transition: all .18s;
+    }
+    .pill.active, .pill:hover { color: #fff; border-color: var(--border-hi); background: rgba(139, 92, 246, 0.22); }
+
+    /* Cards */
+    .grid { display: grid; gap: 12px; }
+    .card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+      padding: 16px; backdrop-filter: blur(12px); transition: transform .15s, border-color .2s, background .2s;
+    }
+    .card:hover { border-color: rgba(255,255,255,0.16); background: var(--surface-hover); }
+    .card.featured {
+      border-color: var(--border-hi);
+      background: linear-gradient(145deg, rgba(24, 28, 56, 0.92), rgba(15, 18, 36, 0.92));
+      box-shadow: 0 12px 36px rgba(139, 92, 246, 0.16);
+    }
+    .badges { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; margin-bottom: 9px; }
+    .badge { font-size: 0.7rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; letter-spacing: 0.04em; text-transform: uppercase; }
+    .badge.kw { background: rgba(56, 189, 248, 0.14); color: var(--cyan); border: 1px solid rgba(56, 189, 248, 0.3); }
+    .badge.latest { background: linear-gradient(90deg, rgba(139, 92, 246, 0.35), rgba(244, 114, 182, 0.3)); color: #f5d0fe; border: 1px solid rgba(244, 114, 182, 0.45); }
+    .badge.cat { background: rgba(255, 255, 255, 0.06); color: var(--muted); border: 1px solid var(--border); }
+
+    .card h2 { margin: 0 0 12px; font-size: 1.04rem; line-height: 1.38; font-weight: 650; color: #fff; }
+    .repo-url { font-size: 0.78rem; color: var(--muted); margin: -6px 0 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; font-weight: 600;
+      text-decoration: none; cursor: pointer; border: none; transition: opacity .15s, transform .1s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { flex: 1 1 160px; background: linear-gradient(95deg, #6366f1, #8b5cf6); color: #fff; }
+    .btn-secondary { background: rgba(255, 255, 255, 0.07); color: #e2e8f0; border: 1px solid var(--border); }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); padding: 10px 12px; }
+
+    .skeleton { height: 118px; border-radius: 16px; background: linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.07), rgba(255,255,255,0.03)); background-size: 200% 100%; animation: pulse 1.3s infinite; }
+    @keyframes pulse { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    .toast {
+      position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: #10b981; color: #052e16; font-weight: 700; font-size: 0.84rem;
+      padding: 10px 18px; border-radius: 999px; box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+      opacity: 0; pointer-events: none; transition: all .22s ease; z-index: 50;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    footer { text-align: center; margin-top: 32px; font-size: 0.8rem; color: var(--muted); }
+    footer a { color: var(--cyan); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="bg-glow"></div>
+  <main class="wrap">
+    <header class="hero-head">
+      <img class="logo" src="./icon.png" alt="CurioCut" />
+      <div class="brand">
+        <h1>CurioCut Vault</h1>
+        <p>Every AI tool &amp; skill from <a href="https://instagram.com/curiocutt">@curiocutt</a> Reels • <span id="count-badge">Loading...</span></p>
+      </div>
+    </header>
+
+    <div class="controls">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="q" type="search" placeholder="Search tool, keyword (AGENT, CLAUDE, MCP)..." oninput="render()" />
+      </div>
+      <div class="pills" id="pills">
+        <button class="pill active" data-cat="all" onclick="setCat('all', this)">All Drops</button>
+        <button class="pill" data-cat="claude" onclick="setCat('claude', this)">Claude Skills</button>
+        <button class="pill" data-cat="agents" onclick="setCat('agents', this)">AI Agents</button>
+        <button class="pill" data-cat="opensource" onclick="setCat('opensource', this)">Open Source</button>
+      </div>
+    </div>
+
+    <section class="grid" id="list">
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+    </section>
+
+    <footer>
+      Auto-synced with <a href="https://instagram.com/curiocutt">@curiocutt</a> •
+      <a href="https://curiocut-corn.pcgpt00.workers.dev/privacy">Privacy</a>
+    </footer>
+  </main>
+
+  <div class="toast" id="toast">Copied AI setup prompt!</div>
+
+  <script>
+    const API_URL = "https://curiocut-corn.pcgpt00.workers.dev/api/vault";
+    let allItems = [];
+    let activeCat = "all";
+
+    const esc = (s) => String(s || "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+    function getCategory(it) {
+      const t = (it.title + " " + it.category + " " + it.keyword).toLowerCase();
+      if (it.is_claude_skill || t.includes("claude") || t.includes("mcp") || t.includes("skill")) return "claude";
+      if (t.includes("agent") || t.includes("auto") || t.includes("workflow") || t.includes("bot")) return "agents";
+      return "opensource";
+    }
+
+    function setCat(cat, btn) {
+      activeCat = cat;
+      document.querySelectorAll(".pill").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      render();
+    }
+
+    function copyPrompt(url) {
+      const prompt = `Help me install, configure, and run this locally: ${url}`;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(prompt).then(showToast).catch(() => fallbackCopy(prompt));
+      } else {
+        fallbackCopy(prompt);
+      }
+    }
+
+    function fallbackCopy(text) {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); showToast(); } catch {}
+      document.body.removeChild(ta);
+    }
+
+    function showToast() {
+      const t = document.getElementById("toast");
+      t.classList.add("show");
+      setTimeout(() => t.classList.remove("show"), 2000);
+    }
+
+    function render() {
+      const q = (document.getElementById("q").value || "").trim().toLowerCase();
+      const filtered = allItems.filter(it => {
+        if (activeCat !== "all" && getCategory(it) !== activeCat) return false;
+        if (q) {
+          const hay = `${it.title} ${it.keyword} ${it.resource_url}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+
+      document.getElementById("count-badge").textContent = `${allItems.length} Drops`;
+      const list = document.getElementById("list");
+      if (!filtered.length) {
+        list.innerHTML = `<div class="card"><h2>No matching drops</h2><p style="margin:0;color:var(--muted);font-size:0.88rem;">Try clearing your search or switching tabs.</p></div>`;
+        return;
+      }
+
+      list.innerHTML = filtered.map((it, idx) => {
+        const isLatest = activeCat === "all" && !q && idx === 0;
+        const cat = getCategory(it);
+        const catLabel = cat === "claude" ? "Claude Skill" : (cat === "agents" ? "AI Agent" : "Open Source");
+        const cleanUrl = it.resource_url.replace(/^https?:\/\//, "");
+        return `
+          <article class="card ${isLatest ? "featured" : ""}">
+            <div class="badges">
+              ${isLatest ? '<span class="badge latest">Latest Drop</span>' : ""}
+              <span class="badge kw">${esc(it.keyword || "TOOL")}</span>
+              <span class="badge cat">${catLabel}</span>
+            </div>
+            <h2>${esc(it.title)}</h2>
+            <div class="repo-url">${esc(cleanUrl)}</div>
+            <div class="actions">
+              <a class="btn btn-primary" href="${esc(it.resource_url)}" rel="noopener">Open Repo →</a>
+              <button class="btn btn-secondary" type="button" onclick="copyPrompt('${esc(it.resource_url)}')">Copy AI Setup Prompt</button>
+              ${it.permalink ? `<a class="btn btn-ghost" href="${esc(it.permalink)}" rel="noopener">Reel</a>` : ""}
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    fetch(API_URL)
+      .then(r => r.json())
+      .then(data => {
+        allItems = Array.isArray(data.items) ? data.items : [];
+        render();
+      })
+      .catch(() => {
+        document.getElementById("list").innerHTML = `<div class="card"><h2>Could not load drops</h2><p style="margin:0;color:var(--muted);font-size:0.88rem;">Refresh or check <a href="https://curiocut-corn.pcgpt00.workers.dev/links" style="color:var(--cyan)">backup vault</a>.</p></div>`;
+      });
+  </script>
+</body>
+</html>

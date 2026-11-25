@@ -680,51 +680,19 @@ export default {
       }
     }
 
-    if (path === "/links" || path === "/links/") {
-      const itemsByUrl = new Map();
-      if (env.REELS_KV) {
-        try {
-          let cursor = undefined;
-          for (let page = 0; page < 5; page++) {
-            const listed = await env.REELS_KV.list({ prefix: "reel:", limit: 100, cursor });
-            const vals = await Promise.all(listed.keys.map(k => env.REELS_KV.get(k.name, "json")));
-            for (const v of vals) {
-              if (!v || !v.resource_url || !/^https?:\/\/\S+$/i.test(v.resource_url)) continue;
-              itemsByUrl.set(v.media_id || v.resource_url, {
-                title: v.title || "CurioCut Tool",
-                keyword: (v.keyword || "").toUpperCase(),
-                resource_url: v.resource_url,
-                permalink: v.permalink || "",
-                updated_at: v.updated_at || 0
-              });
-            }
-            if (listed.list_complete || !listed.cursor) break;
-            cursor = listed.cursor;
-          }
-        } catch {}
-      }
-      try {
-        const ghRes = await fetch("https://raw.githubusercontent.com/shlokkokk/CurioCut/main/published_reels.json", {
-          headers: { "User-Agent": "CurioCut-Edge/1.0" }
-        });
-        if (ghRes.ok) {
-          const reg = await ghRes.json();
-          for (const [mid, r] of Object.entries(reg || {})) {
-            if (!r || !r.resource_url || !/^https?:\/\/\S+$/i.test(r.resource_url)) continue;
-            if (!itemsByUrl.has(mid)) {
-              itemsByUrl.set(mid, {
-                title: r.title || "CurioCut Tool",
-                keyword: (r.cta_keyword || "").toUpperCase(),
-                resource_url: r.resource_url,
-                permalink: r.permalink || `https://www.instagram.com/reel/${mid}/`,
-                updated_at: r.published_at ? Date.parse(r.published_at) || 0 : 0
-              });
-            }
-          }
+    if (path === "/api/vault") {
+      const items = await getVaultItems(env);
+      return new Response(JSON.stringify({ ok: true, count: items.length, items }), {
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          "Access-Control-Allow-Origin": "*",
+          "Cache-Control": "public, max-age=60"
         }
-      } catch {}
+      });
+    }
 
-      const items = Array.from(itemsByUrl.values()).sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0));
+    if (path === "/links" || path === "/links/") {
+      const items = await getVaultItems(env);
       return new Response(renderLinksHubPage(items), {
         headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=60" }
       });
@@ -792,6 +760,56 @@ export default {
     return new Response("CurioCut Edge Active", { headers: { "Content-Type": "text/plain" } });
   }
 };
+
+async function getVaultItems(env) {
+  const itemsByUrl = new Map();
+  if (env.REELS_KV) {
+    try {
+      let cursor = undefined;
+      for (let page = 0; page < 5; page++) {
+        const listed = await env.REELS_KV.list({ prefix: "reel:", limit: 100, cursor });
+        const vals = await Promise.all(listed.keys.map(k => env.REELS_KV.get(k.name, "json")));
+        for (const v of vals) {
+          if (!v || !v.resource_url || !/^https?:\/\/\S+$/i.test(v.resource_url)) continue;
+          itemsByUrl.set(v.media_id || v.resource_url, {
+            title: v.title || "CurioCut Tool",
+            keyword: (v.keyword || "").toUpperCase(),
+            category: v.category || "",
+            is_claude_skill: Boolean(v.is_claude_skill),
+            resource_url: v.resource_url,
+            permalink: v.permalink || "",
+            updated_at: v.updated_at || 0
+          });
+        }
+        if (listed.list_complete || !listed.cursor) break;
+        cursor = listed.cursor;
+      }
+    } catch {}
+  }
+  try {
+    const ghRes = await fetch("https://raw.githubusercontent.com/shlokkokk/CurioCut/main/published_reels.json", {
+      headers: { "User-Agent": "CurioCut-Edge/1.0" }
+    });
+    if (ghRes.ok) {
+      const reg = await ghRes.json();
+      for (const [mid, r] of Object.entries(reg || {})) {
+        if (!r || !r.resource_url || !/^https?:\/\/\S+$/i.test(r.resource_url)) continue;
+        if (!itemsByUrl.has(mid)) {
+          itemsByUrl.set(mid, {
+            title: r.title || "CurioCut Tool",
+            keyword: (r.cta_keyword || "").toUpperCase(),
+            category: r.category || "",
+            is_claude_skill: Boolean(r.category === "claude_skill" || (r.title || "").toLowerCase().includes("claude")),
+            resource_url: r.resource_url,
+            permalink: r.permalink || `https://www.instagram.com/reel/${mid}/`,
+            updated_at: r.published_at ? Date.parse(r.published_at) || 0 : 0
+          });
+        }
+      }
+    }
+  } catch {}
+  return Array.from(itemsByUrl.values()).sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0));
+}
 
 function renderLinksHubPage(items) {
   const esc = (s) => String(s || "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
