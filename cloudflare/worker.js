@@ -1928,6 +1928,16 @@ async function aggregateWeekStats(env) {
   return agg;
 }
 
+function formatBar(current, target, width = 10) {
+  const pct = Math.min(1, Math.max(0, target > 0 ? current / target : 0));
+  const filled = Math.round(pct * width);
+  return `\`[${"#".repeat(filled)}${"-".repeat(width - filled)}]\` **${Math.round(pct * 100)}%**`;
+}
+
+function pluralVisits(n) {
+  return `${(n || 0).toLocaleString()} ${n === 1 ? "visit" : "visits"}`;
+}
+
 async function buildStatsEmbed(env, period = "today") {
   const istDay = getISTDateKey(0);
   const totals = (env.REELS_KV && await env.REELS_KV.get("stats:totals", "json")) || {};
@@ -1935,17 +1945,18 @@ async function buildStatsEmbed(env, period = "today") {
   if (period === "week") {
     const week = await aggregateWeekStats(env);
     return {
-      title: `Weekly Site Stats (${getISTDateKey(6)} to ${istDay})`,
+      title: "Weekly Site Stats",
+      description: `-# ${getISTDateKey(6)} to ${istDay} (IST)`,
       color: 0xD4FF3E,
       fields: [
-        { name: "7-Day Visits", value: String(week.visit || 0), inline: true },
-        { name: "Repo Opens", value: String(week.open_repo || 0), inline: true },
-        { name: "Prompt / Git Copies", value: `${week.copy_prompt || 0} / ${week.copy_git || 0}`, inline: true },
-        { name: "Watch Clicks (IG / YT)", value: `${week.watch_reel || 0} / ${week.watch_yt || 0}`, inline: true },
-        { name: "All-Time Visits", value: String(totals.visit || 0), inline: true },
+        { name: "7-Day Visits", value: `\`${(week.visit || 0).toLocaleString()}\``, inline: true },
+        { name: "Repo Opens", value: `\`${(week.open_repo || 0).toLocaleString()}\``, inline: true },
+        { name: "Copies (Prompt / Git)", value: `\`${week.copy_prompt || 0}\` / \`${week.copy_git || 0}\``, inline: true },
+        { name: "Watch (IG / YT)", value: `\`${week.watch_reel || 0}\` / \`${week.watch_yt || 0}\``, inline: true },
+        { name: "All-Time Visits", value: `\`${(totals.visit || 0).toLocaleString()}\``, inline: true },
         { name: "Top Drops (7d)", value: formatTopDrops(week.byKeyword, 5), inline: false }
       ],
-      footer: { text: "CurioCut Analytics • Weekly (IST)" }
+      footer: { text: "CurioCut Analytics • Weekly" }
     };
   }
 
@@ -1958,12 +1969,13 @@ async function buildStatsEmbed(env, period = "today") {
     });
     return {
       title: "All-Time Site Stats",
+      description: "-# Cumulative metrics across curiocut.pages.dev",
       color: 0xD4FF3E,
       fields: [
-        { name: "Total Visits", value: String(totals.visit || 0), inline: true },
-        { name: "Repo Opens", value: String(totals.open_repo || 0), inline: true },
-        { name: "Prompt / Git Copies", value: `${totals.copy_prompt || 0} / ${totals.copy_git || 0}`, inline: true },
-        { name: "Watch Clicks (IG / YT)", value: `${totals.watch_reel || 0} / ${totals.watch_yt || 0}`, inline: true },
+        { name: "Total Visits", value: `\`${(totals.visit || 0).toLocaleString()}\``, inline: true },
+        { name: "Repo Opens", value: `\`${(totals.open_repo || 0).toLocaleString()}\``, inline: true },
+        { name: "Copies (Prompt / Git)", value: `\`${totals.copy_prompt || 0}\` / \`${totals.copy_git || 0}\``, inline: true },
+        { name: "Watch (IG / YT)", value: `\`${totals.watch_reel || 0}\` / \`${totals.watch_yt || 0}\``, inline: true },
         { name: "Top Drops (All-Time)", value: formatTopDrops(byKw, 5), inline: false }
       ],
       footer: { text: "CurioCut Analytics • All-Time" }
@@ -1972,17 +1984,18 @@ async function buildStatsEmbed(env, period = "today") {
 
   const today = (env.REELS_KV && await env.REELS_KV.get(`stats:day:${istDay}`, "json")) || {};
   return {
-    title: `Daily Site Stats (${istDay} IST)`,
+    title: "Daily Site Stats",
+    description: `-# ${istDay} (IST)`,
     color: 0xD4FF3E,
     fields: [
-      { name: "Today Visits", value: String(today.visit || 0), inline: true },
-      { name: "Repo Opens", value: String(today.open_repo || 0), inline: true },
-      { name: "Prompt / Git Copies", value: `${today.copy_prompt || 0} / ${today.copy_git || 0}`, inline: true },
-      { name: "Watch Clicks (IG / YT)", value: `${today.watch_reel || 0} / ${today.watch_yt || 0}`, inline: true },
-      { name: "All-Time Visits", value: String(totals.visit || 0), inline: true },
+      { name: "Today Visits", value: `\`${(today.visit || 0).toLocaleString()}\``, inline: true },
+      { name: "Repo Opens", value: `\`${(today.open_repo || 0).toLocaleString()}\``, inline: true },
+      { name: "Copies (Prompt / Git)", value: `\`${today.copy_prompt || 0}\` / \`${today.copy_git || 0}\``, inline: true },
+      { name: "Watch (IG / YT)", value: `\`${today.watch_reel || 0}\` / \`${today.watch_yt || 0}\``, inline: true },
+      { name: "All-Time Visits", value: `\`${(totals.visit || 0).toLocaleString()}\``, inline: true },
       { name: "Top Drops Today", value: formatTopDrops(today.byKeyword, 5), inline: false }
     ],
-    footer: { text: "CurioCut Analytics • Daily (IST)" }
+    footer: { text: "CurioCut Analytics • Daily" }
   };
 }
 
@@ -1997,22 +2010,30 @@ async function buildMilestonesEmbed(env) {
   const adReady = dVisits >= 100 || wVisits >= 700 || tVisits >= 3000;
 
   return {
-    title: "Growth & Ad Eligibility Progress",
+    title: "Growth & Ad Eligibility",
+    description: adReady
+      ? "**Status:** `READY FOR AD REVIEW`"
+      : `**Status:** \`BUILDING TRAFFIC\`\n-# ${pluralVisits(tVisits)} total • Target: 3,000 total or 100/day`,
     color: adReady ? 0xD4FF3E : 0x2B2D31,
     fields: [
-      { name: "Today (IST)", value: `${dVisits} visits`, inline: true },
-      { name: "Last 7 Days", value: `${wVisits} visits`, inline: true },
-      { name: "All-Time Total", value: `${tVisits} visits`, inline: true },
+      { name: "Today", value: `\`${pluralVisits(dVisits)}\``, inline: true },
+      { name: "7 Days", value: `\`${pluralVisits(wVisits)}\``, inline: true },
+      { name: "All-Time", value: `\`${pluralVisits(tVisits)}\``, inline: true },
       {
-        name: "Website Ads Readiness (Target: 100/day or 3,000 total)",
-        value: adReady
-          ? "Ready for Google AdSense / Carbon Ads application."
-          : `In progress (${Math.min(100, Math.round((tVisits / 3000) * 100))}% of 3,000 total visits).`,
+        name: "Website Ads (AdSense / Carbon)",
+        value: [
+          `• **Daily:** ${formatBar(dVisits, 100)} \`${dVisits}/100\``,
+          `• **Total:** ${formatBar(tVisits, 3000)} \`${tVisits.toLocaleString()}/3,000\``
+        ].join("\n"),
         inline: false
       },
       {
-        name: "YouTube Partner Program Thresholds",
-        value: "Tier 1: 500 subs + 3M Shorts views (90d)\nTier 2 (Ads): 1,000 subs + 10M Shorts views (90d) or 4,000 watch hrs",
+        name: "YouTube Partner Program",
+        value: [
+          `• **Fan Funding:** \`500\` subs + \`3M\` Shorts views`,
+          `• **Ad Revenue:** \`1,000\` subs + \`10M\` Shorts views`,
+          `-# 90-day rolling Shorts window (or 4,000 long-form watch hrs)`
+        ].join("\n"),
         inline: false
       }
     ],
