@@ -626,45 +626,40 @@ export default function App() {
                           Open Repo
                           <ArrowUpRight size={14} />
                         </a>
-                        <button
-                          type="button"
-                          className="btn btn-ghost drop-icon-btn"
-                          onClick={() => setSelected(it)}
-                          aria-label="Setup & Prompt"
-                          title="Setup & Prompt"
-                        >
-                          <Terminal size={13} />
-                          Setup
-                        </button>
-                        {(it.permalink || it.yt_url) && (
-                          <div className="drop-watch-seg" role="group" aria-label="Watch video">
-                            {it.permalink && (
-                              <a
-                                className="drop-watch-half"
-                                href={it.permalink}
-                                rel="noopener"
-                                aria-label="Watch on Instagram"
-                                title="Watch on Instagram"
-                                onClick={(e) => handleExternalClick(e, it, 'reel')}
-                              >
-                                <IgIcon size={14} />
-                              </a>
-                            )}
-                            {it.permalink && it.yt_url && <span className="drop-watch-sep" aria-hidden="true" />}
-                            {it.yt_url && (
-                              <a
-                                className="drop-watch-half drop-watch-yt"
-                                href={it.yt_url}
-                                rel="noopener"
-                                aria-label="Watch on YouTube"
-                                title="Watch on YouTube"
-                                onClick={(e) => handleExternalClick(e, it, 'yt')}
-                              >
-                                <YtIcon size={14} />
-                              </a>
-                            )}
-                          </div>
-                        )}
+                        <div className="drop-foot-sub">
+                          <button
+                            type="button"
+                            className="btn btn-ghost drop-sub-btn"
+                            onClick={() => setSelected(it)}
+                            aria-label="Setup & Prompt"
+                            title="Setup & Prompt"
+                          >
+                            <Terminal size={12} />
+                            Setup
+                          </button>
+                          {it.permalink && (
+                            <a
+                              className="btn btn-ghost drop-sub-btn"
+                              href={it.permalink}
+                              rel="noopener"
+                              onClick={(e) => handleExternalClick(e, it, 'reel')}
+                            >
+                              <IgIcon size={12} />
+                              Instagram
+                            </a>
+                          )}
+                          {it.yt_url && (
+                            <a
+                              className="btn btn-ghost drop-sub-btn drop-sub-yt"
+                              href={it.yt_url}
+                              rel="noopener"
+                              onClick={(e) => handleExternalClick(e, it, 'yt')}
+                            >
+                              <YtIcon size={12} />
+                              YouTube
+                            </a>
+                          )}
+                        </div>
                       </div>
                     </motion.article>
                   );
