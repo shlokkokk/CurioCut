@@ -48,7 +48,7 @@ async function openPage(port) {
   const prof = fs.mkdtempSync(path.join(os.tmpdir(), 'fs-chrome-'));
   const useGpu = process.env.GPU_ACCEL === '1';
   const isWin = process.platform === 'win32';
-  const glFlags = (process.env.SOFTWARE_GL || (!useGpu && !isWin)) ? ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] : (useGpu ? ['--use-gl=angle', '--use-angle=gl-egl'] : ['--use-angle=d3d11']);
+  const glFlags = process.env.SOFTWARE_GL ? ['--use-angle=swiftshader'] : (useGpu ? ['--use-gl=angle', '--use-angle=gl-egl'] : (isWin ? ['--use-angle=d3d11'] : ['--use-gl=angle', '--use-angle=gl']));
   const chrome = spawn(CHROME, ['--headless=new', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu-sandbox', '--enable-webgl', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--enable-accelerated-2d-canvas', ...glFlags, '--remote-debugging-port=0', `--user-data-dir=${prof}`, '--no-first-run', '--no-default-browser-check',
     '--hide-scrollbars', '--window-size=1080,1920', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', 'about:blank'], { stdio: 'inherit' });
   let dbg;

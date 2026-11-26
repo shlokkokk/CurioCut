@@ -409,6 +409,7 @@ def main():
     last_log_len = 0
     last_log_change_t = time.time()
 
+    st = "queued"
     while time.time() - start_t < max_wait:
         time.sleep(10)
         elapsed = int(time.time() - start_t)
