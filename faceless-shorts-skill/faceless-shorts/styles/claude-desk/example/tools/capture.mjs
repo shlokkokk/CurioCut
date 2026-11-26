@@ -46,7 +46,7 @@ async function openPage(port) {
   const prof = fs.mkdtempSync(path.join(os.tmpdir(), 'fs-chrome-'));
   const useGpu = process.env.GPU_ACCEL === '1';
   const isWin = process.platform === 'win32';
-  const glFlags = process.env.SOFTWARE_GL ? ['--use-angle=swiftshader'] : (useGpu ? ['--use-gl=angle', '--use-angle=gl-egl'] : (isWin ? ['--use-angle=d3d11'] : ['--use-gl=angle', '--use-angle=gl']));
+  const glFlags = (process.env.SOFTWARE_GL || (!useGpu && !isWin)) ? ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] : (useGpu ? ['--use-gl=angle', '--use-angle=gl-egl'] : ['--use-angle=d3d11']);
   const chrome = spawn(CHROME, ['--headless=new', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu-sandbox', '--enable-webgl', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--enable-accelerated-2d-canvas', ...glFlags, '--remote-debugging-port=0', `--user-data-dir=${prof}`, '--no-first-run', '--no-default-browser-check',
     '--hide-scrollbars', '--window-size=1080,1920', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', 'about:blank'], { stdio: 'inherit' });
   let dbg;
@@ -54,7 +54,9 @@ async function openPage(port) {
   if (!dbg) throw new Error('Chrome did not start');
   const r = await fetch(`http://127.0.0.1:${dbg}/json/new?${encodeURIComponent(`http://127.0.0.1:${port}/index.html?capture=1${process.env.QS || ''}`)}`, { method: 'PUT' });
   const target = await r.json();
-  const ws = new WebSocket(target.webSocketDebuggerUrl);
+  let ws;
+  try {
+  ws = new WebSocket(target.webSocketDebuggerUrl);
   await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
   let id = 0; const pend = new Map(), logs = [];
   ws.onmessage = (e) => {
@@ -73,7 +75,13 @@ async function openPage(port) {
     if (i > 1200) throw new Error('boot timeout\n' + logs.join('\n'));
     await sleep(100);
   }
-  const close = () => { try { ws.close(); } catch {} chrome.kill('SIGKILL'); setTimeout(() => { try { fs.rmSync(prof, { recursive: true, force: true }); } catch {} }, 300); };
+  } catch (err) {
+    try { ws?.close(); } catch {}
+    try { chrome.kill('SIGKILL'); } catch {}
+    try { fs.rmSync(prof, { recursive: true, force: true }); } catch {}
+    throw err;
+  }
+  const close = () => { try { ws?.close(); } catch {} try { chrome.kill('SIGKILL'); } catch {} setTimeout(() => { try { fs.rmSync(prof, { recursive: true, force: true }); } catch {} }, 300); };
   return { ev, logs, close };
 }
 const jpg = (d) => Buffer.from(d.slice(d.indexOf(',') + 1), 'base64');
@@ -82,8 +90,9 @@ const FRAME = (t, q, label) => `(() => { const d = OP.frame(${t}, ${q}); ${label
 const srv = await serve(mode === 'preview' ? 8765 : 0), port = srv.address().port;
 if (mode === 'preview') { console.log(`open http://127.0.0.1:${port}/  (Ctrl+C to stop)`); }
 else {
-  const P = await openPage(port);
+  let P;
   try {
+    P = await openPage(port);
     const dur = await P.ev('OP.duration()');
     if (mode === 'check') {
       console.log(`duration ${dur.toFixed(2)} s`);
@@ -130,5 +139,5 @@ else {
       ff.stdin.end(); await new Promise((r) => ff.on('close', r));
       console.log(`\r${out} (${n} frames, ${hasMix ? 'with data/mix.wav' : 'SILENT: no data/mix.wav'}, ${((Date.now() - t0) / 1000).toFixed(0)} s)`);
     } else console.log('modes: check · cues · sheet · frames · video · preview');
-  } finally { P.close(); srv.close(); }
+  } finally { P?.close(); srv.close(); }
 }
