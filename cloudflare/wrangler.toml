@@ -10,12 +10,15 @@ preview_urls = false
 # - Slot 3 (9:30 PM IST): Trigger 08:55 PM IST / 15:25 UTC (3D Dev & Mascot Studio)
 [triggers]
 crons = [
-  # "* * * * *",  # Paused while Zorcha handles IG DMs (uncomment to re-enable Worker IG poller)
+  "* * * * *",  # Active in IG_LOG_ONLY mode for #dms-sent logging while Zorcha handles IG replies/DMs
   "25 6 * * *",
   "45 10 * * *",
   "55 15 * * *",
   "25 18 * * *"
 ]
+
+[vars]
+IG_LOG_ONLY = "true"  # Set to "false" (or comment "* * * * *") if switching IG DM/reply handling back to Worker
 
 [observability]
 enabled = true

@@ -1575,6 +1575,7 @@ async function processInstagramComment(comment, env, skipReplyCheck = false) {
   }
 
   const rule = await resolveReelRule(mediaId, env, token, botToken);
+  const logOnly = String(env?.IG_LOG_ONLY || "").toLowerCase() === "true";
   const reelUrl = /^https?:\/\/\S+$/i.test(rule.permalink || "") ? rule.permalink : `https://www.instagram.com/reel/${mediaId || ""}`;
   const validResourceUrl = /^https?:\/\/\S+$/i.test(rule.resource_url || "") ? rule.resource_url : "";
   const safeRuleTitle = (rule.title || "CurioCut Reel").replace(/[\[\]()]/g, "").slice(0, 120);
@@ -1584,6 +1585,37 @@ async function processInstagramComment(comment, env, skipReplyCheck = false) {
     if (normalizeToken(text).length < 2) {
       console.log(`[Instagram Responder] Skipping short/empty story comment ${commentId}: "${text}"`);
       return { commentId, mediaId, mode: "story", skipped: "too_short" };
+    }
+
+    if (logOnly) {
+      if (botToken) {
+        try {
+          await fetch(`https://discord.com/api/v10/channels/${dmsChannelId}/messages`, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bot ${botToken}`,
+              "Content-Type": "application/json",
+              "User-Agent": "CurioCut-Edge"
+            },
+            body: JSON.stringify({
+              embeds: [{
+                title: "Story Comment Logged",
+                description: `@${user} commented \`${safeText}\` on **${safeRuleTitle}**`.slice(0, 1500),
+                color: 0x0EA5E9,
+                fields: [
+                  { name: "Mode", value: "Log-Only (Zorcha handles IG)", inline: true }
+                ],
+                footer: { text: "24/7 Cloudflare Edge Comment Logger" }
+              }],
+              components: [{
+                type: 1,
+                components: [{ type: 2, style: 5, label: "View Reel on Instagram", url: reelUrl }]
+              }]
+            })
+          });
+        } catch {}
+      }
+      return { commentId, mediaId, mode: "story", loggedOnly: true };
     }
 
     // Check repeat fan status via KV
@@ -1673,9 +1705,9 @@ async function processInstagramComment(comment, env, skipReplyCheck = false) {
         fields: [
           { name: "User", value: `@${user}`.slice(0, 200), inline: true },
           { name: "Comment", value: (safeText || "-").slice(0, 900), inline: true },
-          { name: "Status", value: "Sending DM & Public Reply...", inline: false }
+          { name: "Status", value: logOnly ? "Logged Only (Handled by Zorcha)" : "Sending DM & Public Reply...", inline: false }
         ],
-        footer: { text: "24/7 Cloudflare Edge Auto-Responder" }
+        footer: { text: logOnly ? "24/7 Cloudflare Edge Comment Logger" : "24/7 Cloudflare Edge Auto-Responder" }
       }],
       components
     };
@@ -1694,6 +1726,10 @@ async function processInstagramComment(comment, env, skipReplyCheck = false) {
     }
   } catch (eInit) {
     console.error("Initial Discord post error:", eInit);
+  }
+
+  if (logOnly) {
+    return { commentId, mediaId, mode: "dm", loggedOnly: true };
   }
 
   // Stage 2: Send public reply on Reel (no em dashes)
