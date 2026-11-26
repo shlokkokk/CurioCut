@@ -576,7 +576,7 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
                         "Which part caught you off guard the most? Follow @curiocutt so tomorrow's story hits your feed.",
                     )
                 ig_desc = (
-                    f"{desc}\n\nAll tools & setup guides: curiocut.pages.dev"
+                    f"{desc}\n\nAll tools & setup guides: https://curiocut.pages.dev"
                     if "curiocut.pages.dev" not in desc
                     else desc
                 )
