@@ -396,7 +396,15 @@ def build_short(topic=None, style=None, upload=False, privacy="public", draft=Fa
         run_cmd([PYTHON_EXE, str(SKILL_DIR / "scripts" / "words.py"), "."], cwd=project_dir)
 
         print("Synthesizing procedural sound effects and music bed...")
-        run_cmd([NODE_EXE, "tools/capture.mjs", "cues"], cwd=project_dir)
+        try:
+            run_cmd([NODE_EXE, "tools/capture.mjs", "cues"], cwd=project_dir)
+        except RuntimeError as e:
+            if "WebGL" in str(e) or "EGL" in str(e) or "boot failed" in str(e):
+                print("  [WebGL Fallback] Retrying cues with SOFTWARE_GL=1...")
+                os.environ["SOFTWARE_GL"] = "1"
+                run_cmd([NODE_EXE, "tools/capture.mjs", "cues"], cwd=project_dir)
+            else:
+                raise
         run_cmd([PYTHON_EXE, "tools/mix.py", "."], cwd=project_dir)
 
         # 4. Render (Headless Chrome + FFmpeg)

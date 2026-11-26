@@ -42,42 +42,45 @@ async function openPage(port) {
   const prof = fs.mkdtempSync(path.join(os.tmpdir(), 'fs-chrome-'));
   const useGpu = process.env.GPU_ACCEL === '1';
   const isWin = process.platform === 'win32';
-  const glFlags = process.env.SOFTWARE_GL ? ['--use-angle=swiftshader'] : (useGpu ? ['--use-gl=angle', '--use-angle=gl-egl'] : (isWin ? ['--use-angle=d3d11'] : ['--use-gl=angle', '--use-angle=gl']));
+  const swFlags = isWin ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] : ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ozone-platform=headless'];
+  const glFlags = process.env.SOFTWARE_GL ? swFlags : (useGpu ? ['--use-gl=angle', '--use-angle=gl-egl'] : (isWin ? ['--use-angle=d3d11'] : swFlags));
   const chrome = spawn(CHROME, ['--headless=new', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu-sandbox', '--enable-webgl', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--enable-accelerated-2d-canvas', ...glFlags, '--remote-debugging-port=0', `--user-data-dir=${prof}`, '--no-first-run', '--no-default-browser-check',
-    '--hide-scrollbars', '--window-size=1080,1920', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', 'about:blank'], { stdio: 'inherit' });
-  let dbg;
-  for (let i = 0; i < 200 && !dbg; i++) { try { dbg = fs.readFileSync(path.join(prof, 'DevToolsActivePort'), 'utf8').split('\n')[0].trim(); } catch { await sleep(100); } }
-  if (!dbg) throw new Error('Chrome did not start');
-  const r = await fetch(`http://127.0.0.1:${dbg}/json/new?${encodeURIComponent(`http://127.0.0.1:${port}/index.html?capture=1${process.env.QS || ''}`)}`, { method: 'PUT' });
-  const target = await r.json();
-  let ws;
+    '--hide-scrollbars', '--window-size=1080,1920', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', 'about:blank'], { stdio: ['ignore', 'ignore', 'pipe'] });
+  chrome.stderr?.on('data', (d) => { const s = d.toString(); if (!s.includes('dbus/')) process.stderr.write(s); });
+  let dbg, ws, ev;
+  const logs = [];
   try {
-  ws = new WebSocket(target.webSocketDebuggerUrl);
-  await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
-  let id = 0; const pend = new Map(), logs = [];
-  ws.onmessage = (e) => {
-    const m = JSON.parse(e.data);
-    if (m.id && pend.has(m.id)) { const p = pend.get(m.id); pend.delete(m.id); m.error ? p.rej(new Error(m.error.message)) : p.res(m.result); }
-    else if (m.method === 'Runtime.exceptionThrown') logs.push('EXCEPTION ' + (m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text));
-    else if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'error') logs.push('ERROR ' + m.params.args.map((a) => a.value ?? a.description).join(' '));
-  };
-  const send = (method, params = {}) => new Promise((res, rej) => { const i = ++id; pend.set(i, { res, rej }); ws.send(JSON.stringify({ id: i, method, params })); });
-  const ev = async (expr) => { const x = await send('Runtime.evaluate', { expression: expr, returnByValue: true, awaitPromise: true }); if (x.exceptionDetails) throw new Error(x.exceptionDetails.exception?.description || x.exceptionDetails.text); return x.result.value; };
-  await send('Runtime.enable');
-  for (let i = 0; ; i++) {
-    const st = await ev('window.OP ? (OP.bootError ? "ERR:" + OP.bootError : OP.ready) : false').catch(() => false);
-    if (st === true) break;
-    if (typeof st === 'string') throw new Error('boot failed: ' + st + '\n' + logs.join('\n'));
-    if (i > 1200) throw new Error('boot timeout\n' + logs.join('\n'));
-    await sleep(100);
-  }
+    for (let i = 0; i < 200 && !dbg; i++) { try { dbg = fs.readFileSync(path.join(prof, 'DevToolsActivePort'), 'utf8').split('\n')[0].trim(); } catch { await sleep(100); } }
+    if (!dbg) throw new Error('Chrome did not start');
+    const r = await fetch(`http://127.0.0.1:${dbg}/json/new?${encodeURIComponent(`http://127.0.0.1:${port}/index.html?capture=1${process.env.QS || ''}`)}`, { method: 'PUT' });
+    const target = await r.json();
+    ws = new WebSocket(target.webSocketDebuggerUrl);
+    await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
+    let id = 0; const pend = new Map();
+    ws.onmessage = (e) => {
+      const m = JSON.parse(e.data);
+      if (m.id && pend.has(m.id)) { const p = pend.get(m.id); pend.delete(m.id); m.error ? p.rej(new Error(m.error.message)) : p.res(m.result); }
+      else if (m.method === 'Runtime.exceptionThrown') logs.push('EXCEPTION ' + (m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text));
+      else if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'error') logs.push('ERROR ' + m.params.args.map((a) => a.value ?? a.description).join(' '));
+    };
+    const send = (method, params = {}) => new Promise((res, rej) => { const i = ++id; pend.set(i, { res, rej }); ws.send(JSON.stringify({ id: i, method, params })); });
+    ev = async (expr) => { const x = await send('Runtime.evaluate', { expression: expr, returnByValue: true, awaitPromise: true }); if (x.exceptionDetails) throw new Error(x.exceptionDetails.exception?.description || x.exceptionDetails.text); return x.result.value; };
+    await send('Runtime.enable');
+    for (let i = 0; ; i++) {
+      const st = await ev('window.OP ? (OP.bootError ? "ERR:" + OP.bootError : OP.ready) : false').catch(() => false);
+      if (st === true) break;
+      if (typeof st === 'string') throw new Error('boot failed: ' + st + '\n' + logs.join('\n'));
+      if (i > 1200) throw new Error('boot timeout\n' + logs.join('\n'));
+      await sleep(100);
+    }
   } catch (err) {
     try { ws?.close(); } catch {}
+    try { chrome.stderr?.destroy(); } catch {}
     try { chrome.kill('SIGKILL'); } catch {}
     try { fs.rmSync(prof, { recursive: true, force: true }); } catch {}
     throw err;
   }
-  const close = () => { try { ws?.close(); } catch {} try { chrome.kill('SIGKILL'); } catch {} setTimeout(() => { try { fs.rmSync(prof, { recursive: true, force: true }); } catch {} }, 300); };
+  const close = () => { try { ws?.close(); } catch {} try { chrome.stderr?.destroy(); } catch {} try { chrome.kill('SIGKILL'); } catch {} setTimeout(() => { try { fs.rmSync(prof, { recursive: true, force: true }); } catch {} }, 300); };
   return { ev, logs, close };
 }
 const jpg = (d) => Buffer.from(d.slice(d.indexOf(',') + 1), 'base64');

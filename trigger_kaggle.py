@@ -537,14 +537,19 @@ def main():
                     print(f"  [{elapsed}s] Waiting for Kaggle container to initialize new job (ignoring stale '{st}')...")
                     continue
 
-                # Keep one live card per Kaggle version; refresh phase every 60 seconds
-                if run_message_id and (time.time() - last_run_log_update >= 60):
-                    status_label = describe_run_phase(st, latest_worker_log)
-                    publish_run_log(status_label)
-                    last_run_log_update = time.time()
+                # Keep one live card per Kaggle version; refresh phase & worker logs every 60 seconds
+                if (time.time() - last_run_log_update >= 60):
+                    if st == "running":
+                        fetched = fetch_worker_log(include_kaggle_api=True)
+                        if fetched:
+                            latest_worker_log = fetched
                     if len(latest_worker_log) != last_log_len:
                         last_log_len = len(latest_worker_log)
                         last_log_change_t = time.time()
+                    if run_message_id:
+                        status_label = describe_run_phase(st, latest_worker_log)
+                        publish_run_log(status_label)
+                    last_run_log_update = time.time()
 
                 # Keep waiting for GPU (Kaggle batch GPU queue normally takes 2-8 minutes, ceiling 30 mins)
                 if gpu_requested and st == "queued" and (time.time() - queued_start) > 1800:
@@ -602,6 +607,11 @@ def main():
                             queued_start = time.time()
                             has_alerted_2h = False
                             has_alerted_3h = False
+                            has_alerted_4_5h = False
+                            has_alerted_stale = False
+                            last_log_len = 0
+                            last_log_change_t = time.time()
+                            st = "queued"
                             continue
                         except Exception as failover_err:
                             print(f"[ERROR] Standby failover dispatch failed: {failover_err}")
