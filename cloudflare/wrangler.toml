@@ -10,7 +10,7 @@ preview_urls = false
 # - Slot 3 (9:30 PM IST): Trigger 08:55 PM IST / 15:25 UTC (3D Dev & Mascot Studio)
 [triggers]
 crons = [
-  "* * * * *",
+  # "* * * * *",  # Paused while Zorcha handles IG DMs (uncomment to re-enable Worker IG poller)
   "25 6 * * *",
   "45 10 * * *",
   "55 15 * * *",
