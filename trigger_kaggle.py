@@ -402,8 +402,12 @@ def main():
     queued_start = time.time()
     has_alerted_2h = False
     has_alerted_3h = False
+    has_alerted_4_5h = False
+    has_alerted_stale = False
     last_run_log_update = 0
     last_stop_check = 0
+    last_log_len = 0
+    last_log_change_t = time.time()
 
     while time.time() - start_t < max_wait:
         time.sleep(10)
@@ -437,6 +441,54 @@ def main():
                 notify_long_run_alert(elapsed, latest_kernel_url, account=acc_name, slot=slot_name, phase=phase_label, title=ep_title)
             except Exception as ex:
                 print(f"  Notice: Long run alert dispatch: {ex}")
+
+        if elapsed >= 16200 and not has_alerted_4_5h:
+            has_alerted_4_5h = True
+            idle_min = int((time.time() - last_log_change_t) // 60)
+            print(f"  [ALERT] 4.5 hours elapsed on {get_current_account()['user']}. Dispatching abnormal run alert...")
+            try:
+                from discord_notifier import notify_alert
+                acc_name = get_current_account()["user"]
+                slot_name = secrets_to_pass.get("CURIO_SLOT", "auto")
+                phase_label = describe_run_phase(st, latest_worker_log)
+                notify_alert(
+                    title=f"ABNORMAL RUN: 4.5 Hours Elapsed ({acc_name})",
+                    details=(
+                        f"Job `{slot_name.upper()}` on `{acc_name}` has been running for **4.5 hours**.\n"
+                        f"• **Phase:** `{phase_label}`\n"
+                        f"• **Log Idle:** `{idle_min} min` since last output\n"
+                        f"If this is not an active Blender render, cancel it on Kaggle or hit Emergency Stop in #panel."
+                    ),
+                    severity="warning",
+                    button_label="Inspect Hung Kaggle Run",
+                    button_url=latest_kernel_url,
+                )
+            except Exception as ex:
+                print(f"  Notice: 4.5h alert dispatch: {ex}")
+
+        if st == "running" and elapsed >= 3600 and (time.time() - last_log_change_t) >= 2700 and not has_alerted_stale:
+            has_alerted_stale = True
+            idle_min = int((time.time() - last_log_change_t) // 60)
+            print(f"  [STALE] Worker output frozen for {idle_min}m on {get_current_account()['user']}. Alerting Discord...")
+            try:
+                from discord_notifier import notify_alert
+                acc_name = get_current_account()["user"]
+                slot_name = secrets_to_pass.get("CURIO_SLOT", "auto")
+                phase_label = describe_run_phase(st, latest_worker_log)
+                notify_alert(
+                    title=f"STALE / HUNG JOB ({acc_name})",
+                    details=(
+                        f"Worker output on `{acc_name}` (`{slot_name.upper()}`) has had **zero new logs for {idle_min} minutes**.\n"
+                        f"• **Stuck Phase:** `{phase_label}`\n"
+                        f"• **Total Elapsed:** `{elapsed // 60} min`\n"
+                        f"High confidence this container is hung. Stop it on Kaggle or click Emergency Stop in #panel."
+                    ),
+                    severity="warning",
+                    button_label="Open Hung Kaggle Run",
+                    button_url=latest_kernel_url,
+                )
+            except Exception as ex:
+                print(f"  Notice: Stale alert dispatch: {ex}")
 
         # Check if user triggered emergency stop via Discord (every 20s)
         if (elapsed - last_stop_check >= 20):
@@ -489,6 +541,9 @@ def main():
                     status_label = describe_run_phase(st, latest_worker_log)
                     publish_run_log(status_label)
                     last_run_log_update = time.time()
+                    if len(latest_worker_log) != last_log_len:
+                        last_log_len = len(latest_worker_log)
+                        last_log_change_t = time.time()
 
                 # Keep waiting for GPU (Kaggle batch GPU queue normally takes 2-8 minutes, ceiling 30 mins)
                 if gpu_requested and st == "queued" and (time.time() - queued_start) > 1800:
