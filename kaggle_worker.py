@@ -34,6 +34,7 @@ class CloudLogStreamer:
     """Buffers stdout/stderr in memory and tees to original stdout/stderr for Kaggle execution logs."""
     def __init__(self):
         self.all_logs = []
+        self.unsent_logs = []
         self.lock = threading.Lock()
         self.orig_stdout = sys.__stdout__
         self.orig_stderr = sys.__stderr__
@@ -46,9 +47,20 @@ class CloudLogStreamer:
         target.flush()
         with self.lock:
             self.all_logs.append(s)
+            self.unsent_logs.append(s)
             # Cap in-memory history to ~8 MB (approx 70,000 lines)
             if len(self.all_logs) > 70000:
                 self.all_logs = self.all_logs[-50000:]
+            if len(self.unsent_logs) > 70000:
+                self.unsent_logs = self.unsent_logs[-50000:]
+
+    def pop_unsent(self):
+        with self.lock:
+            if not self.unsent_logs:
+                return ""
+            chunk = "".join(self.unsent_logs)
+            self.unsent_logs.clear()
+            return chunk
 
     def flush(self):
         pass
@@ -130,9 +142,9 @@ def _detect_phase_from_log(log_text):
         (("[4/4]", "Starting 3D short generation", "Cloud Video Engine Booted"), "INITIALIZING ENGINE"),
         (("[1/5]", "Writing viral script", "Generating 2-character dialogue"), "WRITING SCRIPT"),
         (("[2/6]", "Generating fresh AI story", "Generating episode"), "GENERATING STORY"),
-        (("[3/6]", "Synthesizing narration", "Synthesizing Speech"), "SYNTHESIZING AUDIO"),
+        (("[3/6]", "Synthesizing narration", "Synthesizing Speech", "[Dual-Voice Engine]"), "SYNTHESIZING AUDIO"),
         (("[5/6]", "Launching Blender", "Rendering 3D"), "STARTING RENDER"),
-        (("Append frame ", "Fra:"), "RENDERING FRAMES"),
+        (("[Render] Frame", "Append frame ", "Fra:"), "RENDERING FRAMES"),
         (("[6/6]", "Muxing audio", "Burning Captions"), "FINALIZING VIDEO"),
         (("Uploading to YouTube", "Uploading to Instagram", "Publishing to"), "UPLOADING"),
     ]
@@ -141,10 +153,32 @@ def _detect_phase_from_log(log_text):
         idx = max((log_text.rfind(m) for m in markers), default=-1)
         if idx > latest[0]:
             latest = (idx, phase)
+            if phase == "RENDERING FRAMES":
+                frame_m = re.search(r"(?:\[Render\]\s*Frame\s*(\d+/\d+\s*\(\d+%\))|Append frame\s*(\d+)|Fra:\s*(\d+(?:/\d+)?))", log_text[idx:idx+150])
+                if frame_m:
+                    matched_val = frame_m.group(1) or frame_m.group(2) or frame_m.group(3)
+                    latest = (idx, f"RENDERING FRAMES ({matched_val})")
     return latest[1]
+
+def _flush_logs_to_relay():
+    """Push any unsent stdout/stderr chunks to Cloudflare /api/logs."""
+    try:
+        new_chunk = streamer.pop_unsent()
+        if new_chunk:
+            req_post = urllib.request.Request(
+                LOG_RELAY_URL,
+                data=new_chunk.encode("utf-8"),
+                headers={"Content-Type": "text/plain; charset=utf-8", "User-Agent": "Mozilla/5.0 CurioCut-Runner/1.0"},
+                method="POST"
+            )
+            with urllib.request.urlopen(req_post, timeout=5) as _:
+                pass
+    except Exception:
+        pass
 
 def _worker_background_heartbeat():
     last_discord_update = 0
+    last_relay_push = 0
     while True:
         time.sleep(20)
         try:
@@ -157,6 +191,11 @@ def _worker_background_heartbeat():
             pass
 
         now = time.time()
+        # Stream log chunks every 60s (keeps Cloudflare KV writes minimal while staying real-time)
+        if now - last_relay_push >= 60:
+            _flush_logs_to_relay()
+            last_relay_push = now
+
         if RUN_MESSAGE_ID and (now - last_discord_update >= 50):
             try:
                 from discord_notifier import update_run_log
@@ -326,6 +365,7 @@ except Exception:
 
 cmd = [sys.executable, "-u", "make_short.py", "--style", style_arg, "--upload", "--privacy", "public"]
 ret_code = run_command_logged(cmd, check=False)
+_flush_logs_to_relay()
 
 if ret_code == 0:
     print("\n" + "="*70, flush=True)

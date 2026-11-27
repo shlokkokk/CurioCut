@@ -194,10 +194,24 @@ def push_kernel(enable_gpu=True):
     mode_str = "NVIDIA Tesla T4 GPU (16 GB VRAM)" if enable_gpu else "CPU (4-Core / High-Speed)"
     print(f"\nDispatching kernel: {user}/{KERNEL_SLUG} [{mode_str}] (Account {current_account_idx + 1}/{len(KAGGLE_POOL)}: {user})...")
     
+    # Reset cloud execution log buffer so previous run output does not mix
+    try:
+        req_rst = urllib.request.Request(
+            f"{LOG_RELAY_URL}?reset=1",
+            data=b"",
+            headers={"Content-Type": "text/plain", "User-Agent": "Mozilla/5.0 CurioCut-Runner/1.0"},
+            method="POST"
+        )
+        with urllib.request.urlopen(req_rst, timeout=5) as _:
+            pass
+    except Exception:
+        pass
+
     payload = {
         "slug": f"{user}/{KERNEL_SLUG}",
         "newTitle": "CurioCut GPU Engine",
-        "text": full_worker_code,
+        "text": full_worker_code,       # legacy field (some Kaggle API versions)
+        "sourceCode": full_worker_code, # official wire-format per KernelPushRequest schema
         "language": "python",
         "kernelType": "script",
         "isPrivate": True,
@@ -207,6 +221,8 @@ def push_kernel(enable_gpu=True):
         "competitionDataSources": [],
         "kernelDataSources": []
     }
+    if enable_gpu:
+        payload["machineShape"] = "NvidiaTeslaT4"
 
     req = urllib.request.Request(
         "https://www.kaggle.com/api/v1/kernels/push",
@@ -287,7 +303,20 @@ def push_kernel(enable_gpu=True):
         raise
 
 def fetch_worker_log(include_kaggle_api=False):
-    """Fetch official execution logs from Kaggle API when job completes or fails."""
+    """Fetch live logs from Cloudflare log relay bridge, falling back to Kaggle API if needed."""
+    try:
+        req_live = urllib.request.Request(
+            LOG_RELAY_URL,
+            headers={"User-Agent": "Mozilla/5.0 CurioCut-Runner/1.0"}
+        )
+        with urllib.request.urlopen(req_live, timeout=5) as resp_live:
+            if resp_live.status == 200:
+                live_text = resp_live.read().decode("utf-8", errors="ignore")
+                if live_text.strip() and "No active run logs recorded yet." not in live_text:
+                    return clean_kaggle_log(live_text)
+    except Exception:
+        pass
+
     if include_kaggle_api:
         try:
             acc = get_current_account()
@@ -301,7 +330,8 @@ def fetch_worker_log(include_kaggle_api=False):
             with urllib.request.urlopen(req_out, timeout=20) as resp_out:
                 out_data = json.loads(resp_out.read().decode("utf-8"))
                 raw = out_data.get("log", "") or ""
-                return clean_kaggle_log(raw)
+                if raw.strip():
+                    return clean_kaggle_log(raw)
         except Exception:
             pass
     return ""
@@ -318,9 +348,9 @@ def describe_run_phase(kaggle_status, log_text):
         (("[4/4]", "Starting 3D short generation", "Cloud Video Engine Booted"), "INITIALIZING ENGINE"),
         (("[1/5]", "Writing viral script", "Generating 2-character dialogue"), "WRITING SCRIPT"),
         (("[2/6]", "Generating fresh AI story", "Generating episode"), "GENERATING STORY"),
-        (("[3/6]", "Synthesizing narration", "Synthesizing Speech"), "SYNTHESIZING AUDIO"),
+        (("[3/6]", "Synthesizing narration", "Synthesizing Speech", "[Dual-Voice Engine]"), "SYNTHESIZING AUDIO"),
         (("[5/6]", "Launching Blender", "Rendering 3D"), "STARTING RENDER"),
-        (("Append frame ", "Fra:"), "RENDERING FRAMES"),
+        (("[Render] Frame", "Append frame ", "Fra:"), "RENDERING FRAMES"),
         (("[6/6]", "Muxing audio", "Burning Captions"), "FINALIZING VIDEO"),
         (("Uploading to YouTube", "Uploading to Instagram", "Publishing to"), "UPLOADING"),
     ]
@@ -330,9 +360,9 @@ def describe_run_phase(kaggle_status, log_text):
         if marker_at > latest_phase[0]:
             latest_phase = (marker_at, phase)
             if phase == "RENDERING FRAMES":
-                frame_m = re.search(r"(?:Append frame\s*(\d+)|Fra:\s*(\d+(?:/\d+)?))", log_text[marker_at:marker_at+120])
+                frame_m = re.search(r"(?:\[Render\]\s*Frame\s*(\d+/\d+\s*\(\d+%\))|Append frame\s*(\d+)|Fra:\s*(\d+(?:/\d+)?))", log_text[marker_at:marker_at+150])
                 if frame_m:
-                    matched_val = frame_m.group(1) or frame_m.group(2)
+                    matched_val = frame_m.group(1) or frame_m.group(2) or frame_m.group(3)
                     latest_phase = (marker_at, f"RENDERING FRAMES ({matched_val})")
     return latest_phase[1]
 
@@ -377,6 +407,24 @@ def main():
 
     prepare_worker_payload()
 
+    # Pre-flight: skip accounts that are already running or queued to avoid 1-session deadlocks
+    for idx_check in range(len(KAGGLE_POOL)):
+        cand = KAGGLE_POOL[idx_check]
+        try:
+            req_pre = urllib.request.Request(
+                get_status_url(cand["user"]),
+                headers={"Authorization": f"Bearer {cand['token']}", "User-Agent": "kaggle-api/v1.6.14"}
+            )
+            with urllib.request.urlopen(req_pre, timeout=8) as r_pre:
+                st_pre = (json.loads(r_pre.read().decode("utf-8")).get("status") or "").lower()
+                if st_pre in ("running", "queued"):
+                    print(f"[PRE-FLIGHT] Account '{cand['user']}' is already busy (status: {st_pre}). Trying next...")
+                    continue
+        except Exception:
+            pass
+        current_account_idx = idx_check
+        break
+
     # Try GPU first
     gpu_requested = True
     try:
@@ -404,6 +452,7 @@ def main():
     has_alerted_3h = False
     has_alerted_4_5h = False
     has_alerted_stale = False
+    has_checked_gpu_boot = False   # True once we've verified GPU actually booted
     last_run_log_update = 0
     last_stop_check = 0
     last_log_len = 0
@@ -467,7 +516,10 @@ def main():
             except Exception as ex:
                 print(f"  Notice: 4.5h alert dispatch: {ex}")
 
-        if st == "running" and elapsed >= 3600 and (time.time() - last_log_change_t) >= 2700 and not has_alerted_stale:
+        phase_label = describe_run_phase(st, latest_worker_log)
+        is_rendering = "RENDERING FRAMES" in phase_label
+        stale_threshold = 5400 if is_rendering else 2700  # 90m for software CPU renders, 45m otherwise
+        if st == "running" and elapsed >= 3600 and (time.time() - last_log_change_t) >= stale_threshold and not has_alerted_stale:
             has_alerted_stale = True
             idle_min = int((time.time() - last_log_change_t) // 60)
             print(f"  [STALE] Worker output frozen for {idle_min}m on {get_current_account()['user']}. Alerting Discord...")
@@ -475,7 +527,6 @@ def main():
                 from discord_notifier import notify_alert
                 acc_name = get_current_account()["user"]
                 slot_name = secrets_to_pass.get("CURIO_SLOT", "auto")
-                phase_label = describe_run_phase(st, latest_worker_log)
                 notify_alert(
                     title=f"STALE / HUNG JOB ({acc_name})",
                     details=(
@@ -551,6 +602,41 @@ def main():
                         publish_run_log(status_label)
                     last_run_log_update = time.time()
 
+                # GPU boot verification: once the container goes 'running', wait until boot logs
+                # report hardware detection (or 180s passes) to verify GPU vs silent CPU fallback.
+                if gpu_requested and st == "running" and not has_checked_gpu_boot and elapsed >= 30:
+                    boot_log = latest_worker_log or fetch_worker_log(include_kaggle_api=False)
+                    has_gpu_marker = "NVIDIA Hardware GPU Detected" in boot_log
+                    has_cpu_marker = (
+                        "No such file or directory: 'nvidia-smi'" in boot_log
+                        or "Running in High-Speed Multi-Core Cloud CPU mode" in boot_log
+                        or "[INFO] GPU detection notice" in boot_log
+                    )
+                    if has_gpu_marker:
+                        has_checked_gpu_boot = True
+                    elif has_cpu_marker:
+                        has_checked_gpu_boot = True
+                        print(f"\n  [GPU-MISS] Container booted on CPU despite gpu_requested=True on {user}.")
+                        print(f"  Cause: Kaggle silently fell back to CPU (quota or hardware availability).")
+                        try:
+                            from discord_notifier import notify_alert
+                            acc_name = get_current_account()["user"]
+                            slot_name = secrets_to_pass.get("CURIO_SLOT", "auto")
+                            notify_alert(
+                                title=f"GPU ALLOCATION MISSED — Booted on CPU ({acc_name})",
+                                details=(
+                                    f"Job `{slot_name.upper()}` requested GPU on `{acc_name}`, but Kaggle booted the container on **CPU** instead.\n"
+                                    f"The job will continue on CPU (slower render), or you can hit Emergency Stop in #panel."
+                                ),
+                                severity="warning",
+                                button_label="Open Kaggle Run",
+                                button_url=latest_kernel_url,
+                            )
+                        except Exception as ex:
+                            print(f"  Notice: GPU-miss alert dispatch: {ex}")
+                    elif elapsed >= 180:
+                        has_checked_gpu_boot = True
+
                 # Keep waiting for GPU (Kaggle batch GPU queue normally takes 2-8 minutes, ceiling 30 mins)
                 if gpu_requested and st == "queued" and (time.time() - queued_start) > 1800:
                     if current_account_idx + 1 < len(KAGGLE_POOL):
@@ -561,6 +647,14 @@ def main():
                         push_kernel(enable_gpu=True)
                         queued_start = time.time()
                         start_t = time.time()
+                        has_alerted_2h = False
+                        has_alerted_3h = False
+                        has_alerted_4_5h = False
+                        has_alerted_stale = False
+                        has_checked_gpu_boot = False
+                        last_log_len = 0
+                        last_log_change_t = time.time()
+                        latest_worker_log = ""
                         continue
                     else:
                         print("\n[WARNING] All GPU accounts in pool queued. Falling back to Cloud Compute...")
@@ -576,6 +670,10 @@ def main():
                         gpu_requested = False
                         push_kernel(enable_gpu=False)
                         queued_start = time.time()
+                        has_checked_gpu_boot = False
+                        last_log_len = 0
+                        last_log_change_t = time.time()
+                        latest_worker_log = ""
                         continue
 
                 if st == "complete":
@@ -609,8 +707,10 @@ def main():
                             has_alerted_3h = False
                             has_alerted_4_5h = False
                             has_alerted_stale = False
+                            has_checked_gpu_boot = False
                             last_log_len = 0
                             last_log_change_t = time.time()
+                            latest_worker_log = ""
                             st = "queued"
                             continue
                         except Exception as failover_err:
