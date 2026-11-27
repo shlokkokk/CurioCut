@@ -1,0 +1,72 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+WrapStyle: 2
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Cap,Arial Black,96,&H00FFFFFF,&H000000FF,&H00000000,&H90000000,-1,0,0,0,100,100,0,0,1,12,6,2,60,60,380,1
+Style: Brand,Arial Black,48,&H0040D325,&H000000FF,&H00000000,&HB0000000,-1,0,0,0,100,100,0,0,1,6,2,8,60,60,180,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:41.10,Brand,,0,0,0,,{\pos(540,180)}BIZBOT  •  WHATSAPP AUTOMATION
+Dialogue: 1,0:00:00.00,0:00:00.80,Cap,,0,0,0,,{\c&HFFFFFF&}RIGHT NOW
+Dialogue: 1,0:00:00.90,0:00:01.36,Cap,,0,0,0,,{\c&HFFFFFF&}A CUSTOMER
+Dialogue: 1,0:00:01.36,0:00:02.08,Cap,,0,0,0,,{\c&HFFFFFF&}IS MESSAGING
+Dialogue: 1,0:00:02.08,0:00:02.56,Cap,,0,0,0,,{\c&H40D325&}YOUR WHATSAPP
+Dialogue: 1,0:00:02.56,0:00:03.16,Cap,,0,0,0,,{\c&HFFFFFF&}TO BUY
+Dialogue: 1,0:00:03.16,0:00:03.60,Cap,,0,0,0,,{\c&HFFFFFF&}FROM YOU
+Dialogue: 1,0:00:03.98,0:00:04.36,Cap,,0,0,0,,{\c&HFFFFFF&}BUT YOU
+Dialogue: 1,0:00:04.36,0:00:04.84,Cap,,0,0,0,,{\c&H3333FF&}ARE ASLEEP
+Dialogue: 1,0:00:05.28,0:00:05.56,Cap,,0,0,0,,{\c&HFFFFFF&}BUSY
+Dialogue: 1,0:00:06.02,0:00:06.52,Cap,,0,0,0,,{\c&HFFFFFF&}OR AWAY
+Dialogue: 1,0:00:06.52,0:00:06.96,Cap,,0,0,0,,{\c&HFFFFFF&}FROM YOUR
+Dialogue: 1,0:00:06.96,0:00:07.28,Cap,,0,0,0,,{\c&HFFFFFF&}PHONE
+Dialogue: 1,0:00:07.94,0:00:08.14,Cap,,0,0,0,,{\c&HFFFFFF&}BY THE
+Dialogue: 1,0:00:08.14,0:00:08.54,Cap,,0,0,0,,{\c&HFFFFFF&}TIME YOU
+Dialogue: 1,0:00:08.54,0:00:08.74,Cap,,0,0,0,,{\c&HFFFFFF&}REPLY
+Dialogue: 1,0:00:09.26,0:00:09.46,Cap,,0,0,0,,{\c&HFFFFFF&}THEY HAVE
+Dialogue: 1,0:00:09.46,0:00:09.76,Cap,,0,0,0,,{\c&HFFFFFF&}ALREADY
+Dialogue: 1,0:00:09.76,0:00:10.34,Cap,,0,0,0,,{\c&HFFFFFF&}BOUGHT FROM
+Dialogue: 1,0:00:10.34,0:00:10.90,Cap,,0,0,0,,{\c&H3333FF&}YOUR COMPETITOR
+Dialogue: 1,0:00:11.64,0:00:12.00,Cap,,0,0,0,,{\c&HFFFFFF&}IN BUSINESS
+Dialogue: 1,0:00:12.52,0:00:12.80,Cap,,0,0,0,,{\c&HFFFFFF&}DELAYED
+Dialogue: 1,0:00:12.80,0:00:13.74,Cap,,0,0,0,,{\c&HFFFFFF&}REPLIES ARE
+Dialogue: 1,0:00:13.74,0:00:14.30,Cap,,0,0,0,,{\c&H15C7FF&}LOST MONEY
+Dialogue: 1,0:00:15.06,0:00:15.28,Cap,,0,0,0,,{\c&HFFFFFF&}THIS IS
+Dialogue: 1,0:00:15.28,0:00:15.72,Cap,,0,0,0,,{\c&H40D325&}BIZBOT
+Dialogue: 1,0:00:16.22,0:00:16.90,Cap,,0,0,0,,{\c&HFFFFFF&}AN INTELLIGENT
+Dialogue: 1,0:00:16.90,0:00:17.72,Cap,,0,0,0,,{\c&HFFFFFF&}CHAT SYSTEM
+Dialogue: 1,0:00:17.72,0:00:18.32,Cap,,0,0,0,,{\c&HFFFFFF&}THAT TURNS
+Dialogue: 1,0:00:18.32,0:00:18.76,Cap,,0,0,0,,{\c&H40D325&}YOUR WHATSAPP
+Dialogue: 1,0:00:18.76,0:00:19.46,Cap,,0,0,0,,{\c&HFFFFFF&}INTO A
+Dialogue: 1,0:00:19.46,0:00:20.44,Cap,,0,0,0,,{\c&HFFFFFF&}24 7
+Dialogue: 1,0:00:20.44,0:00:20.64,Cap,,0,0,0,,{\c&H15C7FF&}SALES
+Dialogue: 1,0:00:20.64,0:00:21.26,Cap,,0,0,0,,{\c&HFFFFFF&}MACHINE
+Dialogue: 1,0:00:21.92,0:00:22.28,Cap,,0,0,0,,{\c&HFFFFFF&}NO MORE
+Dialogue: 1,0:00:22.28,0:00:22.94,Cap,,0,0,0,,{\c&HFFFFFF&}TYPING LONG
+Dialogue: 1,0:00:22.94,0:00:23.32,Cap,,0,0,0,,{\c&HFFFFFF&}PARAGRAPHS
+Dialogue: 1,0:00:24.04,0:00:24.76,Cap,,0,0,0,,{\c&H40D325&}BIZBOT
+Dialogue: 1,0:00:24.76,0:00:25.54,Cap,,0,0,0,,{\c&HFFFFFF&}ANSWERS IN
+Dialogue: 1,0:00:25.54,0:00:26.62,Cap,,0,0,0,,{\c&HFFFFFF&}0 2
+Dialogue: 1,0:00:26.62,0:00:27.24,Cap,,0,0,0,,{\c&HFFFFFF&}SECONDS WITH
+Dialogue: 1,0:00:27.24,0:00:27.64,Cap,,0,0,0,,{\c&HFFFFFF&}INSTANT
+Dialogue: 1,0:00:27.64,0:00:28.18,Cap,,0,0,0,,{\c&HFFFFFF&}INTERACTIVE
+Dialogue: 1,0:00:28.18,0:00:29.00,Cap,,0,0,0,,{\c&H40D325&}BUTTONS THAT
+Dialogue: 1,0:00:29.00,0:00:29.44,Cap,,0,0,0,,{\c&HFFFFFF&}LET BUYERS
+Dialogue: 1,0:00:29.44,0:00:30.06,Cap,,0,0,0,,{\c&HFFFFFF&}BROWSE
+Dialogue: 1,0:00:30.62,0:00:30.90,Cap,,0,0,0,,{\c&HFFFFFF&}CALL
+Dialogue: 1,0:00:31.40,0:00:31.82,Cap,,0,0,0,,{\c&HFFFFFF&}AND ORDER
+Dialogue: 1,0:00:31.82,0:00:32.78,Cap,,0,0,0,,{\c&H40D325&}ON AUTOPILOT
+Dialogue: 1,0:00:33.38,0:00:33.84,Cap,,0,0,0,,{\c&HFFFFFF&}STARTING AT
+Dialogue: 1,0:00:33.84,0:00:34.34,Cap,,0,0,0,,{\c&H15C7FF&}JUST 200
+Dialogue: 1,0:00:34.34,0:00:35.22,Cap,,0,0,0,,{\c&H15C7FF&}RUPEES A
+Dialogue: 1,0:00:35.22,0:00:35.44,Cap,,0,0,0,,{\c&HFFFFFF&}MONTH
+Dialogue: 1,0:00:36.12,0:00:36.36,Cap,,0,0,0,,{\c&HFFFFFF&}MAKE YOUR
+Dialogue: 1,0:00:36.36,0:00:36.94,Cap,,0,0,0,,{\c&HFFFFFF&}CHATS WORK
+Dialogue: 1,0:00:36.94,0:00:37.58,Cap,,0,0,0,,{\c&HFFFFFF&}ALONE AT
+Dialogue: 1,0:00:37.58,0:00:38.00,Cap,,0,0,0,,{\c&H40D325&}BIZBOT
+Dialogue: 1,0:00:38.00,0:00:39.60,Cap,,0,0,0,,{\c&HFFFFFF&}ZERNOX NET

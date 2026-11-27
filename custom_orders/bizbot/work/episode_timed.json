@@ -1,0 +1,65 @@
+{
+  "title": "BizBot - Chats That Work Alone",
+  "client": "ZERNOX",
+  "url": "https://bizbot.zernox.net/",
+  "duration": 41.1,
+  "fps": 30,
+  "total_frames": 1234,
+  "shots": [
+    {
+      "id": "shot_1",
+      "text": "Right now, a customer is messaging your WhatsApp to buy from you. But you are asleep, busy, or away from your phone.",
+      "start": 0.4,
+      "end": 7.611,
+      "duration": 7.211,
+      "sfx": [
+        "sfx_whatsapp_notif",
+        "sfx_clock_tick"
+      ]
+    },
+    {
+      "id": "shot_2",
+      "text": "By the time you reply, they have already bought from your competitor. In business, delayed replies are lost money.",
+      "start": 7.961,
+      "end": 14.574,
+      "duration": 6.613,
+      "sfx": [
+        "sfx_sub_drop",
+        "sfx_lost_money"
+      ]
+    },
+    {
+      "id": "shot_3",
+      "text": "This is BizBot. An intelligent chat system that turns your WhatsApp into a twenty-four-seven sales machine.",
+      "start": 14.924,
+      "end": 21.559,
+      "duration": 6.635,
+      "sfx": [
+        "sfx_cyber_boot",
+        "sfx_laser_sweep"
+      ]
+    },
+    {
+      "id": "shot_4",
+      "text": "No more typing long paragraphs. BizBot answers in zero point two seconds with instant interactive buttons that let buyers browse, call, and order on autopilot.",
+      "start": 21.909,
+      "end": 33.023,
+      "duration": 11.115,
+      "sfx": [
+        "sfx_button_click",
+        "sfx_cash_ding"
+      ]
+    },
+    {
+      "id": "shot_5",
+      "text": "Starting at just two hundred rupees a month. Make your chats work alone at bizbot dot zernox dot net.",
+      "start": 33.373,
+      "end": 39.752,
+      "duration": 6.379,
+      "sfx": [
+        "sfx_cinematic_impact",
+        "sfx_riser"
+      ]
+    }
+  ]
+}

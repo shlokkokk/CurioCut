@@ -1,0 +1,688 @@
+[
+  {
+    "word": "RIGHT",
+    "raw": " Right",
+    "start": 0.0,
+    "end": 0.54,
+    "prob": 0.86
+  },
+  {
+    "word": "NOW",
+    "raw": " now,",
+    "start": 0.54,
+    "end": 0.8,
+    "prob": 0.996
+  },
+  {
+    "word": "A",
+    "raw": " a",
+    "start": 0.9,
+    "end": 1.02,
+    "prob": 0.996
+  },
+  {
+    "word": "CUSTOMER",
+    "raw": " customer",
+    "start": 1.02,
+    "end": 1.36,
+    "prob": 0.995
+  },
+  {
+    "word": "IS",
+    "raw": " is",
+    "start": 1.36,
+    "end": 1.7,
+    "prob": 0.999
+  },
+  {
+    "word": "MESSAGING",
+    "raw": " messaging",
+    "start": 1.7,
+    "end": 2.08,
+    "prob": 0.996
+  },
+  {
+    "word": "YOUR",
+    "raw": " your",
+    "start": 2.08,
+    "end": 2.36,
+    "prob": 0.872
+  },
+  {
+    "word": "WHATSAPP",
+    "raw": " WhatsApp",
+    "start": 2.36,
+    "end": 2.56,
+    "prob": 0.966
+  },
+  {
+    "word": "TO",
+    "raw": " to",
+    "start": 2.56,
+    "end": 2.96,
+    "prob": 0.974
+  },
+  {
+    "word": "BUY",
+    "raw": " buy",
+    "start": 2.96,
+    "end": 3.16,
+    "prob": 0.997
+  },
+  {
+    "word": "FROM",
+    "raw": " from",
+    "start": 3.16,
+    "end": 3.44,
+    "prob": 0.997
+  },
+  {
+    "word": "YOU",
+    "raw": " you,",
+    "start": 3.44,
+    "end": 3.6,
+    "prob": 0.999
+  },
+  {
+    "word": "BUT",
+    "raw": " but",
+    "start": 3.98,
+    "end": 4.2,
+    "prob": 0.99
+  },
+  {
+    "word": "YOU",
+    "raw": " you",
+    "start": 4.2,
+    "end": 4.36,
+    "prob": 0.997
+  },
+  {
+    "word": "ARE",
+    "raw": " are",
+    "start": 4.36,
+    "end": 4.54,
+    "prob": 0.981
+  },
+  {
+    "word": "ASLEEP",
+    "raw": " asleep,",
+    "start": 4.54,
+    "end": 4.84,
+    "prob": 0.976
+  },
+  {
+    "word": "BUSY",
+    "raw": " busy,",
+    "start": 5.28,
+    "end": 5.56,
+    "prob": 0.999
+  },
+  {
+    "word": "OR",
+    "raw": " or",
+    "start": 6.02,
+    "end": 6.24,
+    "prob": 0.997
+  },
+  {
+    "word": "AWAY",
+    "raw": " away",
+    "start": 6.24,
+    "end": 6.52,
+    "prob": 0.998
+  },
+  {
+    "word": "FROM",
+    "raw": " from",
+    "start": 6.52,
+    "end": 6.86,
+    "prob": 0.997
+  },
+  {
+    "word": "YOUR",
+    "raw": " your",
+    "start": 6.86,
+    "end": 6.96,
+    "prob": 0.994
+  },
+  {
+    "word": "PHONE",
+    "raw": " phone.",
+    "start": 6.96,
+    "end": 7.28,
+    "prob": 1.0
+  },
+  {
+    "word": "BY",
+    "raw": " By",
+    "start": 7.94,
+    "end": 8.02,
+    "prob": 0.99
+  },
+  {
+    "word": "THE",
+    "raw": " the",
+    "start": 8.02,
+    "end": 8.14,
+    "prob": 0.999
+  },
+  {
+    "word": "TIME",
+    "raw": " time",
+    "start": 8.14,
+    "end": 8.38,
+    "prob": 1.0
+  },
+  {
+    "word": "YOU",
+    "raw": " you",
+    "start": 8.38,
+    "end": 8.54,
+    "prob": 0.998
+  },
+  {
+    "word": "REPLY",
+    "raw": " reply,",
+    "start": 8.54,
+    "end": 8.74,
+    "prob": 0.996
+  },
+  {
+    "word": "THEY",
+    "raw": " they",
+    "start": 9.26,
+    "end": 9.34,
+    "prob": 0.998
+  },
+  {
+    "word": "HAVE",
+    "raw": " have",
+    "start": 9.34,
+    "end": 9.46,
+    "prob": 0.981
+  },
+  {
+    "word": "ALREADY",
+    "raw": " already",
+    "start": 9.46,
+    "end": 9.76,
+    "prob": 0.999
+  },
+  {
+    "word": "BOUGHT",
+    "raw": " bought",
+    "start": 9.76,
+    "end": 10.06,
+    "prob": 0.998
+  },
+  {
+    "word": "FROM",
+    "raw": " from",
+    "start": 10.06,
+    "end": 10.34,
+    "prob": 0.994
+  },
+  {
+    "word": "YOUR",
+    "raw": " your",
+    "start": 10.34,
+    "end": 10.44,
+    "prob": 0.997
+  },
+  {
+    "word": "COMPETITOR",
+    "raw": " competitor.",
+    "start": 10.44,
+    "end": 10.9,
+    "prob": 0.997
+  },
+  {
+    "word": "IN",
+    "raw": " In",
+    "start": 11.64,
+    "end": 11.7,
+    "prob": 0.989
+  },
+  {
+    "word": "BUSINESS",
+    "raw": " business,",
+    "start": 11.7,
+    "end": 12.0,
+    "prob": 0.962
+  },
+  {
+    "word": "DELAYED",
+    "raw": " delayed",
+    "start": 12.52,
+    "end": 12.8,
+    "prob": 0.953
+  },
+  {
+    "word": "REPLIES",
+    "raw": " replies",
+    "start": 12.8,
+    "end": 13.28,
+    "prob": 0.998
+  },
+  {
+    "word": "ARE",
+    "raw": " are",
+    "start": 13.28,
+    "end": 13.74,
+    "prob": 0.995
+  },
+  {
+    "word": "LOST",
+    "raw": " lost",
+    "start": 13.74,
+    "end": 14.0,
+    "prob": 0.989
+  },
+  {
+    "word": "MONEY",
+    "raw": " money.",
+    "start": 14.0,
+    "end": 14.3,
+    "prob": 0.997
+  },
+  {
+    "word": "THIS",
+    "raw": " This",
+    "start": 15.06,
+    "end": 15.08,
+    "prob": 0.991
+  },
+  {
+    "word": "IS",
+    "raw": " is",
+    "start": 15.08,
+    "end": 15.28,
+    "prob": 0.996
+  },
+  {
+    "word": "BIZBOT",
+    "raw": " Bizbot,",
+    "start": 15.28,
+    "end": 15.72,
+    "prob": 0.793
+  },
+  {
+    "word": "AN",
+    "raw": " an",
+    "start": 16.22,
+    "end": 16.48,
+    "prob": 0.996
+  },
+  {
+    "word": "INTELLIGENT",
+    "raw": " intelligent",
+    "start": 16.48,
+    "end": 16.9,
+    "prob": 0.948
+  },
+  {
+    "word": "CHAT",
+    "raw": " chat",
+    "start": 16.9,
+    "end": 17.28,
+    "prob": 0.995
+  },
+  {
+    "word": "SYSTEM",
+    "raw": " system",
+    "start": 17.28,
+    "end": 17.72,
+    "prob": 0.998
+  },
+  {
+    "word": "THAT",
+    "raw": " that",
+    "start": 17.72,
+    "end": 18.02,
+    "prob": 0.992
+  },
+  {
+    "word": "TURNS",
+    "raw": " turns",
+    "start": 18.02,
+    "end": 18.32,
+    "prob": 0.934
+  },
+  {
+    "word": "YOUR",
+    "raw": " your",
+    "start": 18.32,
+    "end": 18.52,
+    "prob": 0.997
+  },
+  {
+    "word": "WHATSAPP",
+    "raw": " WhatsApp",
+    "start": 18.52,
+    "end": 18.76,
+    "prob": 0.997
+  },
+  {
+    "word": "INTO",
+    "raw": " into",
+    "start": 18.76,
+    "end": 19.32,
+    "prob": 0.977
+  },
+  {
+    "word": "A",
+    "raw": " a",
+    "start": 19.32,
+    "end": 19.46,
+    "prob": 0.986
+  },
+  {
+    "word": "24",
+    "raw": " 24",
+    "start": 19.46,
+    "end": 19.74,
+    "prob": 0.993
+  },
+  {
+    "word": "7",
+    "raw": "-7",
+    "start": 19.74,
+    "end": 20.44,
+    "prob": 0.505
+  },
+  {
+    "word": "SALES",
+    "raw": " sales",
+    "start": 20.44,
+    "end": 20.64,
+    "prob": 0.97
+  },
+  {
+    "word": "MACHINE",
+    "raw": " machine.",
+    "start": 20.64,
+    "end": 21.26,
+    "prob": 0.998
+  },
+  {
+    "word": "NO",
+    "raw": " No",
+    "start": 21.92,
+    "end": 22.04,
+    "prob": 0.985
+  },
+  {
+    "word": "MORE",
+    "raw": " more",
+    "start": 22.04,
+    "end": 22.28,
+    "prob": 0.999
+  },
+  {
+    "word": "TYPING",
+    "raw": " typing",
+    "start": 22.28,
+    "end": 22.6,
+    "prob": 0.995
+  },
+  {
+    "word": "LONG",
+    "raw": " long",
+    "start": 22.6,
+    "end": 22.94,
+    "prob": 0.977
+  },
+  {
+    "word": "PARAGRAPHS",
+    "raw": " paragraphs.",
+    "start": 22.94,
+    "end": 23.32,
+    "prob": 0.997
+  },
+  {
+    "word": "BIZBOT",
+    "raw": " Bizbot",
+    "start": 24.04,
+    "end": 24.76,
+    "prob": 0.473
+  },
+  {
+    "word": "ANSWERS",
+    "raw": " answers",
+    "start": 24.76,
+    "end": 25.08,
+    "prob": 0.971
+  },
+  {
+    "word": "IN",
+    "raw": " in",
+    "start": 25.08,
+    "end": 25.54,
+    "prob": 0.995
+  },
+  {
+    "word": "0",
+    "raw": " 0",
+    "start": 25.54,
+    "end": 25.92,
+    "prob": 0.955
+  },
+  {
+    "word": "2",
+    "raw": ".2",
+    "start": 25.92,
+    "end": 26.62,
+    "prob": 0.994
+  },
+  {
+    "word": "SECONDS",
+    "raw": " seconds",
+    "start": 26.62,
+    "end": 26.98,
+    "prob": 0.959
+  },
+  {
+    "word": "WITH",
+    "raw": " with",
+    "start": 26.98,
+    "end": 27.24,
+    "prob": 0.978
+  },
+  {
+    "word": "INSTANT",
+    "raw": " instant",
+    "start": 27.24,
+    "end": 27.64,
+    "prob": 0.965
+  },
+  {
+    "word": "INTERACTIVE",
+    "raw": " interactive",
+    "start": 27.64,
+    "end": 28.18,
+    "prob": 0.986
+  },
+  {
+    "word": "BUTTONS",
+    "raw": " buttons",
+    "start": 28.18,
+    "end": 28.64,
+    "prob": 0.994
+  },
+  {
+    "word": "THAT",
+    "raw": " that",
+    "start": 28.64,
+    "end": 29.0,
+    "prob": 0.988
+  },
+  {
+    "word": "LET",
+    "raw": " let",
+    "start": 29.0,
+    "end": 29.22,
+    "prob": 0.985
+  },
+  {
+    "word": "BUYERS",
+    "raw": " buyers",
+    "start": 29.22,
+    "end": 29.44,
+    "prob": 0.946
+  },
+  {
+    "word": "BROWSE",
+    "raw": " browse,",
+    "start": 29.44,
+    "end": 30.06,
+    "prob": 0.939
+  },
+  {
+    "word": "CALL",
+    "raw": " call,",
+    "start": 30.62,
+    "end": 30.9,
+    "prob": 0.997
+  },
+  {
+    "word": "AND",
+    "raw": " and",
+    "start": 31.4,
+    "end": 31.42,
+    "prob": 0.994
+  },
+  {
+    "word": "ORDER",
+    "raw": " order",
+    "start": 31.42,
+    "end": 31.82,
+    "prob": 0.998
+  },
+  {
+    "word": "ON",
+    "raw": " on",
+    "start": 31.82,
+    "end": 32.04,
+    "prob": 0.944
+  },
+  {
+    "word": "AUTOPILOT",
+    "raw": " autopilot,",
+    "start": 32.04,
+    "end": 32.78,
+    "prob": 0.904
+  },
+  {
+    "word": "STARTING",
+    "raw": " starting",
+    "start": 33.38,
+    "end": 33.58,
+    "prob": 0.996
+  },
+  {
+    "word": "AT",
+    "raw": " at",
+    "start": 33.58,
+    "end": 33.84,
+    "prob": 0.995
+  },
+  {
+    "word": "JUST",
+    "raw": " just",
+    "start": 33.84,
+    "end": 34.02,
+    "prob": 0.996
+  },
+  {
+    "word": "200",
+    "raw": " 200",
+    "start": 34.02,
+    "end": 34.34,
+    "prob": 0.865
+  },
+  {
+    "word": "RUPEES",
+    "raw": " rupees",
+    "start": 34.34,
+    "end": 35.02,
+    "prob": 0.85
+  },
+  {
+    "word": "A",
+    "raw": " a",
+    "start": 35.02,
+    "end": 35.22,
+    "prob": 0.994
+  },
+  {
+    "word": "MONTH",
+    "raw": " month.",
+    "start": 35.22,
+    "end": 35.44,
+    "prob": 1.0
+  },
+  {
+    "word": "MAKE",
+    "raw": " Make",
+    "start": 36.12,
+    "end": 36.2,
+    "prob": 0.995
+  },
+  {
+    "word": "YOUR",
+    "raw": " your",
+    "start": 36.2,
+    "end": 36.36,
+    "prob": 0.997
+  },
+  {
+    "word": "CHATS",
+    "raw": " chats",
+    "start": 36.36,
+    "end": 36.64,
+    "prob": 0.984
+  },
+  {
+    "word": "WORK",
+    "raw": " work",
+    "start": 36.64,
+    "end": 36.94,
+    "prob": 0.991
+  },
+  {
+    "word": "ALONE",
+    "raw": " alone",
+    "start": 36.94,
+    "end": 37.24,
+    "prob": 0.997
+  },
+  {
+    "word": "AT",
+    "raw": " at",
+    "start": 37.24,
+    "end": 37.58,
+    "prob": 0.98
+  },
+  {
+    "word": "BIZBOT",
+    "raw": " bizbot",
+    "start": 37.58,
+    "end": 38.0,
+    "prob": 0.925
+  },
+  {
+    "word": "ZERNOX",
+    "raw": ".zernox",
+    "start": 38.0,
+    "end": 38.86,
+    "prob": 0.68
+  },
+  {
+    "word": "NET",
+    "raw": ".net.",
+    "start": 38.86,
+    "end": 39.6,
+    "prob": 0.995
+  }
+]
